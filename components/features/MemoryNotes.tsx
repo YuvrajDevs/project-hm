@@ -243,7 +243,7 @@ export const MemoryNotes: React.FC = () => {
             <div className="bg-blue-500/5 p-6 rounded-2xl border border-blue-500/10">
               <Book className="w-8 h-8 text-blue-500/30 mb-4" />
               <div className="space-y-4">
-                <p className="text-lg font-outfit text-white leading-relaxed break-words whitespace-pre-wrap">{selectedMemory.content}</p>
+                <p className="text-lg font-outfit text-white leading-relaxed break-all whitespace-pre-wrap">{selectedMemory.content}</p>
               </div>
             </div>
           </div>

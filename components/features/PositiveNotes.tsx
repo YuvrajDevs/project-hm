@@ -158,7 +158,7 @@ export const PositiveNotes: React.FC = () => {
                       <div className="space-y-2 min-w-0">
                         <p className="text-black font-semibold font-outfit leading-tight line-clamp-3 overflow-hidden break-all">{note.oneThingRight}</p>
                         {note.whatIAppreciated && (
-                          <p className="text-black/70 text-xs italic font-outfit line-clamp-2 overflow-hidden break-words">{note.whatIAppreciated}</p>
+                          <p className="text-black/70 text-xs italic font-outfit line-clamp-2 overflow-hidden break-all">{note.whatIAppreciated}</p>
                         )}
                         <div className="flex items-center gap-1 text-[9px] text-black/40 uppercase font-bebas pt-1 tracking-widest">
                            <Calendar className="w-2 h-2" /> {new Date(note.createdAt).toLocaleDateString()}
@@ -259,12 +259,12 @@ export const PositiveNotes: React.FC = () => {
               <div className="space-y-6">
                 <div>
                   <h4 className="text-xs font-bebas text-yellow-500 tracking-widest uppercase mb-2">The Deed</h4>
-                  <p className="text-xl font-outfit text-white leading-relaxed break-words whitespace-pre-wrap">{selectedNote.oneThingRight}</p>
+                  <p className="text-xl font-outfit text-white leading-relaxed break-all whitespace-pre-wrap">{selectedNote.oneThingRight}</p>
                 </div>
                 {selectedNote.whatIAppreciated && (
                   <div>
                     <h4 className="text-xs font-bebas text-yellow-500 tracking-widest uppercase mb-2">The Feeling</h4>
-                    <p className="text-base font-outfit text-neutral-400 italic leading-relaxed break-words whitespace-pre-wrap">{selectedNote.whatIAppreciated}</p>
+                    <p className="text-base font-outfit text-neutral-400 italic leading-relaxed break-all whitespace-pre-wrap">{selectedNote.whatIAppreciated}</p>
                   </div>
                 )}
               </div>
