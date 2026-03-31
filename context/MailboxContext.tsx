@@ -150,7 +150,7 @@ export const MailboxProvider: React.FC<{ children: React.ReactNode }> = ({ child
       if (data.success) {
         // Sign in anonymously on the client to satisfy Firestore rules
         await signInAnonymously(auth);
-        setLoading(true);
+        localStorage.setItem("show_sync_invite", "true");
         setRole(data.role as Role);
         return true;
       }

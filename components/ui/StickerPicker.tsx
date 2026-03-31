@@ -2,7 +2,6 @@
 
 import React from "react";
 import { motion } from "framer-motion";
-import { Heart, Sparkles, MessageCircleHeart } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 interface StickerPickerProps {
@@ -12,9 +11,9 @@ interface StickerPickerProps {
 
 export const StickerPicker: React.FC<StickerPickerProps> = ({ onSelect, selected }) => {
   const stickers = [
-    { id: "heart", icon: Heart, label: "Heart", color: "text-pink-400 fill-pink-400/20" },
-    { id: "sparkles", icon: Sparkles, label: "Sparkles", color: "text-yellow-400" },
-    { id: "hug", icon: MessageCircleHeart, label: "Hug", color: "text-blue-400" },
+    { id: "❤️", icon: null, label: "Heart", color: "" },
+    { id: "✨", icon: null, label: "Sparkles", color: "" },
+    { id: "🤗", icon: null, label: "Hug", color: "" },
   ];
 
   return (
@@ -37,8 +36,9 @@ export const StickerPicker: React.FC<StickerPickerProps> = ({ onSelect, selected
             <motion.div
               animate={isSelected ? { scale: [1, 1.3, 1], rotate: [0, 15, -15, 0] } : {}}
               transition={{ duration: 1.5, repeat: Infinity }}
+              className="text-4xl"
             >
-              <Icon className={cn("w-8 h-8", s.color)} />
+              {s.id}
             </motion.div>
           </motion.button>
         );

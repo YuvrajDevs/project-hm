@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { useMailbox } from "@/context/MailboxContext";
 import { MailboxCard } from "@/lib/types";
 import { GlassCard } from "@/components/ui/GlassCard";
@@ -14,10 +14,24 @@ export const ReplyMode: React.FC = () => {
   const { cards, addResponse, updateCardStatus, logout, displayNames } = useMailbox();
   const [selectedCard, setSelectedCard] = useState<MailboxCard | null>(null);
   const [isSyncing, setIsSyncing] = useState(false);
+  const [showSyncInvite, setShowSyncInvite] = useState(false);
+
+  useEffect(() => {
+    const shouldInvite = localStorage.getItem("show_sync_invite");
+    if (shouldInvite === "true") {
+      setShowSyncInvite(true);
+      localStorage.removeItem("show_sync_invite");
+      const timer = setTimeout(() => setShowSyncInvite(false), 5000);
+      return () => clearTimeout(timer);
+    }
+  }, []);
 
   const handleSync = () => {
     setIsSyncing(true);
-    setTimeout(() => setIsSyncing(false), 2000);
+    setTimeout(() => {
+      setIsSyncing(false);
+      window.location.reload();
+    }, 1000);
   };
   
   // Form State
@@ -55,16 +69,33 @@ export const ReplyMode: React.FC = () => {
           <div className="flex flex-col gap-2">
             <div className="flex items-center gap-4">
               <h1 className="text-7xl font-bebas tracking-[0.1em] text-white leading-[0.9]">{(displayNames?.YOU || "YOU").toUpperCase()}</h1>
-              <button 
-                onClick={handleSync}
-                className={cn(
-                  "p-2 rounded-full bg-white/5 border border-white/10 hover:bg-white/10 transition-all",
-                  isSyncing && "animate-spin text-blue-500"
-                )}
-                title="Sync Mailbox"
-              >
-                <RefreshCcw className="w-4 h-4" />
-              </button>
+              <div className="relative">
+                <button 
+                  onClick={handleSync}
+                  className={cn(
+                    "p-2 rounded-full bg-white/5 border border-white/10 hover:bg-white/10 transition-all",
+                    isSyncing && "animate-spin text-blue-500"
+                  )}
+                  title="Sync Mailbox"
+                >
+                  <RefreshCcw className="w-4 h-4" />
+                </button>
+
+                <AnimatePresence>
+                  {showSyncInvite && (
+                    <motion.div
+                      initial={{ opacity: 0, x: 10, scale: 0.8 }}
+                      animate={{ opacity: 1, x: 0, scale: 1 }}
+                      exit={{ opacity: 0, scale: 0.8 }}
+                      onClick={handleSync}
+                      className="absolute left-full ml-3 top-1/2 -translate-y-1/2 whitespace-nowrap px-3 py-1.5 bg-blue-500 text-white rounded-lg text-[10px] font-bebas tracking-[0.1em] shadow-lg cursor-pointer z-50 flex items-center gap-2"
+                    >
+                      <div className="absolute left-0 -translate-x-1/2 top-1/2 -translate-y-1/2 w-2 h-2 bg-blue-500 rotate-45" />
+                      Sync it once!
+                    </motion.div>
+                  )}
+                </AnimatePresence>
+              </div>
             </div>
             <p className="text-neutral-500 mt-2 flex items-center gap-2 uppercase text-[10px] tracking-[0.3em] font-bebas">
               <MessageCircle className="w-3 h-3 text-blue-500" /> Honest Mailbox &bull; Listen & Understand
