@@ -81,11 +81,11 @@ export const ReplyMode: React.FC = () => {
                   <div className="space-y-6 text-left">
                     <div>
                       <p className="text-[var(--accent-pink)] opacity-60 text-[10px] font-bebas uppercase tracking-widest mb-1">Situation</p>
-                      <p className="text-neutral-200 leading-relaxed italic text-base">&quot;{selectedCard.whatHappened}&quot;</p>
+                      <p className="text-neutral-200 leading-relaxed italic text-base break-words whitespace-pre-wrap">&quot;{selectedCard.whatHappened}&quot;</p>
                     </div>
                     <div>
                       <p className="text-[var(--accent-pink)] opacity-60 text-[10px] font-bebas uppercase tracking-widest mb-1">Her Feelings</p>
-                      <p className="text-neutral-200 leading-relaxed italic text-base">&quot;{selectedCard.howIMadeFeel}&quot;</p>
+                      <p className="text-neutral-200 leading-relaxed italic text-base break-words whitespace-pre-wrap">&quot;{selectedCard.howIMadeFeel}&quot;</p>
                     </div>
                     <div className="pt-4 border-t border-pink-500/10 flex flex-wrap gap-3">
                        {selectedCard.needs.map(n => (
