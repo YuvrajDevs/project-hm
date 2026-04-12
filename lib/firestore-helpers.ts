@@ -15,12 +15,9 @@ import {
 } from "firebase/firestore";
 import { db } from "./firebase";
 import { 
-  MailboxMessage, 
-  DailyCheckIn, 
-  QuickReact, 
-  SafeSpaceSession, 
   SafeSpaceMessage,
-  EmotionalProfile 
+  EmotionalProfile,
+  CoupleEvent
 } from "./types";
 
 /**
@@ -187,6 +184,13 @@ export const updatePartnerNickname = async (uid: string, nickname: string) => {
   });
 };
 
+export const updateCoupleAnniversary = async (coupleId: string, anniversaryDate: string) => {
+  const coupleRef = doc(db, "couples", coupleId);
+  return updateDoc(coupleRef, {
+    anniversaryDate
+  });
+};
+
 export const updateProfile = async (uid: string, profile: EmotionalProfile) => {
   const userRef = doc(db, "users", uid);
   return updateDoc(userRef, {
@@ -213,4 +217,58 @@ export const updateSafeSpaceTurn = async (coupleId: string, sessionId: string, n
     currentTurnUid: nextTurnUid,
     lastMessageAt: Timestamp.now()
   });
+};
+
+export const unpairPartner = async (uid: string, partnerUid: string) => {
+  const userRef = doc(db, "users", uid);
+  const partnerRef = doc(db, "users", partnerUid);
+  
+  // Clear initiator
+  await updateDoc(userRef, {
+    coupleId: null,
+    partnerId: null,
+    role: null
+  });
+  
+  // Clear partner and set notification flag
+  return updateDoc(partnerRef, {
+    coupleId: null,
+    partnerId: null,
+    role: null,
+    leftByPartner: true 
+  });
+};
+
+export const clearLeftStatus = async (uid: string) => {
+  const userRef = doc(db, "users", uid);
+  return updateDoc(userRef, {
+    leftByPartner: false
+  });
+};
+
+/**
+ * Event Helpers
+ */
+export const subscribeToEvents = (coupleId: string, callback: (events: CoupleEvent[]) => void) => {
+  const q = query(getCoupleCollection(coupleId, "events"), orderBy("dateId", "asc"));
+  return onSnapshot(q, (snapshot) => {
+    callback(snapshot.docs.map(doc => doc.data() as CoupleEvent));
+  });
+};
+
+export const saveCoupleEvent = async (coupleId: string, event: Omit<CoupleEvent, "id" | "createdAt">) => {
+  return addDoc(getCoupleCollection(coupleId, "events"), {
+    ...event,
+    createdAt: Timestamp.now()
+  });
+};
+
+export const deleteCoupleEvent = async (coupleId: string, eventId: string) => {
+  const eventRef = doc(db, "couples", coupleId, "events", eventId);
+  const snap = await getDoc(eventRef);
+  if (!snap.exists()) return;
+  
+  // Standard delete
+  const { deleteDoc } = await import("firebase/firestore");
+  return deleteDoc(eventRef);
 };

@@ -11,20 +11,20 @@ import { motion, AnimatePresence } from "framer-motion";
 import { Plus, Inbox, History, Heart, Sparkles } from "lucide-react";
 
 import { AmbientBackground } from "../../ui/AmbientBackground";
+import { cn } from "@/lib/utils";
 
 export const MailboxScreen = () => {
 
 
-  const { messages, loading, user } = useMailbox();
+  const { messages, loading, user, metrics } = useMailbox();
   const [isComposing, setIsComposing] = useState(false);
 
   if (loading) return null;
 
   return (
-    <div className="min-h-screen bg-[#0a0a0a] pb-32 relative overflow-hidden">
-        <AmbientBackground variant="bright" />
-        <div className="max-w-4xl mx-auto px-6 pt-24 space-y-12 relative z-10">
-            <header className="flex justify-between items-end pb-8 border-b border-white/5">
+    <div className="min-h-screen bg-transparent pb-32 relative overflow-hidden">
+        <div className="max-w-4xl mx-auto px-6 pt-12 space-y-12 relative z-10">
+            <header className="flex justify-between items-end">
                 <div className="space-y-2">
                     <h1 className="text-6xl font-bebas text-white tracking-widest uppercase leading-none">The Mailbox</h1>
                     <p className="text-neutral-500 font-outfit text-[10px] uppercase tracking-[0.4em]">Honest thoughts, safely landed.</p>
@@ -33,6 +33,50 @@ export const MailboxScreen = () => {
                     <History className="w-4 h-4" /> History
                 </div>
             </header>
+
+            {/* Streak Hero Section */}
+            {metrics && (
+                <section className="relative">
+                    <div className="absolute inset-0 bg-gradient-to-r from-orange-500/10 via-pink-500/10 to-blue-500/10 rounded-[2.5rem] blur-xl" />
+                    <motion.div 
+                        initial={{ opacity: 0, y: 20 }}
+                        animate={{ opacity: 1, y: 0 }}
+                        className="relative bg-white/5 border border-white/10 rounded-[2.5rem] p-8 overflow-hidden backdrop-blur-2xl flex items-center justify-between"
+                    >
+                        <div className="space-y-4">
+                            <div className="flex items-center gap-2">
+                                <Sparkles className="w-4 h-4 text-yellow-400" />
+                                <span className="text-[10px] font-bebas tracking-[0.4em] text-neutral-500 uppercase">Current Rhythm</span>
+                            </div>
+                            <div className="space-y-1">
+                                <h2 className="text-7xl font-bebas text-white leading-none tracking-tight">
+                                    {metrics.streak} <span className="text-2xl text-neutral-600">Days</span>
+                                </h2>
+                                <p className="text-neutral-500 font-outfit text-xs uppercase tracking-widest leading-relaxed">
+                                    {metrics.streak > 0 
+                                        ? "Your heartbeat is in perfect synchronization." 
+                                        : "Start your streak today with a sync."}
+                                </p>
+                            </div>
+                        </div>
+
+                        <div className="relative group">
+                            <div className="absolute inset-0 bg-orange-500 blur-2xl opacity-20 group-hover:opacity-40 transition-opacity" />
+                            <div className="relative w-24 h-24 rounded-full border-2 border-white/10 flex items-center justify-center bg-black/40 backdrop-blur-md">
+                                <motion.div 
+                                    animate={{ scale: [1, 1.1, 1], rotate: [0, 5, -5, 0] }}
+                                    transition={{ duration: 4, repeat: Infinity }}
+                                >
+                                    <Heart className={cn(
+                                        "w-10 h-10",
+                                        metrics.streak > 0 ? "text-orange-500 fill-orange-500/20" : "text-neutral-700"
+                                    )} />
+                                </motion.div>
+                            </div>
+                        </div>
+                    </motion.div>
+                </section>
+            )}
 
             <section className="space-y-6">
                 {/* 1. Messages section */}
@@ -56,25 +100,6 @@ export const MailboxScreen = () => {
                 <DailyCheckIn />
             </section>
         </div>
-
-        {/* Global Compose Button (Reduced Size) */}
-        <div className="fixed bottom-10 left-0 right-0 flex justify-center px-6 z-40">
-            <button
-                onClick={() => setIsComposing(true)}
-                className="w-full max-w-xs bg-white text-black font-bebas text-lg py-4 rounded-2xl shadow-[0_10px_40px_rgba(0,0,0,0.5)] hover:scale-[1.02] active:scale-95 transition-all flex items-center justify-center gap-2 group"
-            >
-                <Plus className="w-5 h-5 group-hover:rotate-90 transition-transform" />
-                <span>New Message</span>
-            </button>
-        </div>
-
-        <QuickReactBar />
-
-        <AnimatePresence>
-            {isComposing && (
-                <ComposeMessage onClose={() => setIsComposing(false)} />
-            )}
-        </AnimatePresence>
     </div>
   );
 };

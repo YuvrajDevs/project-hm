@@ -12,6 +12,7 @@ export interface User {
   role?: UserRole;
   profile?: EmotionalProfile;
   hasCompletedOnboarding?: boolean;
+  leftByPartner?: boolean; // New flag for closure flow
   createdAt: string;
 }
 
@@ -29,7 +30,8 @@ export interface Couple {
         end: string;
       }
     }
-  }
+  },
+  anniversaryDate?: string; // ISO date YYYY-MM-DD
 }
 
 export interface EmotionalProfile {
@@ -78,6 +80,8 @@ export interface DailyCheckIn {
   mood: number; // 1-10
   connection: number; // 1-10
   word: string;
+  reason?: string; // For gloomy moods
+  joyReason?: string; // For happy moods
   dateId: string; // YYYY-MM-DD
   createdAt: string;
 }
@@ -131,5 +135,17 @@ export interface AppNotification {
   title: string;
   body: string;
   read: boolean;
+  createdAt: string;
+}
+
+// 📅 Event Types
+export interface CoupleEvent {
+  id: string;
+  title: string;
+  note?: string;
+  dateId: string; // YYYY-MM-DD
+  repeat: "none" | "monthly" | "yearly";
+  isSurprise: boolean;
+  createdBy: string;
   createdAt: string;
 }

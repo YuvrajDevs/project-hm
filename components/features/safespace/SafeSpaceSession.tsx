@@ -23,6 +23,7 @@ import {
   Sparkles,
   ChevronRight
 } from "lucide-react";
+import { AmbientBackground } from "../../ui/AmbientBackground";
 
 export const SafeSpaceSession = () => {
   const { user, partner, activeSafeSpace } = useMailbox();
@@ -72,10 +73,12 @@ export const SafeSpaceSession = () => {
         initial={{ opacity: 0 }}
         animate={{ opacity: 1 }}
         exit={{ opacity: 0 }}
-        className="fixed inset-0 z-50 bg-[#050505] flex flex-col font-outfit"
+        className="fixed inset-0 z-50 bg-[#050505] flex flex-col font-outfit overflow-hidden"
     >
+        <AmbientBackground variant="bright" />
+        
         {/* Header */}
-        <header className="px-6 py-8 flex justify-between items-center bg-white/5 border-b border-white/5">
+        <header className="px-6 py-8 flex justify-between items-center bg-white/5 border-b border-white/5 relative z-10">
             <div className="flex items-center gap-3">
                 <div className="p-2 bg-indigo-500/20 rounded-lg text-indigo-400">
                     <ShieldQuestion className="w-5 h-5" />
@@ -94,7 +97,7 @@ export const SafeSpaceSession = () => {
         </header>
 
         {/* Message List */}
-        <div className="flex-1 overflow-y-auto px-6 py-12 space-y-12">
+        <div className="flex-1 overflow-y-auto px-6 py-12 space-y-12 relative z-10">
             {messages.length === 0 && (
                 <div className="h-full flex flex-col items-center justify-center text-center space-y-4 opacity-20">
                     <Clock className="w-12 h-12" />
@@ -121,7 +124,7 @@ export const SafeSpaceSession = () => {
         </div>
 
         {/* Footer UI (Turns & Mic Requests) */}
-        <div className="p-6 bg-[#0a0a0a] border-t border-white/5 space-y-4 pb-12">
+        <div className="p-6 bg-black/20 backdrop-blur-3xl border-t border-white/5 space-y-4 pb-12 relative z-10">
             <AnimatePresence>
                 {hasRequestFromPartner && isMyTurn && (
                     <motion.div 

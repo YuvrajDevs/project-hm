@@ -1,7 +1,7 @@
 "use client";
 
 import React, { createContext, useContext, useState, useEffect, useMemo } from "react";
-import { MailboxMessage, User, Couple, QuickReact, DailyCheckIn, SafeSpaceSession } from "@/lib/types";
+import { MailboxMessage, User, Couple, QuickReact, DailyCheckIn, SafeSpaceSession, CoupleEvent } from "@/lib/types";
 import { db, auth } from "@/lib/firebase";
 import { 
   onAuthStateChanged, 
@@ -18,7 +18,15 @@ import {
   limit,
   where
 } from "firebase/firestore";
-import { subscribeToMailbox, sendMailboxMessage } from "@/lib/firestore-helpers";
+import { 
+  subscribeToMailbox, 
+  sendMailboxMessage, 
+  unpairPartner, 
+  clearLeftStatus,
+  subscribeToEvents,
+  saveCoupleEvent,
+  deleteCoupleEvent
+} from "@/lib/firestore-helpers";
 
 interface MailboxContextType {
   user: User | null;
@@ -27,12 +35,27 @@ interface MailboxContextType {
   messages: MailboxMessage[];
   reactions: QuickReact[];
   checkins: DailyCheckIn[];
+  events: CoupleEvent[];
   activeSafeSpace: SafeSpaceSession | null;
+  metrics: {
+    streak: number;
+    syncScore: number;
+    unreadCount: number;
+    state: "Calm" | "Neutral" | "Tense";
+    historyCheckins: DailyCheckIn[];
+    lastActivity: { time: string; type: string; initiator: string } | null;
+    reactsCount: number;
+    trend: number;
+  } | null;
   loading: boolean;
   hasOnboarded: boolean;
   isPaired: boolean;
   logout: () => Promise<void>;
+  leavePartner: () => Promise<void>;
+  clearPartnerLeftStatus: () => Promise<void>;
   sendMessage: (msg: Omit<MailboxMessage, "id" | "senderUid" | "createdAt">) => Promise<void>;
+  addEvent: (event: Omit<CoupleEvent, "id" | "createdAt" | "createdBy">) => Promise<void>;
+  removeEvent: (eventId: string) => Promise<void>;
 }
 
 const MailboxContext = createContext<MailboxContextType | undefined>(undefined);
@@ -45,12 +68,109 @@ export const MailboxProvider: React.FC<{ children: React.ReactNode }> = ({ child
   const [messages, setMessages] = useState<MailboxMessage[]>([]);
   const [reactions, setReactions] = useState<QuickReact[]>([]);
   const [checkins, setCheckins] = useState<DailyCheckIn[]>([]);
+  const [historyCheckins, setHistoryCheckins] = useState<DailyCheckIn[]>([]);
   const [activeSafeSpace, setActiveSafeSpace] = useState<SafeSpaceSession | null>(null);
+  const [rawEvents, setRawEvents] = useState<CoupleEvent[]>([]);
   const [dataLoading, setDataLoading] = useState(false);
 
-  const loading = fbUser === "loading" || dataLoading;
+  // In mailbox context, loading is true if auth hasn't resolved OR if we have auth but haven't fetched profile
+  const loading = fbUser === "loading" || (fbUser !== null && user === null);
   const hasOnboarded = !!user?.hasCompletedOnboarding;
   const isPaired = !!user?.coupleId;
+
+  // Surprise Reveal Logic & Final Events List
+  const events = useMemo(() => {
+    if (!user) return [];
+    const todayStr = new Date().toISOString().split('T')[0];
+    
+    return rawEvents.filter(event => {
+        // If not a surprise, or if it was created by the current user, it's always visible
+        if (!event.isSurprise || event.createdBy === user.uid) return true;
+        
+        // If it IS a surprise for the current user, only show if the date has arrived
+        return event.dateId <= todayStr;
+    });
+  }, [rawEvents, user]);
+
+  // ─── Metrics Derivations ──────────────────────────────────────────────────
+  const metrics = useMemo(() => {
+    if (!user?.coupleId) return null;
+
+    const sortedCheckins = [...historyCheckins].sort((a, b) => b.dateId.localeCompare(a.dateId));
+    let currentStreak = 0;
+    const now = new Date();
+    const today = now.toISOString().split('T')[0];
+    const yesterday = new Date(now.getTime() - 86400000).toISOString().split('T')[0];
+
+    const hasCheckingPair = (dateId: string) => {
+        const dayCheckins = historyCheckins.filter(c => c.dateId === dateId);
+        return dayCheckins.length >= 2; 
+    };
+
+    let checkDate = hasCheckingPair(today) ? today : (hasCheckingPair(yesterday) ? yesterday : null);
+    
+    if (checkDate) {
+        let tempDate = new Date(checkDate);
+        while (true) {
+            const dId = tempDate.toISOString().split('T')[0];
+            if (hasCheckingPair(dId)) {
+                currentStreak++;
+                tempDate.setDate(tempDate.getDate() - 1);
+            } else {
+                break;
+            }
+        }
+    }
+
+    const todayCheckins = historyCheckins.filter(c => c.dateId === today);
+    let syncScore = 0;
+    if (todayCheckins.length === 2) {
+        const moodDiff = Math.abs(todayCheckins[0].mood - todayCheckins[1].mood);
+        const connDiff = Math.abs(todayCheckins[0].connection - todayCheckins[1].connection);
+        syncScore = Math.max(0, 100 - (moodDiff * 7) - (connDiff * 7));
+    }
+
+    const unreadCount = messages.filter(m => !m.response && m.senderUid !== user.uid).length;
+
+    let state: "Calm" | "Neutral" | "Tense" = "Neutral";
+    if (syncScore > 80) state = "Calm";
+    else if (syncScore < 40 && todayCheckins.length === 2) state = "Tense";
+
+    // 5. Recent Activity
+    const allActivities = [
+        ...messages.map(m => ({ time: m.createdAt, type: "message", initiator: m.senderUid === user.uid ? "you" : "partner" })),
+        ...reactions.map(r => ({ time: r.createdAt, type: "reaction", initiator: r.senderUid === user.uid ? "you" : "partner" })),
+    ].sort((a, b) => {
+        const timeA = a.time || "";
+        const timeB = b.time || "";
+        return timeB.localeCompare(timeA);
+    });
+    
+    const lastActivity = allActivities[0] || null;
+
+    const reactsCount = reactions.filter(r => {
+        const d = new Date(r.createdAt);
+        return d > new Date(now.getTime() - 7 * 86400000);
+    }).length;
+
+    // 7. Trend (Weekly Rhythm)
+    const last7Days = sortedCheckins.filter(c => {
+        const d = new Date(c.dateId);
+        return d > new Date(now.getTime() - 7 * 86400000);
+    });
+    const trend = last7Days.length > 5 ? 1 : 0; 
+
+    return {
+        streak: currentStreak,
+        syncScore,
+        unreadCount,
+        state,
+        historyCheckins,
+        lastActivity,
+        reactsCount,
+        trend
+    };
+  }, [user?.coupleId, user?.uid, historyCheckins, messages]);
 
   // ─── 1. Firebase Auth State ────────────────────────────────────────────────
   useEffect(() => {
@@ -73,11 +193,9 @@ export const MailboxProvider: React.FC<{ children: React.ReactNode }> = ({ child
   useEffect(() => {
     if (!fbUser || fbUser === "loading") return;
 
-    setDataLoading(true);
-
     const unsubUser = onSnapshot(doc(db, "users", fbUser.uid), async (snap) => {
       if (!snap.exists()) {
-        setDataLoading(false);
+        setUser(null);
         return;
       }
 
@@ -106,8 +224,6 @@ export const MailboxProvider: React.FC<{ children: React.ReactNode }> = ({ child
         setCouple(null);
         setPartner(null);
       }
-
-      setDataLoading(false);
     });
 
     return () => unsubUser();
@@ -122,19 +238,32 @@ export const MailboxProvider: React.FC<{ children: React.ReactNode }> = ({ child
       setMessages(msgs);
     });
 
-    // Reactions (Last 10)
-    const reactionsRef = collection(db, "couples", user.coupleId, "reactions");
-    const qReactions = query(reactionsRef, orderBy("createdAt", "desc"), limit(10));
-    const unsubReactions = onSnapshot(qReactions, (snap) => {
-      setReactions(snap.docs.map(d => ({ ...d.data(), id: d.id } as QuickReact)));
-    });
-
     // Checkins (Today's)
     const today = new Date().toISOString().split('T')[0];
     const checkinsRef = collection(db, "couples", user.coupleId, "checkins");
     const qCheckins = query(checkinsRef, where("dateId", "==", today));
     const unsubCheckins = onSnapshot(qCheckins, (snap) => {
-      setCheckins(snap.docs.map(d => ({ ...d.data(), id: d.id } as DailyCheckIn)));
+      setCheckins(snap.docs.map(d => {
+        const data = d.data();
+        return { 
+          ...data, 
+          id: d.id,
+          createdAt: data.createdAt?.toDate ? data.createdAt.toDate().toISOString() : data.createdAt
+        } as DailyCheckIn;
+      }));
+    });
+
+    // History (Last 100 docs ≈ 50 days)
+    const qHistory = query(checkinsRef, orderBy("dateId", "desc"), limit(100));
+    const unsubHistory = onSnapshot(qHistory, (snap) => {
+      setHistoryCheckins(snap.docs.map(d => {
+        const data = d.data();
+        return { 
+          ...data, 
+          id: d.id,
+          createdAt: data.createdAt?.toDate ? data.createdAt.toDate().toISOString() : data.createdAt
+        } as DailyCheckIn;
+      }));
     });
 
     // Active Safe Space Session
@@ -148,17 +277,52 @@ export const MailboxProvider: React.FC<{ children: React.ReactNode }> = ({ child
       }
     });
 
+    // Events
+    const unsubEvents = subscribeToEvents(user.coupleId, (evts) => {
+        setRawEvents(evts);
+    });
+
+    // Reactions (Increased limit for metrics)
+    const reactionsRef = collection(db, "couples", user.coupleId, "reactions");
+    const qReactions = query(reactionsRef, orderBy("createdAt", "desc"), limit(50));
+    const unsubReactions = onSnapshot(qReactions, (snap) => {
+      setReactions(snap.docs.map(d => {
+        const data = d.data();
+        return { 
+          ...data, 
+          id: d.id,
+          createdAt: data.createdAt?.toDate ? data.createdAt.toDate().toISOString() : data.createdAt
+        } as QuickReact;
+      }));
+    });
+
     return () => {
       unsubMailbox();
       unsubReactions();
       unsubCheckins();
+      unsubHistory();
       unsubSafeSpace();
+      unsubEvents();
     };
   }, [user?.coupleId]);
 
   // ─── Actions ──────────────────────────────────────────────────────────────
   const logout = async () => {
     await firebaseSignOut(auth);
+  };
+
+  const leavePartner = async () => {
+    if (!user?.uid || !user?.partnerId) return;
+    try {
+        await unpairPartner(user.uid, user.partnerId);
+    } catch (err) {
+        console.error("Failed to unpair:", err);
+    }
+  };
+
+  const clearPartnerLeftStatus = async () => {
+    if (!user?.uid) return;
+    await clearLeftStatus(user.uid);
   };
 
   const sendMessage = async (msg: Omit<MailboxMessage, "id" | "senderUid" | "createdAt">) => {
@@ -169,6 +333,19 @@ export const MailboxProvider: React.FC<{ children: React.ReactNode }> = ({ child
     });
   };
 
+  const addEvent = async (event: Omit<CoupleEvent, "id" | "createdAt" | "createdBy">) => {
+    if (!user?.coupleId || !user?.uid) return;
+    await saveCoupleEvent(user.coupleId, {
+        ...event,
+        createdBy: user.uid
+    });
+  };
+
+  const removeEvent = async (eventId: string) => {
+    if (!user?.coupleId) return;
+    await deleteCoupleEvent(user.coupleId, eventId);
+  };
+
   const value = useMemo(() => ({
     user,
     couple,
@@ -176,14 +353,20 @@ export const MailboxProvider: React.FC<{ children: React.ReactNode }> = ({ child
     messages,
     reactions,
     checkins,
+    events,
     activeSafeSpace,
+    metrics,
     loading,
     hasOnboarded,
     isPaired,
     logout,
+    leavePartner,
+    clearPartnerLeftStatus,
     sendMessage,
+    addEvent,
+    removeEvent
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }), [user, couple, partner, messages, reactions, checkins, activeSafeSpace, loading, hasOnboarded, isPaired]);
+  }), [user, couple, partner, messages, reactions, checkins, events, activeSafeSpace, metrics, loading, hasOnboarded, isPaired]);
 
   return (
     <MailboxContext.Provider value={value}>

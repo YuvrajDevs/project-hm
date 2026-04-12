@@ -2,7 +2,7 @@
 
 import React, { useState, useEffect } from "react";
 import { useMailbox } from "@/context/MailboxContext";
-import { updateProfile, updatePartnerNickname } from "@/lib/firestore-helpers";
+import { updateProfile, updatePartnerNickname, updateCoupleAnniversary } from "@/lib/firestore-helpers";
 import { motion, AnimatePresence } from "framer-motion";
 import { useRouter } from "next/navigation";
 import { 
@@ -17,8 +17,11 @@ import {
   Smile,
   Ghost,
   Cat,
-  ChevronRight
+  ChevronRight,
+  HeartOff,
+  User as UserIcon
 } from "lucide-react";
+import { LeavePartnerModal } from "@/components/features/profile/LeavePartnerModal";
 import { cn } from "@/lib/utils";
 import { doc, updateDoc } from "firebase/firestore";
 import { db } from "@/lib/firebase";
@@ -63,16 +66,18 @@ const CHARACTERS = [
 ];
 
 export default function ProfilePage() {
-  const { user, partner, logout, loading } = useMailbox();
+  const { user, partner, couple, logout, leavePartner, isPaired, loading } = useMailbox();
   const router = useRouter();
   
   const [view, setView] = useState<"me" | "partner">("me");
   const [editingSection, setEditingSection] = useState<string | null>(null);
+  const [isLeaveModalOpen, setIsLeaveModalOpen] = useState(false);
   
   const [localName, setLocalName] = useState("");
   const [localNickname, setLocalNickname] = useState("");
   const [customTagInput, setCustomTagInput] = useState("");
   const [editingGender, setEditingGender] = useState(false);
+  const [editingAnniversary, setEditingAnniversary] = useState(false);
 
   useEffect(() => {
     if (user) {
@@ -82,6 +87,11 @@ export default function ProfilePage() {
   }, [user]);
 
   if (loading || !user) return null;
+
+  const handleLeavePartner = async () => {
+    await leavePartner();
+    router.push("/pair");
+  };
 
   const handleSaveName = async () => {
     const trimmedName = localName.trim();
@@ -95,6 +105,16 @@ export default function ProfilePage() {
       setEditingSection(null);
     } catch (err) {
       console.error(err);
+    }
+  };
+
+  const handleAnniversaryUpdate = async (date: string) => {
+    if (!user?.coupleId) return;
+    try {
+        await updateCoupleAnniversary(user.coupleId, date);
+        setEditingAnniversary(false);
+    } catch (err) {
+        console.error("Failed to update anniversary:", err);
     }
   };
 
@@ -196,7 +216,9 @@ export default function ProfilePage() {
             </button>
             <div className="flex bg-white/5 p-1 rounded-full border border-white/5">
                 <button onClick={() => setView("me")} className={cn("px-6 py-2 rounded-full font-bebas text-xs tracking-widest uppercase transition-all", isMe ? "bg-white text-black" : "text-neutral-500 hover:text-white")}>You</button>
-                <button onClick={() => setView("partner")} className={cn("px-6 py-2 rounded-full font-bebas text-xs tracking-widest uppercase transition-all", !isMe ? "bg-white text-black" : "text-neutral-500 hover:text-white")}>Partner</button>
+                {isPaired && (
+                    <button onClick={() => setView("partner")} className={cn("px-6 py-2 rounded-full font-bebas text-xs tracking-widest uppercase transition-all", !isMe ? "bg-white text-black" : "text-neutral-500 hover:text-white")}>Partner</button>
+                )}
             </div>
             <div className="w-11" />
         </header>
@@ -260,6 +282,26 @@ export default function ProfilePage() {
                         )}
                     </div>
                 )}
+
+                {/* Anniversary Section */}
+                <div className="flex flex-col items-center gap-2 pt-2">
+                    <div className="px-4 py-1.5 rounded-full bg-white/5 border border-white/5 text-[10px] uppercase tracking-widest text-neutral-500 flex items-center gap-2">
+                        Meeting Date: <span className="text-white">{couple?.anniversaryDate || "Not set"}</span>
+                        <button onClick={() => setEditingAnniversary(!editingAnniversary)} className="hover:text-white">
+                            <Pencil className="w-3 h-3" />
+                        </button>
+                    </div>
+                    {editingAnniversary && (
+                        <div className="flex items-center gap-2">
+                            <input 
+                                type="date" 
+                                className="bg-white/5 border border-white/20 rounded-lg px-3 py-1 text-xs text-white focus:outline-none focus:border-white font-bebas"
+                                defaultValue={couple?.anniversaryDate}
+                                onChange={(e) => handleAnniversaryUpdate(e.target.value)}
+                            />
+                        </div>
+                    )}
+                </div>
             </section>
 
             <div className="grid gap-6">
@@ -354,20 +396,64 @@ export default function ProfilePage() {
             </section>
 
             {isMe && (
-                <button 
-                    onClick={() => {
-                        logout();
-                        router.push("/login");
-                    }}
-                    className="w-full flex items-center justify-between p-6 bg-red-500/5 hover:bg-red-500/10 border border-red-500/10 rounded-[2rem] transition-all group mt-12"
-                >
-                    <div className="flex items-center gap-4">
-                        <div className="p-2 bg-red-500/20 rounded-xl text-red-500"><LogOut className="w-5 h-5" /></div>
-                        <div className="text-left font-bebas tracking-widest uppercase text-white py-1">Logout</div>
-                    </div>
-                    <X className="w-5 h-5 text-red-900 group-hover:text-red-500 transition-colors" />
-                </button>
+                <div className="space-y-4 mt-12">
+                    {isPaired ? (
+                        <button 
+                            onClick={() => setIsLeaveModalOpen(true)}
+                            className="w-full flex items-center justify-between p-6 bg-red-500/5 hover:bg-red-500/10 border border-red-500/10 rounded-[2rem] transition-all group"
+                        >
+                            <div className="flex items-center gap-4">
+                                <div className="p-2 bg-red-500/20 rounded-xl text-red-500"><HeartOff className="w-5 h-5" /></div>
+                                <div className="text-left py-1">
+                                    <div className="font-bebas tracking-widest uppercase text-white leading-none">Leave Partner</div>
+                                    <div className="text-[10px] text-neutral-600 uppercase tracking-widest mt-1">End shared safe space</div>
+                                </div>
+                            </div>
+                            <ChevronRight className="w-5 h-5 text-red-900 group-hover:text-red-500 transition-colors" />
+                        </button>
+                    ) : (
+                        <button 
+                            onClick={async () => {
+                                if (user.leftByPartner) {
+                                    await useMailbox().clearPartnerLeftStatus();
+                                }
+                                router.push("/pair");
+                            }}
+                            className="w-full flex items-center justify-between p-6 bg-white text-black border border-white rounded-[2rem] transition-all group shadow-xl"
+                        >
+                            <div className="flex items-center gap-4">
+                                <div className="p-2 bg-black/5 rounded-xl text-black"><Plus className="w-5 h-5" /></div>
+                                <div className="text-left py-1">
+                                    <div className="font-bebas tracking-widest uppercase text-black leading-none">Connect with Partner</div>
+                                    <div className="text-[10px] text-neutral-500 uppercase tracking-widest mt-1">Start a new safe space</div>
+                                </div>
+                            </div>
+                            <ChevronRight className="w-5 h-5 text-black/50 group-hover:text-black transition-colors" />
+                        </button>
+                    )}
+
+                    <button 
+                        onClick={() => {
+                            logout();
+                            router.push("/login");
+                        }}
+                        className="w-full flex items-center justify-between p-6 bg-white/5 hover:bg-white/10 border border-white/5 rounded-[2rem] transition-all group"
+                    >
+                        <div className="flex items-center gap-4">
+                            <div className="p-2 bg-white/10 rounded-xl text-neutral-400 group-hover:text-white transition-colors"><LogOut className="w-5 h-5" /></div>
+                            <div className="text-left font-bebas tracking-widest uppercase text-white py-1">Logout</div>
+                        </div>
+                        <X className="w-5 h-5 text-neutral-800 group-hover:text-white transition-colors" />
+                    </button>
+                </div>
             )}
+
+            <LeavePartnerModal 
+                isOpen={isLeaveModalOpen}
+                onClose={() => setIsLeaveModalOpen(false)}
+                onConfirm={handleLeavePartner}
+                partnerName={partner?.displayName || "your partner"}
+            />
         </div>
     </div>
   );

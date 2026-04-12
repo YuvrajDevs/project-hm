@@ -1,5 +1,5 @@
 import { initializeApp, getApps, getApp } from "firebase/app";
-import { getFirestore } from "firebase/firestore";
+import { initializeFirestore, getFirestore } from "firebase/firestore";
 import { 
   getAuth, 
   setPersistence, 
@@ -19,7 +19,9 @@ const firebaseConfig = {
 
 // Initialize Firebase for Client-side
 const app = getApps().length > 0 ? getApp() : initializeApp(firebaseConfig);
-const db = getFirestore(app);
+const db = initializeFirestore(app, {
+  experimentalForceLongPolling: true,
+});
 const auth = getAuth(app);
 const googleProvider = new GoogleAuthProvider();
 

@@ -40,8 +40,6 @@ export default function Login() {
         const data = snap.data();
         if (!data.hasCompletedOnboarding) {
           router.push("/onboarding");
-        } else if (!data.coupleId) {
-          router.push("/pair");
         } else {
           router.push("/");
         }

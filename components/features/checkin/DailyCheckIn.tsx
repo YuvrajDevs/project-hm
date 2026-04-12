@@ -8,8 +8,10 @@ import { Sparkles, Heart, Activity, ArrowRight, CheckCircle2, UserCheck } from "
 
 export const DailyCheckIn = () => {
   const { user, partner, checkins } = useMailbox();
-  const [step, setStep] = useState<"mood" | "connection" | "word" | "summary">("mood");
+  const [step, setStep] = useState<"mood" | "reason" | "connection" | "word" | "summary">("mood");
   const [mood, setMood] = useState(5);
+  const [reason, setReason] = useState("");
+  const [joyReason, setJoyReason] = useState("");
   const [connection, setConnection] = useState(5);
   const [word, setWord] = useState("");
   const [saving, setSaving] = useState(false);
@@ -27,6 +29,8 @@ export const DailyCheckIn = () => {
         mood,
         connection,
         word,
+        reason: mood <= 4 ? reason : undefined,
+        joyReason: mood >= 8 ? joyReason : undefined,
         dateId: today,
       });
       setStep("summary");
@@ -80,6 +84,40 @@ export const DailyCheckIn = () => {
                     </div>
                 </div>
                 <div className="text-8xl font-bebas text-center text-white/20 select-none">{mood}</div>
+                <button 
+                  onClick={() => {
+                    if (mood <= 4 || mood >= 8) {
+                        setStep("reason");
+                    } else {
+                        setStep("connection");
+                    }
+                  }}
+                  className="w-full bg-white text-black font-bebas text-xl py-4 rounded-2xl flex items-center justify-center gap-2"
+                >
+                    Next <ArrowRight className="w-5 h-5" />
+                </button>
+            </div>
+          </motion.div>
+        )}
+
+        {step === "reason" && (
+          <motion.div key="reason" initial={{ opacity: 0, x: 20 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: -20 }} className="space-y-8">
+            <div className="space-y-2">
+                <h3 className="text-3xl font-bebas text-white tracking-widest uppercase mb-1">
+                    {mood <= 4 ? "What's weighing you down?" : "What's your reason for joy?"}
+                </h3>
+                <p className="text-neutral-500 font-outfit text-xs uppercase tracking-widest">
+                    {mood <= 4 ? "It's okay to not be okay." : "Share the sweetness."}
+                </p>
+            </div>
+            <div className="space-y-12">
+                <textarea 
+                    value={mood <= 4 ? reason : joyReason} 
+                    onChange={(e) => mood <= 4 ? setReason(e.target.value) : setJoyReason(e.target.value)}
+                    placeholder={mood <= 4 ? "Write it out..." : "My reason for joy is..."}
+                    className="w-full bg-transparent border-b-2 border-white/10 focus:border-white py-4 text-xl font-outfit text-white focus:outline-none placeholder:opacity-20 transition-colors resize-none h-32"
+                    autoFocus
+                />
                 <button 
                   onClick={() => setStep("connection")}
                   className="w-full bg-white text-black font-bebas text-xl py-4 rounded-2xl flex items-center justify-center gap-2"

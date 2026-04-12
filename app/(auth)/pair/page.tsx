@@ -15,12 +15,14 @@ import { useRouter } from "next/navigation";
 import { Share2, Link as LinkIcon, Check, Copy, ArrowRight, Loader2, Heart } from "lucide-react";
 
 export default function Pair() {
-  const [mode, setMode] = useState<"choice" | "create" | "join">("choice");
+  const [mode, setMode] = useState<"choice" | "create" | "join" | "success">("choice");
+  const [coupleId, setCoupleId] = useState("");
   const [inviteCode, setInviteCode] = useState("");
   const [inputCode, setInputCode] = useState("");
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
   const [copied, setCopied] = useState(false);
+  const [anniversaryDate, setAnniversaryDate] = useState("");
   const router = useRouter();
 
   const generateCode = () => {
@@ -49,7 +51,8 @@ export default function Pair() {
       const unsub = onSnapshot(doc(db, "users", user.uid), (snap) => {
         if (snap.exists() && snap.data().coupleId) {
           unsub();
-          router.push("/");
+          setCoupleId(snap.data().coupleId);
+          setMode("success");
         }
       });
     } catch {
@@ -107,9 +110,26 @@ export default function Pair() {
         used: true, usedBy: user.uid
       });
 
-      router.push("/");
+      setCoupleId(coupleId);
+      setMode("success");
     } catch {
       setError("Something went wrong. Try again.");
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleAnniversarySubmit = async () => {
+    if (!anniversaryDate || !coupleId) return;
+    setLoading(true);
+    try {
+      await updateDoc(doc(db, "couples", coupleId), {
+        anniversaryDate
+      });
+      router.push("/");
+    } catch {
+      setError("Failed to save anniversary. You can do this later in settings.");
+      setTimeout(() => router.push("/"), 2000);
     } finally {
       setLoading(false);
     }
@@ -132,12 +152,19 @@ export default function Pair() {
           <Heart className="w-4 h-4 text-pink-500 fill-pink-500/30" />
           <span className="font-bebas text-sm tracking-[0.4em] text-neutral-500 uppercase">Honest Mailbox</span>
         </div>
-        {mode !== "choice" && (
+        {mode !== "choice" ? (
           <button
             onClick={() => { setMode("choice"); setError(""); setInputCode(""); setInviteCode(""); }}
             className="font-bebas text-xs tracking-widest text-neutral-600 uppercase hover:text-white transition-colors"
           >
             ← Back
+          </button>
+        ) : (
+          <button
+            onClick={() => router.push("/")}
+            className="font-bebas text-xs tracking-widest text-neutral-600 uppercase hover:text-white transition-colors"
+          >
+            ← Home
           </button>
         )}
       </div>
@@ -269,6 +296,57 @@ export default function Pair() {
                     ? <><Loader2 className="w-5 h-5 animate-spin" /> Connecting...</>
                     : <>Connect Hearts <ArrowRight className="w-5 h-5" /></>}
                 </button>
+              </motion.div>
+            )}
+
+            {/* Success / Anniversary */}
+            {mode === "success" && (
+              <motion.div
+                key="success"
+                initial={{ opacity: 0, scale: 0.9 }}
+                animate={{ opacity: 1, scale: 1 }}
+                className="flex flex-col gap-8 text-center"
+              >
+                <div className="flex flex-col items-center gap-4">
+                  <div className="w-20 h-20 rounded-full bg-pink-500/20 flex items-center justify-center text-pink-500">
+                    <Heart className="w-10 h-10 fill-current" />
+                  </div>
+                  <div>
+                    <h1 className="text-4xl font-bebas text-white tracking-widest uppercase mb-2">Connected!</h1>
+                    <p className="text-neutral-500 font-outfit text-sm">You are now paired. One more thing...</p>
+                  </div>
+                </div>
+
+                <div className="space-y-6">
+                    <div>
+                        <p className="text-white font-bebas text-lg tracking-widest uppercase mb-4">When did you guys meet?</p>
+                        <p className="text-neutral-600 font-outfit text-xs mb-6 uppercase tracking-widest leading-relaxed">
+                            We use this to track special days<br />and help you celebrate your journey.
+                        </p>
+                        <input 
+                            type="date"
+                            value={anniversaryDate}
+                            onChange={(e) => setAnniversaryDate(e.target.value)}
+                            className="w-full bg-white/5 border border-white/10 rounded-2xl py-4 px-6 text-center text-white font-outfit focus:outline-none focus:border-pink-500/40 transition-all [color-scheme:dark]"
+                        />
+                    </div>
+
+                    <div className="flex flex-col gap-3">
+                        <button
+                          onClick={handleAnniversarySubmit}
+                          disabled={loading || !anniversaryDate}
+                          className="w-full bg-white text-black font-bebas text-xl py-5 rounded-2xl flex items-center justify-center gap-2 hover:bg-neutral-200 active:scale-95 transition-all disabled:opacity-30"
+                        >
+                          {loading ? <Loader2 className="w-5 h-5 animate-spin" /> : <>Start Our Journey <ArrowRight className="w-5 h-5" /></>}
+                        </button>
+                        <button 
+                            onClick={() => router.push("/")}
+                            className="text-neutral-600 font-bebas text-xs tracking-widest uppercase hover:text-neutral-400 py-2"
+                        >
+                            Skip for now
+                        </button>
+                    </div>
+                </div>
               </motion.div>
             )}
 

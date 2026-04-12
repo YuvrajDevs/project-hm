@@ -53,15 +53,15 @@ export const SafeSpaceEntry = () => {
         <Coffee className="w-32 h-32" />
       </div>
 
-      <div className="flex flex-col gap-2 relative z-10">
-        <h3 className="text-4xl font-bebas text-white tracking-wider uppercase leading-none">The Safe Space</h3>
-        <p className="text-neutral-500 font-outfit text-[10px] uppercase tracking-[0.3em]">No interruptions. Just understanding.</p>
+      <div className="flex flex-col gap-1 relative z-10 flex-1">
+        <h3 className="text-3xl font-bebas text-white tracking-wider uppercase leading-none">The Safe Space</h3>
+        <p className="text-neutral-500 font-outfit text-[8px] uppercase tracking-[0.3em]">No interruptions. Just understanding.</p>
       </div>
 
       <button 
         disabled={starting}
         onClick={handleStart}
-        className="bg-white text-black font-bebas text-xl px-10 py-5 rounded-2xl shadow-xl hover:scale-105 active:scale-95 transition-all flex items-center gap-3 relative z-10 disabled:opacity-50"
+        className="bg-white text-black font-bebas text-lg px-8 py-3 rounded-2xl shadow-xl hover:scale-105 active:scale-95 transition-all flex items-center gap-2 relative z-10 disabled:opacity-50"
       >
         <MessageCircle className="w-5 h-5 fill-current" />
         {starting ? "Opening..." : "Ask to Talk"}
