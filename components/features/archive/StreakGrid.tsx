@@ -11,6 +11,7 @@ import {
     Plus, Trash2, Gift, Sparkles 
 } from "lucide-react";
 import { formatDateId } from "@/lib/utils";
+import { useMailbox } from "@/context/MailboxContext";
 
 interface StreakGridProps {
   history: DailyCheckIn[];
