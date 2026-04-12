@@ -3,8 +3,6 @@
 import React, { useState } from "react";
 import { useMailbox } from "@/context/MailboxContext";
 import { MessageCard } from "./MessageCard";
-import { ComposeMessage } from "./ComposeMessage";
-import { QuickReactBar } from "../reactions/QuickReact";
 import { DailyCheckIn } from "../checkin/DailyCheckIn";
 import { SafeSpaceEntry } from "../safespace/SafeSpaceEntry";
 import { motion, AnimatePresence } from "framer-motion";
@@ -17,7 +15,6 @@ export const MailboxScreen = () => {
 
 
   const { messages, loading, user, metrics } = useMailbox();
-  const [isComposing, setIsComposing] = useState(false);
 
   if (loading) return null;
 
