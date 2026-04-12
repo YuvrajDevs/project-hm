@@ -137,7 +137,6 @@ export default function Home() {
             <ComposeMessage 
                 key="compose-modal"
                 onClose={() => setShowCompose(false)} 
-                onSend={sendMessage}
             />
         )}
         {showReactions && (

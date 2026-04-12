@@ -27,6 +27,7 @@ import {
   saveCoupleEvent,
   deleteCoupleEvent
 } from "@/lib/firestore-helpers";
+import { formatDateId } from "@/lib/utils";
 
 interface MailboxContextType {
   user: User | null;
@@ -81,7 +82,7 @@ export const MailboxProvider: React.FC<{ children: React.ReactNode }> = ({ child
   // Surprise Reveal Logic & Final Events List
   const events = useMemo(() => {
     if (!user) return [];
-    const todayStr = new Date().toISOString().split('T')[0];
+    const todayStr = formatDateId(new Date());
     
     return rawEvents.filter(event => {
         // If not a surprise, or if it was created by the current user, it's always visible
@@ -99,8 +100,10 @@ export const MailboxProvider: React.FC<{ children: React.ReactNode }> = ({ child
     const sortedCheckins = [...historyCheckins].sort((a, b) => b.dateId.localeCompare(a.dateId));
     let currentStreak = 0;
     const now = new Date();
-    const today = now.toISOString().split('T')[0];
-    const yesterday = new Date(now.getTime() - 86400000).toISOString().split('T')[0];
+    const today = formatDateId(now);
+    const yesterdayDate = new Date(now);
+    yesterdayDate.setDate(now.getDate() - 1);
+    const yesterday = formatDateId(yesterdayDate);
 
     const hasCheckingPair = (dateId: string) => {
         const dayCheckins = historyCheckins.filter(c => c.dateId === dateId);

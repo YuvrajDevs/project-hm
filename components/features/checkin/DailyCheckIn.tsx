@@ -5,6 +5,7 @@ import { motion, AnimatePresence } from "framer-motion";
 import { useMailbox } from "@/context/MailboxContext";
 import { saveCheckIn } from "@/lib/firestore-helpers";
 import { Sparkles, Heart, Activity, ArrowRight, CheckCircle2, UserCheck } from "lucide-react";
+import { formatDateId } from "@/lib/utils";
 
 export const DailyCheckIn = () => {
   const { user, partner, checkins } = useMailbox();
@@ -16,7 +17,7 @@ export const DailyCheckIn = () => {
   const [word, setWord] = useState("");
   const [saving, setSaving] = useState(false);
 
-  const today = new Date().toISOString().split('T')[0];
+  const today = formatDateId(new Date());
   const userCheckIn = checkins.find(c => c.userUid === user?.uid);
   const partnerCheckIn = checkins.find(c => c.userUid === partner?.uid);
 

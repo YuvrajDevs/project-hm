@@ -10,7 +10,7 @@ import {
     Calendar as CalendarIcon, 
     Plus, Trash2, Gift, Sparkles 
 } from "lucide-react";
-import { useMailbox } from "@/context/MailboxContext";
+import { formatDateId } from "@/lib/utils";
 
 interface StreakGridProps {
   history: DailyCheckIn[];
@@ -30,7 +30,7 @@ export const StreakGrid: React.FC<StreakGridProps> = ({ history }) => {
   const [eventRepeat, setEventRepeat] = useState<"none" | "monthly" | "yearly">("none");
   const [isSurprise, setIsSurprise] = useState(false);
 
-  const todayStr = new Date().toISOString().split('T')[0];
+  const todayStr = formatDateId(new Date());
 
   // Navigation handlers
   const handlePrevMonth = () => {
@@ -50,7 +50,7 @@ export const StreakGrid: React.FC<StreakGridProps> = ({ history }) => {
   const days = Array.from({ length: 42 }, (_, i) => {
     const d = new Date(startDate);
     d.setDate(startDate.getDate() + i);
-    return d.toISOString().split('T')[0];
+    return formatDateId(d);
   });
 
   const getDaySyncInfo = (dateId: string) => {
