@@ -12,6 +12,15 @@ interface PartnerLeftOverlayProps {
 export const PartnerLeftOverlay: React.FC<PartnerLeftOverlayProps> = ({ onClearData, onClose }) => {
   const [loading, setLoading] = useState(false);
 
+  React.useEffect(() => {
+    document.body.style.overflow = 'hidden';
+    window.dispatchEvent(new CustomEvent('popupStateChange', { detail: { isOpen: true }}));
+    return () => {
+      document.body.style.overflow = '';
+      window.dispatchEvent(new CustomEvent('popupStateChange', { detail: { isOpen: false }}));
+    };
+  }, []);
+
   const handleClear = async () => {
     setLoading(true);
     await onClearData();
@@ -19,7 +28,7 @@ export const PartnerLeftOverlay: React.FC<PartnerLeftOverlayProps> = ({ onClearD
   };
 
   return (
-    <div className="fixed inset-0 z-[200] flex items-center justify-center p-6 bg-[#050505]">
+    <div className="fixed inset-0 z-[200] flex items-center justify-center p-6 bg-black/80 backdrop-blur-md">
       {/* Background Ambiance */}
       <div className="absolute inset-0 overflow-hidden pointer-events-none">
         <div className="absolute top-[-10%] left-[-10%] w-[40%] h-[40%] bg-pink-500/10 rounded-full blur-[120px]" />

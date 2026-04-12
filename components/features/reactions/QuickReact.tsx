@@ -17,6 +17,15 @@ const REACTIONS: { type: ReactionType; emoji: string; label: string }[] = [
 export const QuickReact = ({ onClose }: { onClose: () => void }) => {
   const { user } = useMailbox();
 
+  React.useEffect(() => {
+    document.body.style.overflow = 'hidden';
+    window.dispatchEvent(new CustomEvent('popupStateChange', { detail: { isOpen: true }}));
+    return () => {
+      document.body.style.overflow = '';
+      window.dispatchEvent(new CustomEvent('popupStateChange', { detail: { isOpen: false }}));
+    };
+  }, []);
+
   const handleReact = async (type: ReactionType) => {
     if (!user?.coupleId) return;
     try {

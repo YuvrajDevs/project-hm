@@ -1,7 +1,7 @@
 "use client";
 
 import React from "react";
-import { motion } from "framer-motion";
+import { motion, AnimatePresence } from "framer-motion";
 import { Plus, Smile, BarChart3, MessageSquareHeart } from "lucide-react";
 import { cn } from "@/lib/utils";
 
@@ -20,14 +20,25 @@ export const BottomDock: React.FC<BottomDockProps> = ({
   onEmojiClick,
   showEmojiDot = false
 }) => {
+  const [internalHidden, setInternalHidden] = React.useState(false);
+
+  React.useEffect(() => {
+    const handlePopup = (e: any) => setInternalHidden(e.detail.isOpen);
+    window.addEventListener('popupStateChange', handlePopup);
+    return () => window.removeEventListener('popupStateChange', handlePopup);
+  }, []);
+
   return (
-    <div className="fixed bottom-8 left-0 right-0 z-[100] flex justify-center px-6 pointer-events-none">
-      <motion.nav
-        initial={{ y: 100, opacity: 0 }}
-        animate={{ y: 0, opacity: 1 }}
-        transition={{ type: "spring", damping: 20, stiffness: 100 }}
-        className="pointer-events-auto relative flex items-center gap-1 p-2 bg-black/40 backdrop-blur-3xl border border-white/10 rounded-[2.5rem] shadow-[0_20px_50px_rgba(0,0,0,0.5)]"
-      >
+    <div className="fixed bottom-8 left-0 right-0 z-[100] flex justify-center px-6 pointer-events-none transform-gpu">
+      <AnimatePresence>
+        {!internalHidden && (
+          <motion.nav
+            initial={{ y: 100, opacity: 0 }}
+            animate={{ y: 0, opacity: 1 }}
+            exit={{ y: 100, opacity: 0 }}
+            transition={{ type: "spring", damping: 20, stiffness: 100 }}
+            className="pointer-events-auto relative flex items-center gap-1 p-2 bg-black/40 backdrop-blur-3xl border border-white/10 rounded-[2.5rem] shadow-[0_20px_50px_rgba(0,0,0,0.5)]"
+          >
         {/* Left: Emoji Button */}
         <button
           onClick={onEmojiClick}
@@ -69,6 +80,8 @@ export const BottomDock: React.FC<BottomDockProps> = ({
           </span>
         </button>
       </motion.nav>
+        )}
+      </AnimatePresence>
     </div>
   );
 };

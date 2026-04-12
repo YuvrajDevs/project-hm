@@ -24,6 +24,20 @@ export const StreakGrid: React.FC<StreakGridProps> = ({ history }) => {
   const [selectedDate, setSelectedDate] = useState<string | null>(null);
   const [viewDate, setViewDate] = useState(new Date());
   const [isAddingEvent, setIsAddingEvent] = useState(false);
+
+  React.useEffect(() => {
+    if (selectedDate) {
+        document.body.style.overflow = 'hidden';
+        window.dispatchEvent(new CustomEvent('popupStateChange', { detail: { isOpen: true }}));
+    } else {
+        document.body.style.overflow = '';
+        window.dispatchEvent(new CustomEvent('popupStateChange', { detail: { isOpen: false }}));
+    }
+    return () => {
+        document.body.style.overflow = '';
+        window.dispatchEvent(new CustomEvent('popupStateChange', { detail: { isOpen: false }}));
+    };
+  }, [selectedDate]);
   
   // Event Form State (Renamed to Special Day internally)
   const [eventTitle, setEventTitle] = useState("");
@@ -188,13 +202,12 @@ export const StreakGrid: React.FC<StreakGridProps> = ({ history }) => {
                             className={cn(
                                 "w-10 h-10 rounded-full transition-all duration-500 flex items-center justify-center relative overflow-hidden",
                                 getStatusColor(info?.status, info?.count || 0, isCurrentMonth),
-                                info?.count || dayEvents.length ? "hover:scale-110 active:scale-95 shadow-lg border-2 border-white/10" : "border border-white/5"
+                                isToday ? "border-2 border-white shadow-sm" : (info?.count || dayEvents.length ? "hover:scale-110 active:scale-95 shadow-lg border-2 border-white/10" : "border border-white/5")
                             )} 
                         >
                             <span className={cn(
                                 "text-[11px] font-bebas tracking-tighter transition-colors relative z-10",
-                                (info?.count ?? 0) >= 2 ? "text-black/80" : (isCurrentMonth ? "text-neutral-400" : "text-neutral-600"),
-                                isToday && !info?.count ? "text-pink-500 font-bold" : ""
+                                (info?.count ?? 0) >= 2 ? "text-black/80" : (isCurrentMonth ? "text-neutral-400" : "text-neutral-600")
                             )}>
                                 {d.getDate()}
                             </span>
@@ -203,9 +216,6 @@ export const StreakGrid: React.FC<StreakGridProps> = ({ history }) => {
                                 <div className="absolute top-1 right-1.5 w-1 h-1 rounded-full bg-cyan-400 shadow-[0_0_5px_rgba(34,211,238,0.5)]" />
                             )}
                         </div>
-                        {isToday && (
-                            <div className="absolute -bottom-1 w-1 h-1 rounded-full bg-pink-500" />
-                        )}
                     </motion.div>
                 );
             })}

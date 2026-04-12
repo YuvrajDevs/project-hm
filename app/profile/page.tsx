@@ -22,6 +22,7 @@ import {
   User as UserIcon
 } from "lucide-react";
 import { LeavePartnerModal } from "@/components/features/profile/LeavePartnerModal";
+import { AmbientBackground } from "@/components/ui/AmbientBackground";
 import { cn } from "@/lib/utils";
 import { doc, updateDoc } from "firebase/firestore";
 import { db } from "@/lib/firebase";
@@ -78,6 +79,8 @@ export default function ProfilePage() {
   const [customTagInput, setCustomTagInput] = useState("");
   const [editingGender, setEditingGender] = useState(false);
   const [editingAnniversary, setEditingAnniversary] = useState(false);
+  
+  const carouselRef = React.useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     if (user) {
@@ -85,6 +88,31 @@ export default function ProfilePage() {
       setLocalNickname(user.partnerNickname || "");
     }
   }, [user]);
+
+  useEffect(() => {
+    if (editingSection === "meme" || isLeaveModalOpen) {
+      document.body.style.overflow = "hidden";
+    } else {
+      document.body.style.overflow = "";
+    }
+    return () => { document.body.style.overflow = ""; }
+  }, [editingSection, isLeaveModalOpen]);
+
+  // Auto-scroll the meme carousel every 5 seconds
+  useEffect(() => {
+    const interval = setInterval(() => {
+      if (carouselRef.current) {
+        const { scrollLeft, scrollWidth, clientWidth } = carouselRef.current;
+        let nextScroll = scrollLeft + clientWidth;
+        // If we reached the end, loop back to the first slide
+        if (Math.ceil(nextScroll) >= scrollWidth) {
+          nextScroll = 0;
+        }
+        carouselRef.current.scrollTo({ left: nextScroll, behavior: 'smooth' });
+      }
+    }, 5000);
+    return () => clearInterval(interval);
+  }, []);
 
   if (loading || !user) return null;
 
@@ -209,21 +237,42 @@ export default function ProfilePage() {
   };
 
   return (
-    <div className="min-h-screen bg-[#050505] text-white font-outfit pb-32">
-        <header className="fixed top-0 left-0 right-0 p-6 flex justify-between items-center bg-[#050505]/80 backdrop-blur-xl z-50 border-b border-white/5">
-            <button onClick={() => router.push("/")} className="p-3 rounded-full hover:bg-white/5 transition-colors">
+    <div className="min-h-screen bg-[#050505] text-white font-outfit pb-32 relative">
+        <AmbientBackground variant="standard" gender={displayedUser?.gender} />
+        
+        <header className="flex justify-between items-center w-full fixed top-0 left-0 p-8 z-50 bg-gradient-to-b from-[#050505]/80 to-transparent backdrop-blur-sm pointer-events-none">
+            <button onClick={() => router.push("/")} className="w-10 h-10 flex items-center justify-center rounded-full bg-white/5 border border-white/5 hover:bg-white/10 transition-all text-white pointer-events-auto backdrop-blur-md">
                 <ArrowLeft className="w-5 h-5" />
             </button>
-            <div className="flex bg-white/5 p-1 rounded-full border border-white/5">
-                <button onClick={() => setView("me")} className={cn("px-6 py-2 rounded-full font-bebas text-xs tracking-widest uppercase transition-all", isMe ? "bg-white text-black" : "text-neutral-500 hover:text-white")}>You</button>
-                {isPaired && (
-                    <button onClick={() => setView("partner")} className={cn("px-6 py-2 rounded-full font-bebas text-xs tracking-widest uppercase transition-all", !isMe ? "bg-white text-black" : "text-neutral-500 hover:text-white")}>Partner</button>
-                )}
+            <div className="relative flex bg-black/40 p-1.5 rounded-full border border-white/10 pointer-events-auto backdrop-blur-xl">
+                {(["me", "partner"] as const).map((v) => {
+                    if (!isPaired && v === "partner") return null;
+                    const isActive = view === v;
+                    return (
+                        <button
+                            key={v}
+                            onClick={() => setView(v)}
+                            className={cn(
+                                "px-6 py-2 rounded-full font-bebas text-[11px] tracking-widest uppercase relative z-10 transition-colors duration-300", 
+                                isActive ? "text-black" : "text-neutral-500 hover:text-white"
+                            )}
+                        >
+                            {isActive && (
+                                <motion.div
+                                    layoutId="profileTabActive"
+                                    className="absolute inset-0 bg-white rounded-full z-[-1]"
+                                    transition={{ type: "spring", stiffness: 400, damping: 30 }}
+                                />
+                            )}
+                            {v === "me" ? "You" : "Partner"}
+                        </button>
+                    );
+                })}
             </div>
-            <div className="w-11" />
+            <div className="w-10 h-10" />
         </header>
 
-        <div className="max-w-xl mx-auto px-6 pt-32 space-y-12">
+        <div className="max-w-4xl mx-auto px-6 pt-32 space-y-12 relative z-10">
             <section className="flex flex-col items-center text-center space-y-4">
                 <div className="w-32 h-32 rounded-[3.5rem] bg-white/5 border border-white/5 flex items-center justify-center shadow-2xl">
                     {getAvatar(displayedUser)}
@@ -304,8 +353,8 @@ export default function ProfilePage() {
                 </div>
             </section>
 
-            <div className="grid gap-6">
-                {CATEGORIES.map((cat) => {
+            <div className="grid gap-6 md:grid-cols-2">
+                {CATEGORIES.map((cat, index) => {
                     const profileData = isMe ? user.profile : partner?.profile;
                     const activeTags = (profileData as any)?.[cat.id] || [];
                     const customOptions = (profileData as any)?.customTags?.[cat.id] || [];
@@ -313,7 +362,13 @@ export default function ProfilePage() {
                     const isEditing = editingSection === cat.id;
 
                     return (
-                        <motion.div key={cat.id} className="bg-white/5 border border-white/5 rounded-[2.5rem] p-8 space-y-6 relative group">
+                        <motion.div 
+                            key={cat.id} 
+                            initial={{ opacity: 0, y: 20 }}
+                            animate={{ opacity: 1, y: 0 }}
+                            transition={{ delay: index * 0.1 }}
+                            className="bg-white/5 border border-white/5 rounded-[2.5rem] p-8 space-y-6 relative group"
+                        >
                             <div className="flex justify-between items-center">
                                 <div className="flex items-center gap-3">
                                     <span className="text-2xl">{cat.icon}</span>
@@ -384,32 +439,65 @@ export default function ProfilePage() {
                         <span className="text-2xl">😂</span>
                         <h3 className="font-bebas text-xl tracking-widest text-white uppercase">Me as a Meme</h3>
                     </div>
+                    {isMe && (
+                        <button onClick={() => setEditingSection("meme")} className="p-2 rounded-full text-neutral-700 hover:text-white transition-all">
+                            <Pencil className="w-4 h-4" />
+                        </button>
+                    )}
                 </div>
-                <div className="flex gap-4 overflow-x-auto pb-4 no-scrollbar">
-                    {[1, 2, 3].map(i => (
-                        <div key={i} className="flex-none w-40 h-40 bg-white/5 rounded-2xl border border-white/10 flex items-center justify-center text-neutral-800">
-                             <Smile className="w-8 h-8 opacity-20" />
-                        </div>
-                    ))}
+                <div className="relative w-full max-w-sm mx-auto overflow-hidden rounded-[2.5rem] border border-white/10 group">
+                    <div 
+                        ref={carouselRef}
+                        className="flex w-full overflow-x-auto snap-x snap-mandatory no-scrollbar"
+                    >
+                        {[1, 2, 3].map(i => (
+                            <div key={i} className="snap-center shrink-0 w-full aspect-square bg-white/5 flex flex-col items-center justify-center text-neutral-700 space-y-4">
+                                <span className="text-6xl opacity-30 drop-shadow-2xl">🖼️</span>
+                                <span className="text-xs font-bebas tracking-widest uppercase opacity-50">Image {i} of 3</span>
+                            </div>
+                        ))}
+                    </div>
                 </div>
-                <p className="text-center text-[10px] text-neutral-600 font-bebas uppercase tracking-widest">Meme uploads coming soon...</p>
             </section>
 
+            <AnimatePresence>
+                {editingSection === "meme" && (
+                    <div className="fixed inset-0 z-[100] flex items-center justify-center p-6 bg-black/80 backdrop-blur-sm" onClick={() => setEditingSection(null)}>
+                        <motion.div 
+                            initial={{ scale: 0.9, y: 20, opacity: 0 }}
+                            animate={{ scale: 1, y: 0, opacity: 1 }}
+                            exit={{ scale: 0.9, y: 20, opacity: 0 }}
+                            className="w-full max-w-sm bg-neutral-900 border border-white/10 rounded-[2.5rem] p-8 text-center space-y-6 shadow-2xl relative"
+                            onClick={e => e.stopPropagation()}
+                        >
+                            <div className="w-16 h-16 bg-white/5 border border-white/10 rounded-2xl flex items-center justify-center mx-auto text-3xl">
+                                🚧
+                            </div>
+                            <div className="space-y-2">
+                                <h3 className="text-2xl font-bebas tracking-widest uppercase text-white">Under Construction</h3>
+                                <p className="text-xs font-outfit text-neutral-400 leading-relaxed">The meme upload service is currently being provisioned. Soon you&apos;ll be able to upload up to 3 hilarious images here!</p>
+                            </div>
+                            <button 
+                                onClick={() => setEditingSection(null)}
+                                className="w-full bg-white text-black py-4 rounded-2xl font-bebas tracking-widest uppercase mt-4 active:scale-95 transition-all"
+                            >
+                                I&apos;ll Wait
+                            </button>
+                        </motion.div>
+                    </div>
+                )}
+            </AnimatePresence>
+
             {isMe && (
-                <div className="space-y-4 mt-12">
+                <div className="grid grid-cols-2 gap-4 mt-12 pb-12">
                     {isPaired ? (
                         <button 
                             onClick={() => setIsLeaveModalOpen(true)}
-                            className="w-full flex items-center justify-between p-6 bg-red-500/5 hover:bg-red-500/10 border border-red-500/10 rounded-[2rem] transition-all group"
+                            className="w-full flex flex-col items-center justify-center p-6 bg-red-500/5 hover:bg-red-500/10 border border-red-500/10 rounded-[2rem] transition-all group"
                         >
-                            <div className="flex items-center gap-4">
-                                <div className="p-2 bg-red-500/20 rounded-xl text-red-500"><HeartOff className="w-5 h-5" /></div>
-                                <div className="text-left py-1">
-                                    <div className="font-bebas tracking-widest uppercase text-white leading-none">Leave Partner</div>
-                                    <div className="text-[10px] text-neutral-600 uppercase tracking-widest mt-1">End shared safe space</div>
-                                </div>
-                            </div>
-                            <ChevronRight className="w-5 h-5 text-red-900 group-hover:text-red-500 transition-colors" />
+                            <div className="p-4 bg-red-500/10 rounded-2xl text-red-500 mb-4 group-hover:scale-110 transition-transform"><HeartOff className="w-6 h-6" /></div>
+                            <div className="font-bebas tracking-widest uppercase text-white leading-none text-center">Leave Partner</div>
+                            <div className="text-[9px] text-neutral-600 uppercase tracking-widest mt-2 px-2 text-center">End shared safe space</div>
                         </button>
                     ) : (
                         <button 
@@ -419,16 +507,11 @@ export default function ProfilePage() {
                                 }
                                 router.push("/pair");
                             }}
-                            className="w-full flex items-center justify-between p-6 bg-white text-black border border-white rounded-[2rem] transition-all group shadow-xl"
+                            className="w-full flex flex-col items-center justify-center p-6 bg-white text-black border border-white rounded-[2rem] transition-all group shadow-xl"
                         >
-                            <div className="flex items-center gap-4">
-                                <div className="p-2 bg-black/5 rounded-xl text-black"><Plus className="w-5 h-5" /></div>
-                                <div className="text-left py-1">
-                                    <div className="font-bebas tracking-widest uppercase text-black leading-none">Connect with Partner</div>
-                                    <div className="text-[10px] text-neutral-500 uppercase tracking-widest mt-1">Start a new safe space</div>
-                                </div>
-                            </div>
-                            <ChevronRight className="w-5 h-5 text-black/50 group-hover:text-black transition-colors" />
+                            <div className="p-4 bg-black/5 rounded-2xl text-black mb-4 group-hover:scale-110 transition-transform"><Plus className="w-6 h-6" /></div>
+                            <div className="font-bebas tracking-widest uppercase text-black leading-none text-center">Connect Partner</div>
+                            <div className="text-[9px] text-neutral-500 uppercase tracking-widest mt-2 px-2 text-center">Start a new safe space</div>
                         </button>
                     )}
 
@@ -437,13 +520,11 @@ export default function ProfilePage() {
                             logout();
                             router.push("/login");
                         }}
-                        className="w-full flex items-center justify-between p-6 bg-white/5 hover:bg-white/10 border border-white/5 rounded-[2rem] transition-all group"
+                        className="w-full flex flex-col items-center justify-center p-6 bg-white/5 hover:bg-white/10 border border-white/5 rounded-[2rem] transition-all group"
                     >
-                        <div className="flex items-center gap-4">
-                            <div className="p-2 bg-white/10 rounded-xl text-neutral-400 group-hover:text-white transition-colors"><LogOut className="w-5 h-5" /></div>
-                            <div className="text-left font-bebas tracking-widest uppercase text-white py-1">Logout</div>
-                        </div>
-                        <X className="w-5 h-5 text-neutral-800 group-hover:text-white transition-colors" />
+                        <div className="p-4 bg-white/5 rounded-2xl text-neutral-400 group-hover:text-white mb-4 group-hover:scale-110 transition-all"><LogOut className="w-6 h-6" /></div>
+                        <div className="font-bebas tracking-widest uppercase text-white leading-none text-center">Logout</div>
+                        <div className="text-[9px] text-neutral-600 uppercase tracking-widest mt-2 px-2 text-center">Sign out of device</div>
                     </button>
                 </div>
             )}

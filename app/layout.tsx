@@ -28,9 +28,9 @@ export default function RootLayout({
   return (
     <html
       lang="en"
-      className={`${bebasNeue.variable} ${outfit.variable} h-full antialiased dark`}
+      className={`${bebasNeue.variable} ${outfit.variable} antialiased dark scroll-smooth`}
     >
-      <body className={`${outfit.className} min-h-full flex flex-col bg-neutral-950 text-neutral-50`}>
+      <body className={`${outfit.className} min-h-screen bg-[#070707] text-neutral-50 overflow-x-hidden flex flex-col`}>
         <MailboxProvider>
           {children}
         </MailboxProvider>

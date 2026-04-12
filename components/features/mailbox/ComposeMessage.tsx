@@ -32,6 +32,15 @@ export const ComposeMessage = ({ onClose }: { onClose: () => void }) => {
   const [note, setNote] = useState("");
   const [sending, setSending] = useState(false);
 
+  React.useEffect(() => {
+    document.body.style.overflow = 'hidden';
+    window.dispatchEvent(new CustomEvent('popupStateChange', { detail: { isOpen: true }}));
+    return () => {
+      document.body.style.overflow = '';
+      window.dispatchEvent(new CustomEvent('popupStateChange', { detail: { isOpen: false }}));
+    };
+  }, []);
+
   const handleSend = async () => {
     if (!status || !intent) return;
     setSending(true);
@@ -50,7 +59,7 @@ export const ComposeMessage = ({ onClose }: { onClose: () => void }) => {
       initial={{ opacity: 0 }} 
       animate={{ opacity: 1 }} 
       exit={{ opacity: 0 }}
-      className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/90 backdrop-blur-sm"
+      className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-sm"
     >
       <div className="w-full max-w-2xl bg-[#0f0f0f] border border-white/10 rounded-[2.5rem] overflow-hidden flex flex-col max-h-[90vh]">
         <header className="p-6 border-b border-white/5 flex justify-between items-center">

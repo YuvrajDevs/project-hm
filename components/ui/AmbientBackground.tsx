@@ -4,12 +4,24 @@ import React from "react";
 import { motion } from "framer-motion";
 import { cn } from "@/lib/utils";
 
-export const AmbientBackground = ({ variant = "standard" }: { variant?: "standard" | "bright" }) => {
+export const AmbientBackground = ({ variant = "standard", gender }: { variant?: "standard" | "bright", gender?: string }) => {
     const isBright = variant === "bright";
+
+    // Dynamic colors based on gender
+    let color1 = "#ff69b4"; // default pink
+    let color2 = "#87ceeb"; // default sky blue
+    
+    if (gender === "Male") {
+        color1 = "#4f46e5"; // deep indigo
+        color2 = "#3b82f6"; // bright blue
+    } else if (gender === "Female") {
+        color1 = "#ff69b4"; // soft pink
+        color2 = "#ec4899"; // rose
+    }
 
     return (
         <div className="fixed inset-0 pointer-events-none overflow-hidden z-0 bg-[#070707]">
-            {/* Bright Soft Pink Wash (Pinned Top Left) */}
+            {/* Top Left Wash */}
             <motion.div
                 animate={{
                     scale: [1, 1.1, 1],
@@ -22,12 +34,13 @@ export const AmbientBackground = ({ variant = "standard" }: { variant?: "standar
                     ease: "easeInOut",
                 }}
                 className={cn(
-                    "absolute -top-1/4 -left-1/4 w-[110%] h-[110%] bg-[radial-gradient(circle_at_center,_#ff69b4_0%,_transparent_55%)] blur-[160px] transition-opacity duration-1000",
+                    "absolute -top-1/4 -left-1/4 w-[110%] h-[110%] blur-[160px] transition-all duration-1000",
                     isBright ? "opacity-[0.4]" : "opacity-[0.2]"
                 )}
+                style={{ backgroundImage: `radial-gradient(circle at center, ${color1} 0%, transparent 55%)` }}
             />
             
-            {/* Bright Soft Sky Blue Wash (Pinned Bottom Right) */}
+            {/* Bottom Right Wash */}
             <motion.div
                 animate={{
                     scale: [1.2, 1, 1.2],
@@ -40,9 +53,10 @@ export const AmbientBackground = ({ variant = "standard" }: { variant?: "standar
                     ease: "easeInOut",
                 }}
                 className={cn(
-                    "absolute -bottom-1/4 -right-1/4 w-[110%] h-[110%] bg-[radial-gradient(circle_at_center,_#87ceeb_0%,_transparent_55%)] blur-[160px] transition-opacity duration-1000",
+                    "absolute -bottom-1/4 -right-1/4 w-[110%] h-[110%] blur-[160px] transition-all duration-1000",
                     isBright ? "opacity-[0.35]" : "opacity-[0.18]"
                 )}
+                style={{ backgroundImage: `radial-gradient(circle at center, ${color2} 0%, transparent 55%)` }}
             />
 
             {/* Static Subtle Noise for texture without flickering */}

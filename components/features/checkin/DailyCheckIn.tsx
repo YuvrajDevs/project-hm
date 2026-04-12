@@ -61,30 +61,30 @@ export const DailyCheckIn = () => {
   }
 
   return (
-    <div className="w-full bg-white/5 border border-white/10 rounded-[2rem] overflow-hidden p-8 shadow-2xl relative">
-      <div className="absolute top-0 right-0 p-8 opacity-5 pointer-events-none">
-        <Sparkles className="w-32 h-32" />
+    <div className="w-full bg-white/5 border border-white/5 rounded-3xl overflow-hidden p-6 shadow-xl backdrop-blur-md relative">
+      <div className="absolute top-0 right-0 p-6 opacity-5 pointer-events-none">
+        <Sparkles className="w-24 h-24" />
       </div>
 
       <AnimatePresence mode="wait">
         {step === "mood" && (
-          <motion.div key="mood" initial={{ opacity: 0, x: 20 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: -20 }} className="space-y-8">
-            <div className="space-y-2">
-                <h3 className="text-3xl font-bebas text-white tracking-widest uppercase mb-1">How's your mood?</h3>
-                <p className="text-neutral-500 font-outfit text-xs uppercase tracking-widest">General feeling right now</p>
+          <motion.div key="mood" initial={{ opacity: 0, x: 20 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: -20 }} className="space-y-6">
+            <div className="space-y-1">
+                <h3 className="text-xl font-bebas text-white tracking-widest uppercase">How's your mood?</h3>
+                <p className="text-neutral-500 font-outfit text-[10px] uppercase tracking-widest">General feeling right now</p>
             </div>
-            <div className="space-y-12 py-4">
-                <div className="relative">
+            <div className="space-y-6">
+                <div className="relative pt-2">
                     <input 
                         type="range" min="1" max="10" value={mood} onChange={(e) => setMood(parseInt(e.target.value))}
-                        className="w-full h-1.5 bg-white/10 rounded-full appearance-none cursor-pointer accent-white"
+                        className="w-full h-1 bg-white/10 rounded-full appearance-none cursor-pointer accent-white"
                     />
-                    <div className="flex justify-between mt-2 text-[10px] font-bebas text-neutral-600 tracking-widest uppercase">
+                    <div className="flex justify-between mt-2 text-[10px] font-bebas text-neutral-500 tracking-widest uppercase">
                         <span>Low</span>
                         <span>Radiant</span>
                     </div>
                 </div>
-                <div className="text-8xl font-bebas text-center text-white/20 select-none">{mood}</div>
+                <div className="text-6xl font-bebas text-center text-white/30 select-none pb-2">{mood}</div>
                 <button 
                   onClick={() => {
                     if (mood <= 4 || mood >= 8) {
@@ -93,88 +93,88 @@ export const DailyCheckIn = () => {
                         setStep("connection");
                     }
                   }}
-                  className="w-full bg-white text-black font-bebas text-xl py-4 rounded-2xl flex items-center justify-center gap-2"
+                  className="w-full bg-white text-black font-bebas text-lg py-3 rounded-xl flex items-center justify-center gap-2 hover:bg-neutral-200 transition-colors"
                 >
-                    Next <ArrowRight className="w-5 h-5" />
+                    Next <ArrowRight className="w-4 h-4" />
                 </button>
             </div>
           </motion.div>
         )}
 
         {step === "reason" && (
-          <motion.div key="reason" initial={{ opacity: 0, x: 20 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: -20 }} className="space-y-8">
-            <div className="space-y-2">
-                <h3 className="text-3xl font-bebas text-white tracking-widest uppercase mb-1">
+          <motion.div key="reason" initial={{ opacity: 0, x: 20 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: -20 }} className="space-y-6">
+            <div className="space-y-1">
+                <h3 className="text-xl font-bebas text-white tracking-widest uppercase">
                     {mood <= 4 ? "What's weighing you down?" : "What's your reason for joy?"}
                 </h3>
-                <p className="text-neutral-500 font-outfit text-xs uppercase tracking-widest">
+                <p className="text-neutral-500 font-outfit text-[10px] uppercase tracking-widest">
                     {mood <= 4 ? "It's okay to not be okay." : "Share the sweetness."}
                 </p>
             </div>
-            <div className="space-y-12">
+            <div className="space-y-6">
                 <textarea 
                     value={mood <= 4 ? reason : joyReason} 
                     onChange={(e) => mood <= 4 ? setReason(e.target.value) : setJoyReason(e.target.value)}
                     placeholder={mood <= 4 ? "Write it out..." : "My reason for joy is..."}
-                    className="w-full bg-transparent border-b-2 border-white/10 focus:border-white py-4 text-xl font-outfit text-white focus:outline-none placeholder:opacity-20 transition-colors resize-none h-32"
+                    className="w-full bg-transparent border-b border-white/10 focus:border-white py-2 text-sm font-outfit text-white focus:outline-none placeholder:opacity-30 transition-colors resize-none h-20"
                     autoFocus
                 />
                 <button 
                   onClick={() => setStep("connection")}
-                  className="w-full bg-white text-black font-bebas text-xl py-4 rounded-2xl flex items-center justify-center gap-2"
+                  className="w-full bg-white text-black font-bebas text-lg py-3 rounded-xl flex items-center justify-center gap-2 hover:bg-neutral-200 transition-colors"
                 >
-                    Next <ArrowRight className="w-5 h-5" />
+                    Next <ArrowRight className="w-4 h-4" />
                 </button>
             </div>
           </motion.div>
         )}
 
         {step === "connection" && (
-          <motion.div key="connection" initial={{ opacity: 0, x: 20 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: -20 }} className="space-y-8">
-            <div className="space-y-2">
-                <h3 className="text-3xl font-bebas text-white tracking-widest uppercase mb-1">How connected do you feel?</h3>
-                <p className="text-neutral-500 font-outfit text-xs uppercase tracking-widest">Us, right in this moment</p>
+          <motion.div key="connection" initial={{ opacity: 0, x: 20 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: -20 }} className="space-y-6">
+            <div className="space-y-1">
+                <h3 className="text-xl font-bebas text-white tracking-widest uppercase">How connected do you feel?</h3>
+                <p className="text-neutral-500 font-outfit text-[10px] uppercase tracking-widest">Us, right in this moment</p>
             </div>
-            <div className="space-y-12 py-4">
-                <div className="relative">
+            <div className="space-y-6">
+                <div className="relative pt-2">
                     <input 
                         type="range" min="1" max="10" value={connection} onChange={(e) => setConnection(parseInt(e.target.value))}
-                        className="w-full h-1.5 bg-white/10 rounded-full appearance-none cursor-pointer accent-white"
+                        className="w-full h-1 bg-white/10 rounded-full appearance-none cursor-pointer accent-white"
                     />
-                    <div className="flex justify-between mt-2 text-[10px] font-bebas text-neutral-600 tracking-widest uppercase">
+                    <div className="flex justify-between mt-2 text-[10px] font-bebas text-neutral-500 tracking-widest uppercase">
                         <span>Distant</span>
                         <span>Deeply In-Sync</span>
                     </div>
                 </div>
-                <div className="text-8xl font-bebas text-center text-white/20 select-none">{connection}</div>
+                <div className="text-6xl font-bebas text-center text-white/30 select-none pb-2">{connection}</div>
                 <button 
                   onClick={() => setStep("word")}
-                  className="w-full bg-white text-black font-bebas text-xl py-4 rounded-2xl flex items-center justify-center gap-2"
+                  className="w-full bg-white text-black font-bebas text-lg py-3 rounded-xl flex items-center justify-center gap-2 hover:bg-neutral-200 transition-colors"
                 >
-                    Next <ArrowRight className="w-5 h-5" />
+                    Next <ArrowRight className="w-4 h-4" />
                 </button>
             </div>
           </motion.div>
         )}
 
         {step === "word" && (
-          <motion.div key="word" initial={{ opacity: 0, x: 20 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: -20 }} className="space-y-8">
-            <div className="space-y-2">
-                <h3 className="text-3xl font-bebas text-white tracking-widest uppercase mb-1">One word for today?</h3>
-                <p className="text-neutral-500 font-outfit text-xs uppercase tracking-widest">No essays. Just the essence.</p>
+          <motion.div key="word" initial={{ opacity: 0, x: 20 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: -20 }} className="space-y-6">
+            <div className="space-y-1">
+                <h3 className="text-xl font-bebas text-white tracking-widest uppercase">One word for today?</h3>
+                <p className="text-neutral-500 font-outfit text-[10px] uppercase tracking-widest">No essays. Just the essence.</p>
             </div>
-            <div className="space-y-12">
+            <div className="space-y-6">
                 <input 
                     type="text" value={word} onChange={(e) => setWord(e.target.value)}
                     placeholder="Focus..."
                     maxLength={20}
                     autoFocus
-                    className="w-full bg-transparent border-b-2 border-white/10 focus:border-white py-4 text-4xl font-outfit text-center text-white focus:outline-none placeholder:opacity-10 transition-colors"
+                    className="w-full bg-transparent border-b border-white/10 focus:border-white py-3 text-2xl font-outfit text-center text-white focus:outline-none placeholder:opacity-20 transition-colors"
                 />
                 <button 
                   disabled={!word.trim() || saving}
                   onClick={handleSubmit}
-                  className="w-full bg-white text-black font-bebas text-xl py-4 rounded-2xl flex items-center justify-center gap-2 disabled:opacity-30 transition-all"
+                  className="w-full bg-white text-black font-bebas text-lg py-3 rounded-xl flex items-center justify-center gap-2 disabled:opacity-30 transition-all"
                 >
                     {saving ? "Saving..." : "Finish Sync"}
                 </button>
@@ -183,54 +183,61 @@ export const DailyCheckIn = () => {
         )}
 
         {step === "summary" && (
-          <motion.div key="summary" initial={{ opacity: 0, scale: 0.95 }} animate={{ opacity: 1, scale: 1 }} className="space-y-8 py-4">
+          <motion.div key="summary" initial={{ opacity: 0, scale: 0.95 }} animate={{ opacity: 1, scale: 1 }} className="py-2">
             {!partnerCheckIn ? (
-              <div className="flex flex-col items-center py-6 text-center space-y-6">
+              <div className="flex flex-col items-center py-4 text-center space-y-4">
                  <motion.div animate={{ rotate: 360 }} transition={{ duration: 10, repeat: Infinity, ease: "linear" }}>
-                    <Activity className="w-16 h-16 text-neutral-800" />
+                    <Activity className="w-10 h-10 text-neutral-800" />
                  </motion.div>
-                 <div className="space-y-2">
-                    <h3 className="text-2xl font-bebas text-white tracking-widest uppercase">Sync in progress</h3>
-                    <p className="text-neutral-500 font-outfit text-sm">Once {partner?.displayName} completes their check-in, we'll show your daily compatibility.</p>
+                 <div className="space-y-1">
+                    <h3 className="text-lg font-bebas text-neutral-300 tracking-widest uppercase">Sync in progress</h3>
+                    <p className="text-neutral-600 font-outfit text-xs max-w-[200px] mx-auto">Waiting for {partner?.displayName} to complete their daily check-in.</p>
                  </div>
               </div>
             ) : (
-              <div className="space-y-10">
-                 <div className="flex justify-between items-center bg-white/5 border border-white/5 p-6 rounded-3xl">
-                    <div className="space-y-1">
-                        <span className="font-bebas text-[10px] tracking-widest text-neutral-500 uppercase">Synchronicity Score</span>
-                        <div className="text-5xl font-bebas text-white">{calculateSyncScore()}%</div>
-                    </div>
-                    <div className="w-1/2 h-1.5 bg-white/10 rounded-full overflow-hidden">
-                        <motion.div 
-                            initial={{ width: 0 }} 
-                            animate={{ width: `${calculateSyncScore()}%` }} 
-                            transition={{ duration: 1, delay: 0.5 }}
-                            className="h-full bg-gradient-to-r from-pink-500 to-blue-500" 
-                        />
-                    </div>
+              <div className="space-y-4">
+                 
+                 <div className="flex flex-col gap-4">
+                     {/* Score Banner */}
+                     <div className="flex items-center justify-between bg-white/5 border border-white/5 px-5 py-4 rounded-2xl backdrop-blur-md">
+                        <div className="flex items-center gap-3">
+                            <motion.div 
+                                animate={{ scale: [1, 1.1, 1] }} 
+                                transition={{ repeat: Infinity, duration: 2 }}
+                            >
+                                <Heart className="w-5 h-5 text-pink-500 fill-pink-500/20" />
+                            </motion.div>
+                            <div>
+                                <h4 className="font-bebas text-sm tracking-widest uppercase text-white m-0">Synchronicity Score</h4>
+                                <div className="text-[10px] font-outfit text-neutral-500 uppercase tracking-widest mt-0.5">Today's Alignment</div>
+                            </div>
+                        </div>
+                        <div className="text-3xl font-bebas text-white">
+                            {calculateSyncScore()}%
+                        </div>
+                     </div>
+    
+                     {/* Words Comparison */}
+                     <div className="grid grid-cols-2 gap-3">
+                        <div className="p-3 bg-gradient-to-br from-white/5 to-transparent border border-white/5 rounded-2xl flex flex-col items-center justify-center gap-1">
+                            <span className="font-bebas text-[9px] tracking-widest text-neutral-500 uppercase">You</span>
+                            <span className="font-outfit text-sm text-white font-medium">{userCheckIn?.word}</span>
+                        </div>
+                        <div className="p-3 bg-gradient-to-br from-white/5 to-transparent border border-white/5 rounded-2xl flex flex-col items-center justify-center gap-1">
+                            <span className="font-bebas text-[9px] tracking-widest text-neutral-500 uppercase">Them</span>
+                            <span className="font-outfit text-sm text-white font-medium">{partnerCheckIn?.word}</span>
+                        </div>
+                     </div>
+    
+                     {/* Advice */}
+                     <div className="px-4 py-3 bg-blue-500/5 border border-blue-500/10 rounded-2xl flex items-start gap-3">
+                        <Activity className="w-4 h-4 text-blue-400 shrink-0 mt-0.5" />
+                        <p className="text-neutral-400 font-outfit text-xs italic leading-relaxed">
+                            {getSuggestion(calculateSyncScore())}
+                        </p>
+                     </div>
                  </div>
 
-                 <div className="grid grid-cols-2 gap-4">
-                    <div className="p-4 rounded-2xl bg-white/5 border border-white/5 flex flex-col items-center gap-2">
-                        <span className="font-bebas text-[10px] tracking-widest text-neutral-600 uppercase">Your Word</span>
-                        <span className="font-outfit text-white font-medium">{userCheckIn?.word}</span>
-                    </div>
-                    <div className="p-4 rounded-2xl bg-white/5 border border-white/5 flex flex-col items-center gap-2">
-                        <span className="font-bebas text-[10px] tracking-widest text-neutral-600 uppercase">Their Word</span>
-                        <span className="font-outfit text-white font-medium">{partnerCheckIn?.word}</span>
-                    </div>
-                 </div>
-
-                 <div className="p-6 bg-blue-500/10 border border-blue-500/20 rounded-3xl space-y-3">
-                    <div className="flex items-center gap-2 text-blue-400">
-                        <Heart className="w-4 h-4 fill-current" />
-                        <span className="font-bebas text-xs tracking-widest uppercase">The Honest Advice</span>
-                    </div>
-                    <p className="text-neutral-300 font-outfit text-sm italic leading-relaxed">
-                        &quot;{getSuggestion(calculateSyncScore())}&quot;
-                    </p>
-                 </div>
               </div>
             )}
           </motion.div>
