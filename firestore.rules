@@ -1,0 +1,44 @@
+rules_version = '2';
+
+service cloud.firestore {
+  match /databases/{database}/documents {
+    
+    // Helper: Is the user authenticated?
+    function isAuthenticated() {
+      return request.auth != null;
+    }
+
+    // Helper: Is the user part of this couple?
+    function isPartOfCouple(coupleId) {
+      let couple = get(/databases/$(database)/documents/couples/$(coupleId)).data;
+      return request.auth.uid == couple.partnerA_uid || request.auth.uid == couple.partnerB_uid;
+    }
+
+    // User profiles: Users can read their own or their partner's profile
+    match /users/{userId} {
+      allow write: if isAuthenticated() && request.auth.uid == userId;
+      allow read: if isAuthenticated() && (
+        request.auth.uid == userId || 
+        get(/databases/$(database)/documents/users/$(request.auth.uid)).data.coupleId == resource.data.coupleId
+      );
+    }
+
+    // Invites: Authenticated users can create/read invites
+    // (Validation of 'used' status should happen in a cloud function or careful client logic)
+    match /invites/{inviteId} {
+      allow read, create: if isAuthenticated();
+      allow update: if isAuthenticated(); // For marking as used
+    }
+
+    // Couples: Only partners can read their couple doc
+    match /couples/{coupleId} {
+      allow read: if isAuthenticated() && isPartOfCouple(coupleId);
+      allow create: if isAuthenticated(); // During pairing
+      
+      // Sub-collections: Locked to partners only
+      match /{allSubcollections=**} {
+        allow read, write: if isAuthenticated() && isPartOfCouple(coupleId);
+      }
+    }
+  }
+}

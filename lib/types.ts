@@ -1,58 +1,135 @@
-export type Role = "HER" | "YOU" | null;
+export type UserRole = "PARTNER_A" | "PARTNER_B";
 
-export type Mood = "Minor" | "Hurt" | "Very Hurt" | "Serious";
-
-export type Need = "Hug" | "Space" | "Talk" | "Reassurance";
-
-export type CardStatus = "Open" | "In Progress" | "Resolved";
-
-export interface DisplayNames {
-  HER: string;
-  YOU: string;
-}
-
-export interface MailboxResponse {
-  cardId: string;
-  iUnderstand: string;
-  iMessedUp: string;
-  iWillDoBetterBy: string;
-  sticker?: string;
+export interface User {
+  uid: string;
+  email: string;
+  displayName: string;
+  gender?: string;
+  partnerNickname?: string;
+  photoURL?: string;
+  partnerId?: string;
+  coupleId?: string;
+  role?: UserRole;
+  profile?: EmotionalProfile;
+  hasCompletedOnboarding?: boolean;
   createdAt: string;
 }
 
-export interface MailboxCard {
+export interface Couple {
   id: string;
+  partnerA_uid: string;
+  partnerB_uid: string;
   createdAt: string;
-  status: CardStatus;
-  mood: Mood;
-  needs: Need[];
-  whatHappened: string;
-  howIMadeFeel: string;
-  whatINeeded: string;
-  whatIWantToUnderstand: string;
-  response?: MailboxResponse;
+  settings: {
+    notifications: {
+      checkInReminderTime: string; // e.g. "20:00"
+      doNotDisturb: {
+        enabled: boolean;
+        start: string;
+        end: string;
+      }
+    }
+  }
 }
 
-export interface PositiveNote {
-  id: string;
-  createdAt: string;
-  oneThingRight: string;
-  whatIAppreciated: string;
-  senderRole?: Role; // Added for bidirectional support
+export interface EmotionalProfile {
+  howToShowUp?: string[];    // 🧠
+  loveLanguages?: string[]; // ❤️
+  offSignals?: string[];    // ⚡
+  personality?: string[];   // 🎯
+  interests?: string[];     // 🎮
+  memes?: string[];         // 😂
+  customTags?: {
+    [key: string]: string[];
+  };
+  avatarId?: string;        // 3 characters for now
+  updatedAt?: string;
 }
 
-export interface MemoryNote {
+// 📬 Mailbox Feature Types
+export type MailboxStatus = 
+  | "IGNORING" | "OVERWHELMED" | "NEED_ATTENTION" | "DISTANT" 
+  | "ANXIOUS" | "LOVE_NOTE" | "SPACE_NEEDED" | "HARD_DAY";
+
+export type MailboxIntent = 
+  | "LISTEN" | "REASSURE" | "ADVICE" | "TALK" | "SAY_IT";
+
+export type ResponseMode = "LISTEN" | "HERE" | "MINUTE";
+
+export interface MailboxMessage {
   id: string;
+  senderUid: string;
+  status: MailboxStatus;
+  intent: MailboxIntent;
+  note: string; // 140 chars max
   createdAt: string;
-  content: string;
-  senderRole: Role;
+  response?: {
+    mode: ResponseMode;
+    respondedAt: string;
+    text?: string;
+    timerExpiresAt?: string; // for "Give me a minute"
+  };
 }
 
-export interface WeeklyCheckIn {
+// 🌡️ Daily Check-In Types
+export interface DailyCheckIn {
   id: string;
+  userUid: string;
+  mood: number; // 1-10
+  connection: number; // 1-10
+  word: string;
+  dateId: string; // YYYY-MM-DD
   createdAt: string;
-  annoyed: string;
-  loved: string;
-  doMore: string;
-  doLess: string;
+}
+
+// 📊 Archive / Compatibility
+export interface CompatibilityReport {
+  date: string;
+  alignmentScore: number;
+  starter: string;
+}
+
+// ⚡ Quick React Types
+export type ReactionType = "HUG" | "LOVE" | "THINKING" | "PROUD" | "SUPPORT";
+
+export interface QuickReact {
+  id: string;
+  senderUid: string;
+  type: ReactionType;
+  createdAt: string;
+}
+
+// 🔒 Safe Space Mode Types
+export interface SafeSpaceMessage {
+  id: string;
+  senderUid: string;
+  text: string;
+  createdAt: string;
+}
+export interface SafeSpaceSession {
+  id: string;
+  active: boolean;
+  participants: string[];
+  currentTurnUid: string;
+  micRequest?: {
+    uid: string;
+    requestedAt: string;
+    status: "pending" | "approved" | "denied";
+  };
+  lastMicRequestAt?: string; // For 5min cooldown
+  lastMessageAt: string;
+  startedAt: string;
+  endedAt?: string;
+  closureMood?: 1 | 2 | 3; // 🟢/🟡/🔴
+}
+
+// 🔔 Notification Types (In-App)
+export interface AppNotification {
+  id: string;
+  uid: string; // recipient
+  type: "MAILBOX" | "CHECK_IN" | "REACTION" | "SAFE_SPACE";
+  title: string;
+  body: string;
+  read: boolean;
+  createdAt: string;
 }

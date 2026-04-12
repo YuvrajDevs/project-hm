@@ -18,6 +18,15 @@
   --accent-blue: #7aa2f7;
   --accent-yellow: #e0af68;
   
+  --status-ignored: #9d8df1;
+  --status-overwhelmed: #ff6b35;
+  --status-attention: #ff85a1;
+  --status-distant: #6a0572;
+  --status-anxious: #00b4d8;
+  --status-love: #ef476f;
+  --status-space: #06d6a0;
+  --status-hardday: #ffd166;
+
   --card-yellow: #facc15;
   --card-yellow-text: #121212;
   --card-blue: #3b82f6;
@@ -25,6 +34,7 @@
   --card-dark: #1e1e1e;
   --card-dark-border: rgba(255, 255, 255, 0.08);
 }
+
 
 body {
   background-color: var(--background);

@@ -1,236 +1,189 @@
 "use client";
 
 import React, { createContext, useContext, useState, useEffect, useMemo } from "react";
-import { MailboxCard, MailboxResponse, PositiveNote, MemoryNote, WeeklyCheckIn, Role, CardStatus, DisplayNames } from "@/lib/types";
+import { MailboxMessage, User, Couple, QuickReact, DailyCheckIn, SafeSpaceSession } from "@/lib/types";
 import { db, auth } from "@/lib/firebase";
-import { signInAnonymously, signOut } from "firebase/auth";
 import { 
-  collection, 
-  addDoc, 
-  updateDoc, 
+  onAuthStateChanged, 
+  signOut as firebaseSignOut,
+  User as FirebaseUser 
+} from "firebase/auth";
+import { 
   doc, 
-  onSnapshot, 
-  query, 
-  orderBy, 
-  Timestamp 
+  getDoc, 
+  onSnapshot,
+  collection,
+  query,
+  orderBy,
+  limit,
+  where
 } from "firebase/firestore";
+import { subscribeToMailbox, sendMailboxMessage } from "@/lib/firestore-helpers";
 
 interface MailboxContextType {
-  role: Role;
-  displayNames: DisplayNames;
-  cards: MailboxCard[];
-  positiveNotes: PositiveNote[];
-  memoryNotes: MemoryNote[];
-  weeklyCheckIns: WeeklyCheckIn[]; 
+  user: User | null;
+  couple: Couple | null;
+  partner: User | null;
+  messages: MailboxMessage[];
+  reactions: QuickReact[];
+  checkins: DailyCheckIn[];
+  activeSafeSpace: SafeSpaceSession | null;
   loading: boolean;
-  login: (key: string) => Promise<boolean>;
+  hasOnboarded: boolean;
+  isPaired: boolean;
   logout: () => Promise<void>;
-  addCard: (card: Omit<MailboxCard, "id" | "createdAt" | "status">) => void;
-  updateCardStatus: (id: string, status: CardStatus) => void;
-  addResponse: (id: string, response: Omit<MailboxResponse, "cardId" | "createdAt">) => void;
-  addPositiveNote: (note: Omit<PositiveNote, "id" | "createdAt">) => void;
-  addMemoryNote: (note: Omit<MemoryNote, "id" | "createdAt" | "senderRole">) => void;
-  addWeeklyCheckIn: (checkIn: Omit<WeeklyCheckIn, "id" | "createdAt">) => void;
+  sendMessage: (msg: Omit<MailboxMessage, "id" | "senderUid" | "createdAt">) => Promise<void>;
 }
 
-// Provide a full default value to avoid destructuring issues before the provider mounts
-const defaultNames: DisplayNames = { HER: "Her", YOU: "You" };
-
-const MailboxContext = createContext<MailboxContextType>({
-  role: null,
-  displayNames: defaultNames,
-  cards: [],
-  positiveNotes: [],
-  memoryNotes: [],
-  weeklyCheckIns: [],
-  loading: true,
-  login: async () => false,
-  logout: async () => {},
-  addCard: () => {},
-  updateCardStatus: () => {},
-  addResponse: () => {},
-  addPositiveNote: () => {},
-  addMemoryNote: () => {},
-  addWeeklyCheckIn: () => {},
-});
+const MailboxContext = createContext<MailboxContextType | undefined>(undefined);
 
 export const MailboxProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
-  const [role, setRole] = useState<Role>(null);
-  const [displayNames, setDisplayNames] = useState<DisplayNames>(defaultNames);
-  const [cards, setCards] = useState<MailboxCard[]>([]);
-  const [positiveNotes, setPositiveNotes] = useState<PositiveNote[]>([]);
-  const [memoryNotes, setMemoryNotes] = useState<MemoryNote[]>([]);
-  const [weeklyCheckIns, setWeeklyCheckIns] = useState<WeeklyCheckIn[]>([]);
-  const [loading, setLoading] = useState(true);
+  const [fbUser, setFbUser] = useState<FirebaseUser | null | "loading">("loading");
+  const [user, setUser] = useState<User | null>(null);
+  const [couple, setCouple] = useState<Couple | null>(null);
+  const [partner, setPartner] = useState<User | null>(null);
+  const [messages, setMessages] = useState<MailboxMessage[]>([]);
+  const [reactions, setReactions] = useState<QuickReact[]>([]);
+  const [checkins, setCheckins] = useState<DailyCheckIn[]>([]);
+  const [activeSafeSpace, setActiveSafeSpace] = useState<SafeSpaceSession | null>(null);
+  const [dataLoading, setDataLoading] = useState(false);
 
-  // Session Persistence for Role
-  useEffect(() => {
-    const savedRole = localStorage.getItem("honest_mailbox_role") as Role;
-    if (savedRole) setRole(savedRole);
-  }, []);
+  const loading = fbUser === "loading" || dataLoading;
+  const hasOnboarded = !!user?.hasCompletedOnboarding;
+  const isPaired = !!user?.coupleId;
 
+  // ─── 1. Firebase Auth State ────────────────────────────────────────────────
   useEffect(() => {
-    if (role) localStorage.setItem("honest_mailbox_role", role);
-    else localStorage.removeItem("honest_mailbox_role");
-  }, [role]);
-
-  // Firebase Real-time Listeners
-  useEffect(() => {
-    // Settings/DisplayNames Listener
-    const unsubscribeNames = onSnapshot(doc(db, "settings", "displayNames"), (snapshot) => {
-      if (snapshot.exists()) {
-        const data = snapshot.data();
-        if (data && data.HER && data.YOU) {
-          setDisplayNames(data as DisplayNames);
-        }
+    return onAuthStateChanged(auth, (u) => {
+      setFbUser(u);
+      if (!u) {
+        // Signed out — clear everything
+        setUser(null);
+        setCouple(null);
+        setPartner(null);
+        setMessages([]);
+        setReactions([]);
+        setCheckins([]);
+        setActiveSafeSpace(null);
       }
     });
+  }, []);
 
-    // Cards Listener
-    const qCards = query(collection(db, "cards"), orderBy("createdAt", "desc"));
-    const unsubscribeCards = onSnapshot(qCards, (snapshot) => {
-      const docs = snapshot.docs.map(doc => {
-        const data = doc.data();
-        return {
-          ...data,
-          id: doc.id,
-          createdAt: data.createdAt instanceof Timestamp ? data.createdAt.toDate().toISOString() : data.createdAt
-        } as MailboxCard;
-      });
-      setCards(docs);
-      setLoading(false);
+  // ─── 2. User Profile & Couple Listener ────────────────────────────────────
+  useEffect(() => {
+    if (!fbUser || fbUser === "loading") return;
+
+    setDataLoading(true);
+
+    const unsubUser = onSnapshot(doc(db, "users", fbUser.uid), async (snap) => {
+      if (!snap.exists()) {
+        setDataLoading(false);
+        return;
+      }
+
+      const userData = { ...snap.data(), uid: fbUser.uid } as User;
+      setUser(userData);
+
+      if (userData.coupleId) {
+        // Fetch couple doc
+        const coupleSnap = await getDoc(doc(db, "couples", userData.coupleId));
+        if (coupleSnap.exists()) {
+          const coupleData = coupleSnap.data() as Couple;
+          setCouple(coupleData);
+
+          const partnerUid = coupleData.partnerA_uid === fbUser.uid
+            ? coupleData.partnerB_uid
+            : coupleData.partnerA_uid;
+
+          if (partnerUid) {
+            const partnerSnap = await getDoc(doc(db, "users", partnerUid));
+            if (partnerSnap.exists()) {
+              setPartner({ ...partnerSnap.data(), uid: partnerUid } as User);
+            }
+          }
+        }
+      } else {
+        setCouple(null);
+        setPartner(null);
+      }
+
+      setDataLoading(false);
     });
 
-    // Positive Notes Listener
-    const qNotes = query(collection(db, "positive_notes"), orderBy("createdAt", "desc"));
-    const unsubscribeNotes = onSnapshot(qNotes, (snapshot) => {
-      const docs = snapshot.docs.map(doc => {
-        const data = doc.data();
-        return {
-          ...data,
-          id: doc.id,
-          createdAt: data.createdAt instanceof Timestamp ? data.createdAt.toDate().toISOString() : data.createdAt
-        } as PositiveNote;
-      });
-      setPositiveNotes(docs);
+    return () => unsubUser();
+  }, [fbUser]);
+
+  // ─── 3. Real-time Feature Listeners ────────────────────────────────────────
+  useEffect(() => {
+    if (!user?.coupleId) return;
+
+    // Mailbox
+    const unsubMailbox = subscribeToMailbox(user.coupleId, (msgs) => {
+      setMessages(msgs);
     });
 
-    // Memory Notes Listener
-    const qMemory = query(collection(db, "memory_notes"), orderBy("createdAt", "desc"));
-    const unsubscribeMemory = onSnapshot(qMemory, (snapshot) => {
-      const docs = snapshot.docs.map(doc => {
-        const data = doc.data();
-        return {
-          ...data,
-          id: doc.id,
-          createdAt: data.createdAt instanceof Timestamp ? data.createdAt.toDate().toISOString() : data.createdAt
-        } as MemoryNote;
-      });
-      setMemoryNotes(docs);
+    // Reactions (Last 10)
+    const reactionsRef = collection(db, "couples", user.coupleId, "reactions");
+    const qReactions = query(reactionsRef, orderBy("createdAt", "desc"), limit(10));
+    const unsubReactions = onSnapshot(qReactions, (snap) => {
+      setReactions(snap.docs.map(d => ({ ...d.data(), id: d.id } as QuickReact)));
+    });
+
+    // Checkins (Today's)
+    const today = new Date().toISOString().split('T')[0];
+    const checkinsRef = collection(db, "couples", user.coupleId, "checkins");
+    const qCheckins = query(checkinsRef, where("dateId", "==", today));
+    const unsubCheckins = onSnapshot(qCheckins, (snap) => {
+      setCheckins(snap.docs.map(d => ({ ...d.data(), id: d.id } as DailyCheckIn)));
+    });
+
+    // Active Safe Space Session
+    const sessionsRef = collection(db, "couples", user.coupleId, "safe_space_sessions");
+    const qSessions = query(sessionsRef, where("active", "==", true));
+    const unsubSafeSpace = onSnapshot(qSessions, (snap) => {
+      if (!snap.empty) {
+        setActiveSafeSpace({ ...snap.docs[0].data(), id: snap.docs[0].id } as SafeSpaceSession);
+      } else {
+        setActiveSafeSpace(null);
+      }
     });
 
     return () => {
-      unsubscribeNames();
-      unsubscribeCards();
-      unsubscribeNotes();
-      unsubscribeMemory();
+      unsubMailbox();
+      unsubReactions();
+      unsubCheckins();
+      unsubSafeSpace();
     };
-  }, []);
+  }, [user?.coupleId]);
 
-  const login = async (key: string) => {
-    try {
-      const response = await fetch("/api/login", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ key })
-      });
-
-      const data = await response.json();
-
-      if (data.success) {
-        // Sign in anonymously on the client to satisfy Firestore rules
-        await signInAnonymously(auth);
-        localStorage.setItem("show_sync_invite", "true");
-        setRole(data.role as Role);
-        return true;
-      }
-      return false;
-    } catch (error) {
-      console.error("Auth error:", error);
-      return false;
-    }
-  };
-
+  // ─── Actions ──────────────────────────────────────────────────────────────
   const logout = async () => {
-    await signOut(auth);
-    setRole(null);
+    await firebaseSignOut(auth);
   };
 
-  const addCard = async (card: Omit<MailboxCard, "id" | "createdAt" | "status">) => {
-    await addDoc(collection(db, "cards"), {
-      ...card,
-      createdAt: Timestamp.now(),
-      status: "Open",
-    });
-  };
-
-  const updateCardStatus = async (id: string, status: CardStatus) => {
-    const cardRef = doc(db, "cards", id);
-    await updateDoc(cardRef, { status });
-  };
-
-  const addResponse = async (id: string, response: Omit<MailboxResponse, "cardId" | "createdAt">) => {
-    const cardRef = doc(db, "cards", id);
-    await updateDoc(cardRef, {
-      status: "In Progress",
-      response: {
-        ...response,
-        cardId: id,
-        createdAt: Timestamp.now(),
-      }
-    });
-  };
-
-  const addPositiveNote = async (note: Omit<PositiveNote, "id" | "createdAt">) => {
-    await addDoc(collection(db, "positive_notes"), {
-      ...note,
-      senderRole: role,
-      createdAt: Timestamp.now(),
-    });
-  };
-
-  const addMemoryNote = async (note: Omit<MemoryNote, "id" | "createdAt" | "senderRole">) => {
-    await addDoc(collection(db, "memory_notes"), {
-      ...note,
-      senderRole: role,
-      createdAt: Timestamp.now(),
-    });
-  };
-
-  const addWeeklyCheckIn = async (checkIn: Omit<WeeklyCheckIn, "id" | "createdAt">) => {
-    await addDoc(collection(db, "weekly_checkins"), {
-      ...checkIn,
-      createdAt: Timestamp.now(),
+  const sendMessage = async (msg: Omit<MailboxMessage, "id" | "senderUid" | "createdAt">) => {
+    if (!user?.coupleId || !fbUser || fbUser === "loading") return;
+    await sendMailboxMessage(user.coupleId, {
+      ...msg,
+      senderUid: fbUser.uid,
     });
   };
 
   const value = useMemo(() => ({
-    role,
-    displayNames,
-    cards,
-    positiveNotes,
-    memoryNotes,
-    weeklyCheckIns,
+    user,
+    couple,
+    partner,
+    messages,
+    reactions,
+    checkins,
+    activeSafeSpace,
     loading,
-    login,
+    hasOnboarded,
+    isPaired,
     logout,
-    addCard,
-    updateCardStatus,
-    addResponse,
-    addPositiveNote,
-    addMemoryNote,
-    addWeeklyCheckIn,
-  }), [role, displayNames, cards, positiveNotes, memoryNotes, weeklyCheckIns, loading]);
+    sendMessage,
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }), [user, couple, partner, messages, reactions, checkins, activeSafeSpace, loading, hasOnboarded, isPaired]);
 
   return (
     <MailboxContext.Provider value={value}>
