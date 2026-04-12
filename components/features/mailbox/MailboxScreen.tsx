@@ -34,7 +34,7 @@ export const MailboxScreen = () => {
             {/* Streak Hero Section */}
             {metrics && (
                 <section className="relative">
-                    <div className="absolute inset-0 bg-gradient-to-r from-orange-500/10 via-pink-500/10 to-blue-500/10 rounded-[2.5rem] blur-xl" />
+                    <div className="absolute inset-0 rounded-[2.5rem]" style={{ backgroundImage: "radial-gradient(ellipse at center, rgba(249,115,22,0.1), transparent 70%)" }} />
                     <motion.div 
                         initial={{ opacity: 0, y: 20 }}
                         animate={{ opacity: 1, y: 0 }}
@@ -58,7 +58,7 @@ export const MailboxScreen = () => {
                         </div>
 
                         <div className="relative group">
-                            <div className="absolute inset-0 bg-orange-500 blur-2xl opacity-20 group-hover:opacity-40 transition-opacity" />
+                            <div className="absolute inset-0 opacity-20 group-hover:opacity-40 transition-opacity" style={{ backgroundImage: "radial-gradient(circle at center, rgba(249,115,22,0.5), transparent 70%)" }} />
                             <div className="relative w-24 h-24 rounded-full border-2 border-white/10 flex items-center justify-center bg-black/40 backdrop-blur-md">
                                 <motion.div 
                                     animate={{ scale: [1, 1.1, 1], rotate: [0, 5, -5, 0] }}

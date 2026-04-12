@@ -74,7 +74,7 @@ export const BottomDock: React.FC<BottomDockProps> = ({
             activeView === "archive" ? "text-white bg-white/10" : "text-neutral-400 hover:text-white hover:bg-white/5"
           )}
         >
-          {activeView === "archive" ? <MessageSquareHeart className="w-6 h-6" /> : <BarChart3 className="w-6 h-6 group-hover:scale-110 transition-transform" />}
+          {activeView === "archive" ? <img src="/HM.png" alt="Mailbox" className="w-6 h-auto group-hover:scale-110 transition-transform drop-shadow-[0_0_10px_rgba(255,255,255,0.2)]" /> : <BarChart3 className="w-6 h-6 group-hover:scale-110 transition-transform" />}
           <span className="absolute -top-12 left-1/2 -translate-x-1/2 px-3 py-1 bg-white text-black text-[10px] font-bebas tracking-widest uppercase rounded-lg opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none">
             {activeView === "archive" ? "Mailbox" : "Archive"}
           </span>

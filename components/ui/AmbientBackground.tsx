@@ -34,7 +34,7 @@ export const AmbientBackground = ({ variant = "standard", gender }: { variant?: 
                     ease: "easeInOut",
                 }}
                 className={cn(
-                    "absolute -top-1/4 -left-1/4 w-[110%] h-[110%] blur-[160px] transition-all duration-1000",
+                    "absolute -top-1/4 -left-1/4 w-[110%] h-[110%] transition-all duration-1000 will-change-transform transform-gpu",
                     isBright ? "opacity-[0.4]" : "opacity-[0.2]"
                 )}
                 style={{ backgroundImage: `radial-gradient(circle at center, ${color1} 0%, transparent 55%)` }}
@@ -53,7 +53,7 @@ export const AmbientBackground = ({ variant = "standard", gender }: { variant?: 
                     ease: "easeInOut",
                 }}
                 className={cn(
-                    "absolute -bottom-1/4 -right-1/4 w-[110%] h-[110%] blur-[160px] transition-all duration-1000",
+                    "absolute -bottom-1/4 -right-1/4 w-[110%] h-[110%] transition-all duration-1000 will-change-transform transform-gpu",
                     isBright ? "opacity-[0.35]" : "opacity-[0.18]"
                 )}
                 style={{ backgroundImage: `radial-gradient(circle at center, ${color2} 0%, transparent 55%)` }}

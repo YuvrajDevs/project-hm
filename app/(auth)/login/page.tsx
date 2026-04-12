@@ -79,9 +79,9 @@ export default function Login() {
           className="flex flex-col items-center gap-6 text-center"
         >
           <motion.div
-            animate={{ scale: [1, 1.08, 1], opacity: [0.7, 1, 0.7] }}
-            transition={{ duration: 4, repeat: Infinity }}
-            className="flex items-center justify-center mb-4"
+            whileHover={{ scale: 1.05, rotate: 2 }}
+            transition={{ duration: 0.3, ease: "easeOut" }}
+            className="flex items-center justify-center mb-4 will-change-transform transform-gpu"
           >
             <img src="/HM.png" alt="Honest Mailbox Logo" className="w-20 h-auto object-contain drop-shadow-2xl" />
           </motion.div>

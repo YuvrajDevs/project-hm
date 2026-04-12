@@ -118,7 +118,7 @@ export const LeavePartnerModal: React.FC<LeavePartnerModalProps> = ({
             </div>
             
             {/* Background elements */}
-            <div className="absolute -bottom-20 -right-20 w-40 h-40 bg-red-500/5 rounded-full blur-[60px]" />
+            <div className="absolute -bottom-20 -right-20 w-40 h-40 rounded-full" style={{ backgroundImage: "radial-gradient(circle at center, rgba(239,68,68,0.05), transparent 70%)" }} />
           </motion.div>
         </div>
       )}

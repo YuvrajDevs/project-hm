@@ -155,14 +155,14 @@ export default function Pair() {
         {mode !== "choice" ? (
           <button
             onClick={() => { setMode("choice"); setError(""); setInputCode(""); setInviteCode(""); }}
-            className="font-bebas text-xs tracking-widest text-neutral-600 uppercase hover:text-white transition-colors"
+            className="flex items-center gap-2 px-4 py-2 bg-white/5 border border-white/10 rounded-full font-bebas text-xs tracking-widest text-neutral-400 uppercase hover:text-white hover:bg-white/10 transition-all active:scale-95"
           >
             ← Back
           </button>
         ) : (
           <button
             onClick={() => router.push("/")}
-            className="font-bebas text-xs tracking-widest text-neutral-600 uppercase hover:text-white transition-colors"
+            className="flex items-center gap-2 px-4 py-2 bg-white/5 border border-white/10 rounded-full font-bebas text-xs tracking-widest text-neutral-400 uppercase hover:text-white hover:bg-white/10 transition-all active:scale-95"
           >
             ← Home
           </button>

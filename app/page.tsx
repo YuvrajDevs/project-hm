@@ -50,15 +50,12 @@ export default function Home() {
     return (
       <div className="min-h-screen bg-[#0a0a0a] flex items-center justify-center">
         <div className="flex flex-col items-center gap-6">
-          <motion.div
-            animate={{ scale: [1, 1.1, 1], opacity: [0.5, 1, 0.5] }}
-            transition={{ duration: 2, repeat: Infinity }}
-          >
-            <Heart className="w-12 h-12 text-pink-500 fill-pink-500/20" />
-          </motion.div>
+          <div className="flex items-center justify-center mb-2">
+            <img src="/HM.png" alt="HM Logo" className="w-16 h-auto drop-shadow-lg" />
+          </div>
           <div className="flex items-center gap-3">
             <Loader2 className="w-4 h-4 text-neutral-600 animate-spin" />
-            <div className="font-bebas text-neutral-500 tracking-[0.3em] uppercase text-sm">Synchronizing Hearts...</div>
+            <div className="font-bebas text-neutral-500 tracking-[0.3em] uppercase text-sm">Synchronizing...</div>
           </div>
         </div>
       </div>
