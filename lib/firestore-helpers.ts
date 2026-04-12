@@ -17,7 +17,11 @@ import { db } from "./firebase";
 import { 
   SafeSpaceMessage,
   EmotionalProfile,
-  CoupleEvent
+  CoupleEvent,
+  MailboxMessage,
+  DailyCheckIn,
+  QuickReact,
+  SafeSpaceSession
 } from "./types";
 
 /**
