@@ -93,7 +93,7 @@ export default function Home() {
 
       <header className="flex justify-between items-center w-full fixed top-0 left-0 p-8 z-50 bg-gradient-to-b from-black/80 to-transparent backdrop-blur-sm pointer-events-none">
         <div className="flex items-center gap-3 pointer-events-auto">
-          <MessageSquareHeart className="w-6 h-6 text-pink-500" />
+          <img src="/HM.png" alt="HM Logo" className="w-6 h-auto" />
           <span className="font-bebas text-xl tracking-widest text-white uppercase">Honest Mailbox</span>
         </div>
         <button 

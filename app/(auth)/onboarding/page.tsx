@@ -119,7 +119,7 @@ export default function Onboarding() {
       <div className="flex-none flex items-center justify-between px-8 pt-8 pb-4 z-10">
         <div className="flex items-center gap-2">
           <Heart className="w-4 h-4 text-pink-500 fill-pink-500/30" />
-          <span className="font-bebas text-sm tracking-[0.4em] text-neutral-500 uppercase">Honest Mailbox</span>
+          <img src="/HM.png" alt="Honest Mailbox" className="h-6 w-auto opacity-80" />
         </div>
         <span className="font-bebas text-xs tracking-widest text-neutral-600 uppercase">
           {step + 1} / {TOTAL_STEPS}

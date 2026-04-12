@@ -64,7 +64,7 @@ export default function Login() {
         transition={{ duration: 0.6 }}
         className="absolute top-10 flex items-center gap-2"
       >
-        <Heart className="w-4 h-4 text-pink-500 fill-pink-500/30" />
+        <img src="/HM.png" alt="HM Logo" className="w-4 h-auto" />
         <span className="font-bebas text-sm tracking-[0.4em] text-neutral-500 uppercase">Honest Mailbox</span>
       </motion.div>
 
@@ -81,9 +81,9 @@ export default function Login() {
           <motion.div
             animate={{ scale: [1, 1.08, 1], opacity: [0.7, 1, 0.7] }}
             transition={{ duration: 4, repeat: Infinity }}
-            className="w-20 h-20 rounded-[2rem] bg-white/5 border border-white/10 flex items-center justify-center"
+            className="flex items-center justify-center mb-4"
           >
-            <Heart className="w-10 h-10 text-pink-400 fill-pink-400/20" />
+            <img src="/HM.png" alt="Honest Mailbox Logo" className="w-20 h-auto object-contain drop-shadow-2xl" />
           </motion.div>
 
           <div>

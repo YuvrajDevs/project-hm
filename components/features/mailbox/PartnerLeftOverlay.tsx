@@ -91,3 +91,4 @@ export const PartnerLeftOverlay: React.FC<PartnerLeftOverlayProps> = ({ onClearD
     </div>
   );
 };
+

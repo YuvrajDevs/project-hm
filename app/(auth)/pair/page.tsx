@@ -149,7 +149,7 @@ export default function Pair() {
       {/* Top bar */}
       <div className="flex-none flex items-center justify-between px-8 pt-8 pb-4 z-10">
         <div className="flex items-center gap-2">
-          <Heart className="w-4 h-4 text-pink-500 fill-pink-500/30" />
+          <img src="/HM.png" alt="HM Logo" className="w-4 h-auto" />
           <span className="font-bebas text-sm tracking-[0.4em] text-neutral-500 uppercase">Honest Mailbox</span>
         </div>
         {mode !== "choice" ? (
