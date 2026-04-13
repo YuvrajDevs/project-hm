@@ -234,9 +234,11 @@ export const unpairPartner = async (uid: string, partnerUid: string) => {
     role: null
   });
   
-  // Set notification flag on partner, but DO NOT CLEAR their coupleId yet
-  // so they can choose to keep data for now.
+  // Clear partner and set notification flag
   return updateDoc(partnerRef, {
+    coupleId: null,
+    partnerId: null,
+    role: null,
     leftByPartner: true 
   });
 };

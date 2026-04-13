@@ -67,15 +67,8 @@ export const PartnerLeftOverlay: React.FC<PartnerLeftOverlayProps> = ({ onClearD
             disabled={loading}
             className="w-full py-5 bg-white text-black rounded-2xl font-bebas tracking-widest uppercase hover:bg-neutral-200 active:scale-95 transition-all flex items-center justify-center gap-3 disabled:opacity-50 shadow-xl"
           >
-            {loading ? "Preparing your space..." : "Erase & Move Forward"}
+            {loading ? "Preparing your space..." : "Clear and move on"}
             <ArrowRight className="w-5 h-5 text-neutral-400" />
-          </button>
-
-          <button
-            onClick={onClose}
-            className="w-full py-5 bg-white/5 text-white border border-white/10 rounded-2xl font-bebas tracking-widest uppercase hover:bg-white/10 transition-all font-medium"
-          >
-            Keep for now
           </button>
           
           <div className="flex items-center justify-center gap-2 text-neutral-600">

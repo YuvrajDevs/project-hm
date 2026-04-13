@@ -63,6 +63,29 @@ export default function Onboarding() {
     setStep(1);
   };
 
+  const handleSkip = async () => {
+    if (!name.trim()) return;
+    setSubmitting(true);
+    const user = auth.currentUser;
+    if (!user) return;
+    try {
+      await updateDoc(doc(db, "users", user.uid), {
+        displayName: name.trim(),
+        profile: {
+          supportPreference: "",
+          overwhelmedInstinct: "",
+          spaceSignal: "",
+          loveSignal: "",
+        },
+        hasCompletedOnboarding: true,
+      });
+      router.push("/");
+    } catch (err) {
+      console.error(err);
+      setSubmitting(false);
+    }
+  };
+
   const handleOptionSelect = async (option: string) => {
     const stepId = currentProfile.id;
     const updatedAnswers = { ...answers, [stepId]: option };
@@ -86,7 +109,7 @@ export default function Onboarding() {
           },
           hasCompletedOnboarding: true,
         });
-        router.push("/pair");
+        router.push("/");
       } catch (err) {
         console.error(err);
         setSubmitting(false);
@@ -170,13 +193,23 @@ export default function Onboarding() {
                     maxLength={30}
                     className="w-full bg-white/5 border border-white/10 rounded-2xl px-5 py-4 text-white font-outfit text-lg focus:outline-none focus:border-white/30 transition-all placeholder:text-neutral-700"
                   />
-                  <button
-                    type="submit"
-                    disabled={!name.trim()}
-                    className="w-full bg-white text-black font-bebas text-xl py-4 rounded-2xl flex items-center justify-center gap-2 hover:bg-neutral-200 active:scale-95 transition-all disabled:opacity-30"
-                  >
-                    Continue <ChevronRight className="w-5 h-5" />
-                  </button>
+                  <div className="flex flex-col gap-3">
+                    <button
+                      type="submit"
+                      disabled={!name.trim() || submitting}
+                      className="w-full bg-white text-black font-bebas text-xl py-4 rounded-2xl flex items-center justify-center gap-2 hover:bg-neutral-200 active:scale-95 transition-all disabled:opacity-30 shadow-xl"
+                    >
+                      Continue <ChevronRight className="w-5 h-5" />
+                    </button>
+                    <button
+                      type="button"
+                      onClick={handleSkip}
+                      disabled={!name.trim() || submitting}
+                      className="w-full text-neutral-500 font-bebas text-sm py-2 hover:text-white transition-all disabled:opacity-30 tracking-[0.2em] uppercase"
+                    >
+                      Skip Profile Setup
+                    </button>
+                  </div>
                 </form>
               </motion.div>
             )}
