@@ -102,18 +102,18 @@ export default function Home() {
     if (!loading) {
       if (!user) {
         router.push("/login");
-      } else if (user.leftByPartner && !overlayDismissed) {
+      } else if (user?.leftByPartner && !overlayDismissed) {
         return;
       } else if (!hasOnboarded) {
         router.push("/onboarding");
       } else if (isPaired && hasLoadedCheckins) {
          // Auto-trigger daily sync if not done
-         const userCheckIn = checkins.find(c => c.userUid === user.uid);
+         const userCheckIn = checkins.find(c => c.userUid === user?.uid);
          if (!userCheckIn) {
             setShowCheckInPopup(true);
          } else {
             // Both check-ins done?
-            const partnerCheckIn = checkins.find(c => c.userUid !== user.uid);
+            const partnerCheckIn = checkins.find(c => c.userUid !== user?.uid);
             if (partnerCheckIn) {
                const todayId = userCheckIn.dateId;
                const hasShownNudge = localStorage.getItem(`nudge_shown_${todayId}`);
@@ -290,7 +290,7 @@ export default function Home() {
         {activeSafeSpace ? (
             <SafeSpaceSession key="safe-space-session" />
         ) : null}
-        {user.leftByPartner && !overlayDismissed ? (
+        {user?.leftByPartner && !overlayDismissed ? (
             <PartnerLeftOverlay 
                 key="partner-left-overlay"
                 onClearData={async () => {
