@@ -87,8 +87,8 @@ export default function Home() {
 
   useEffect(() => {
     const isAnyPopupOpen = showCheckInPopup || !!activeSafeSpace || isOverlayActive || 
-      (couple?.resetRequestStatus === "pending" && couple?.resetRequestedBy !== user?.uid) ||
-      (!!couple?.whiteFlagBy && couple?.whiteFlagBy !== user?.uid);
+      ((couple as any)?.resetRequestStatus === "pending" && (couple as any)?.resetRequestedBy !== user?.uid) ||
+      (!!(couple as any)?.whiteFlagBy && (couple as any)?.whiteFlagBy !== user?.uid);
     
     if (isAnyPopupOpen) {
       document.body.style.overflow = "hidden";
