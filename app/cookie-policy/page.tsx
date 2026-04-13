@@ -1,88 +1,74 @@
-import React from 'react';
+'use client';
+
+import React, { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { ArrowLeft } from 'lucide-react';
 
 export default function CookiePolicy() {
+  const [mounted, setMounted] = useState(false);
+
+  useEffect(() => {
+    setMounted(true);
+  }, []);
+
   return (
-    <div className="min-h-screen bg-[#0a0a0a] text-neutral-300 font-outfit selection:bg-pink-500/30">
+    <div className="min-h-screen bg-[#0a0a0a] text-neutral-300 font-inter selection:bg-pink-500/30">
       <div className="max-w-3xl mx-auto px-6 py-12 md:py-20">
-        
+
         {/* Header */}
         <div className="mb-16">
-          <Link href="/" className="inline-flex items-center gap-2 text-neutral-500 hover:text-white transition-colors uppercase tracking-widest font-bebas text-sm mb-8 group">
+          <Link href="/" className="inline-flex items-center gap-2 text-neutral-500 hover:text-white transition-colors uppercase tracking-widest font-inter text-sm mb-8 group">
             <ArrowLeft className="w-4 h-4 group-hover:-translate-x-1 transition-transform" /> Back
           </Link>
           <div className="flex items-center gap-3 mb-6">
             <img src="/HM.png" alt="Honest Mailbox Logo" className="w-8 h-auto" />
-            <span className="font-bebas text-2xl tracking-[0.2em] text-white uppercase">Honest Mailbox</span>
+            <span className="font-inter text-2xl tracking-[0.2em] text-white uppercase font-bold">Honest Mailbox</span>
           </div>
-          <h1 className="text-4xl md:text-5xl font-bebas tracking-widest uppercase text-white mb-4">Cookie Policy</h1>
-          <p className="text-sm text-neutral-500 tracking-widest uppercase mb-8">Last Updated: {new Date().toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' })}</p>
+          <h1 className="text-4xl md:text-5xl font-inter font-bold tracking-widest uppercase text-white mb-4">
+            Cookie Policy
+          </h1>
+          <p className="text-sm text-neutral-500 tracking-widest uppercase mb-8">
+            Last Updated: April 13, 2026
+          </p>
         </div>
 
-        {/* Content */}
-        <div className="space-y-12 leading-relaxed">
-          
-          <section className="space-y-4">
-            <h2 className="text-2xl font-bebas tracking-wider text-white uppercase">1. Introduction</h2>
-            <p>
-              This Cookie Policy explains how Honest Mailbox utilizes cookies and similar tracking technologies when you use our application. Since our platform is built as a highly restricted, secure space strictly for intimate couple connections, our use of cookies is fundamentally minimal and purely operational.
-            </p>
-          </section>
-
-          <section className="space-y-4">
-            <h2 className="text-2xl font-bebas tracking-wider text-white uppercase">2. What are Cookies?</h2>
-            <p>
-              Cookies are minor text files stored directly on your computer or mobile device when you access websites or applications. They are universally used to maintain session states, process sign-ins, and remember critical application preferences efficiently.
-            </p>
-          </section>
-
-          <section className="space-y-4">
-            <h2 className="text-2xl font-bebas tracking-wider text-white uppercase">3. How We Use Cookies</h2>
-            <p>
-              Honest Mailbox only utilizes strictly necessary cookies. We do <strong>not</strong> use invasive third-party tracking cookies or advertising cookies. 
-            </p>
-            <div className="space-y-4 pl-4 border-l border-white/10 mt-4">
-              <div>
-                <h3 className="font-bold text-white mb-1">Authentication (Strictly Necessary)</h3>
-                <p className="text-sm text-neutral-400">Our native infrastructure relies on Firebase Authentication to explicitly manage your session. Essential tokens are stored locally on your device specifically to keep you securely signed in to your mailbox without repetitive credential prompts.</p>
-              </div>
-              <div>
-                <h3 className="font-bold text-white mb-1">Security & Integrity</h3>
-                <p className="text-sm text-neutral-400">Underlying security cookies are leveraged to preemptively identify malicious activities and ensure your localized connection to the server is securely authenticated against unwanted interception.</p>
-              </div>
-            </div>
-          </section>
-
-          <section className="space-y-4">
-            <h2 className="text-2xl font-bebas tracking-wider text-white uppercase">4. Third-Party Integration</h2>
-            <p>
-              The application uses Google Authentication to handle account initialization. Accordingly, Google may set fundamental cookies to facilitate the authentication handshake. These actions are strictly governed by Google's overarching privacy policies. Honest Mailbox does not integrate cross-site marketing trackers whatsoever.
-            </p>
-          </section>
-
-          <section className="space-y-4">
-            <h2 className="text-2xl font-bebas tracking-wider text-white uppercase">5. Managing Cookies</h2>
-            <p>
-              You maintain full authority directly through your browser settings to restrict, reject, or purge all cookies. However, please note that specifically rejecting authentication cookies will abruptly prevent Honest Mailbox from functioning, as the system will be unable to establish or securely sustain your login session.
-            </p>
-          </section>
-
-          <section className="space-y-4">
-            <h2 className="text-2xl font-bebas tracking-wider text-white uppercase">6. Policy Updates</h2>
-            <p>
-              We reserve the exclusive right to modify this Cookie Policy to map future operational prerequisites. Any updates will be securely appended to this portal, maintaining structural transparency.
-            </p>
-          </section>
-
+        {/* Content (Termly HTML goes here) */}
+        <div className="policy-content" suppressHydrationWarning>
+          {mounted && (
+            <div
+              dangerouslySetInnerHTML={{
+                __html: `
+      <div data-custom-class="body">
+      <div style="line-height: 1.5;"><span style="color: rgb(127, 127, 127);"><span style="color: rgb(89, 89, 89); font-size: 15px;"><span data-custom-class="body_text">This Cookie Policy explains how <bdt class="question">Honest Mailbox</bdt> ("<strong>Company</strong>," "<strong>we</strong>," "<strong>us</strong>," and "<strong>our</strong>") uses cookies and similar technologies to recognize you when you visit our website at </span></span><span style="color: rgb(0, 58, 250); font-size: 15px;"><span data-custom-class="body_text"><bdt class="question"><a target="_blank" data-custom-class="link" href="https://honestmailbox.com">https://honestmailbox.com</a></bdt></span></span><span style="color: rgb(89, 89, 89); font-size: 15px;"><span data-custom-class="body_text"> ("<strong>Website</strong>"). It explains what these technologies are and why we use them, as well as your rights to control our use of them.</span></span></span></div><div style="line-height: 1.5;"><br></div><div style="line-height: 1.5;"><span style="color: rgb(127, 127, 127);"><span style="color: rgb(89, 89, 89); font-size: 15px;"><span data-custom-class="body_text">In some cases we may use cookies to collect personal information, or that becomes personal information if we combine it with other information.</span></span></span></div><div style="line-height: 1.5;"><br></div><div style="line-height: 1.5;"><span style="color: rgb(127, 127, 127);"><span style="color: rgb(0, 0, 0); font-size: 15px;"><strong><span data-custom-class="heading_1"><h2>What are cookies?</h2></span></strong></span></span></div><div style="line-height: 1.5;"><span style="color: rgb(127, 127, 127);"><span style="color: rgb(89, 89, 89); font-size: 15px;"><span data-custom-class="body_text">Cookies are small data files that are placed on your computer or mobile device when you visit a website. Cookies are widely used by website owners in order to make their websites work, or to work more efficiently, as well as to provide reporting information.</span></span></span></div><div style="line-height: 1.5;"><br></div><div style="line-height: 1.5;"><span style="color: rgb(127, 127, 127);"><span style="color: rgb(89, 89, 89); font-size: 15px;"><span data-custom-class="body_text">Cookies set by the website owner (in this case, <bdt class="question">Honest Mailbox</bdt>) are called "first-party cookies." Cookies set by parties other than the website owner are called "third-party cookies." Third-party cookies enable third-party features or functionality to be provided on or through the website (e.g., advertising, interactive content, and analytics). The parties that set these third-party cookies can recognize your computer both when it visits the website in question and also when it visits certain other websites.</span></span></span></div><div style="line-height: 1.5;"><br></div><div style="line-height: 1.5;"><span style="color: rgb(127, 127, 127);"><span style="color: rgb(0, 0, 0); font-size: 15px;"><strong><span data-custom-class="heading_1"><h2>Why do we use cookies?</h2></span></strong></span></span></div><div style="line-height: 1.5;"><span style="color: rgb(127, 127, 127);"><span style="color: rgb(89, 89, 89); font-size: 15px;"><span data-custom-class="body_text">We use first-<bdt class="block-component"></bdt> and third-<bdt class="statement-end-if-in-editor"></bdt>party cookies for several reasons. Some cookies are required for technical reasons in order for our Website to operate, and we refer to these as "essential" or "strictly necessary" cookies. Other cookies also enable us to track and target the interests of our users to enhance the experience on our Online Properties. <bdt class="block-component"></bdt>Third parties serve cookies through our Website for advertising, analytics, and other purposes. <bdt class="statement-end-if-in-editor"></bdt>This is described in more detail below.</span></span></span></div><div style="line-height: 1.5;"><br></div><div style="line-height: 1.5;"><span style="color: rgb(127, 127, 127);"><span style="color: rgb(89, 89, 89); font-size: 15px;"><span style="font-size: 15px; color: rgb(89, 89, 89);"><span style="font-size: 15px; color: rgb(89, 89, 89);"><span id="control" style="color: rgb(0, 0, 0);"><strong><span data-custom-class="heading_1"><h2>How can I control cookies?</h2></span></strong></span></span></span></span></span></div><div style="line-height: 1.5;"><span style="font-size: 15px; color: rgb(89, 89, 89);"><span style="font-size: 15px; color: rgb(89, 89, 89);"><span data-custom-class="body_text">You have the right to decide whether to accept or reject cookies. You can exercise your cookie rights by setting your preferences in the Cookie Preference Center. The Cookie Preference Center allows you to select which categories of cookies you accept or reject. Essential cookies cannot be rejected as they are strictly necessary to provide you with services.</span></span></span></div><div style="line-height: 1.5;"><br></div><div style="line-height: 1.5;"><span style="font-size: 15px; color: rgb(89, 89, 89);"><span style="font-size: 15px; color: rgb(89, 89, 89);"><span data-custom-class="body_text">The Cookie Preference Center can be found in the notification banner and on our Website. If you choose to reject cookies, you may still use our Website though your access to some functionality and areas of our Website may be restricted. You may also set or amend your web browser controls to accept or refuse cookies.</span></span></span></div><div style="line-height: 1.5;"><br></div><div style="line-height: 1.5;"><span style="font-size: 15px; color: rgb(89, 89, 89);"><span style="font-size: 15px; color: rgb(89, 89, 89);"><span data-custom-class="body_text">The specific types of first- and third-party cookies served through our Website and the purposes they perform are described in the table below (please note that the specific </span><span data-custom-class="body_text">cookies served may vary depending on the specific Online Properties you visit):</span></span></span><span style="font-size: 15px;"></span></div><div><br></div><div><span style="color: rgb(127, 127, 127);"><span style="color: rgb(0, 0, 0); font-size: 15px;"><strong><span data-custom-class="heading_1"><h2>How can I control cookies on my browser?</h2></span></strong></span></span></div><div style="line-height: 1.5;"><span data-custom-class="body_text">As the means by which you can refuse cookies through your web browser controls vary from browser to browser, you should visit your browser's help menu for more information. The following is information about how to manage cookies on the most popular browsers:</span><span style="color: rgb(0, 58, 250);"><a data-custom-class="link" href="https://support.google.com/chrome/answer/95647#zippy=%2Callow-or-block-cookies" rel="noopener noreferrer" target="_blank"></a></span></div><ul><li style="line-height: 1.5;"><span style="color: rgb(0, 58, 250);"><a data-custom-class="link" href="https://support.google.com/chrome/answer/95647#zippy=%2Callow-or-block-cookies" rel="noopener noreferrer" target="_blank"><span style="font-size: 15px;">Chrome</span></a></span></li><li style="line-height: 1.5;"><span style="color: rgb(0, 58, 250);"><a data-custom-class="link" href="https://support.microsoft.com/en-us/windows/delete-and-manage-cookies-168dab11-0753-043d-7c16-ede5947fc64d" rel="noopener noreferrer" target="_blank"><span style="font-size: 15px;">Internet Explorer</span></a></span></li><li style="line-height: 1.5;"><span style="color: rgb(0, 58, 250);"><a data-custom-class="link" href="https://support.mozilla.org/en-US/kb/enhanced-tracking-protection-firefox-desktop?redirectslug=enable-and-disable-cookies-website-preferences&redirectlocale=en-US" rel="noopener noreferrer" target="_blank"><span style="font-size: 15px;">Firefox</span></a></span></li><li style="line-height: 1.5;"><span style="color: rgb(0, 58, 250);"><a data-custom-class="link" href="https://support.apple.com/en-ie/guide/safari/sfri11471/mac" rel="noopener noreferrer" target="_blank"><span style="font-size: 15px;">Safari</span></a></span></li><li style="line-height: 1.5;"><span style="color: rgb(0, 58, 250);"><a data-custom-class="link" href="https://support.microsoft.com/en-us/windows/microsoft-edge-browsing-data-and-privacy-bb8174ba-9d73-dcf2-9b4a-c582b4e640dd" rel="noopener noreferrer" target="_blank"><span style="font-size: 15px;">Edge</span></a></span></li><li style="line-height: 1.5;"><span style="color: rgb(0, 58, 250);"><a data-custom-class="link" href="https://help.opera.com/en/latest/web-preferences/" rel="noopener noreferrer" target="_blank"><span style="font-size: 15px;">Opera</span></a></span></li></ul><div style="line-height: 1.5;"><span data-custom-class="body_text">In addition, most advertising networks offer you a way to opt out of targeted advertising. If you would like to find out more information, please visit:</span><span style="color: rgb(0, 58, 250);"><a data-custom-class="link" href="http://www.aboutads.info/choices/" rel="noopener noreferrer" target="_blank"></a></span></div><ul><li style="line-height: 1.5;"><span style="color: rgb(0, 58, 250);"><a data-custom-class="link" href="http://www.aboutads.info/choices/" rel="noopener noreferrer" target="_blank"><span style="font-size: 15px;">Digital Advertising Alliance</span></a></span><span style="color: rgb(0, 58, 250);"><a data-custom-class="link" href="https://youradchoices.ca/" rel="noopener noreferrer" target="_blank"></a></span></li><li style="line-height: 1.5;"><span style="color: rgb(0, 58, 250);"><a data-custom-class="link" href="https://youradchoices.ca/" rel="noopener noreferrer" target="_blank"><span style="color: rgb(0, 58, 250); font-size: 15px;">Digital Advertising Alliance of Canada</span></a></span><span style="color: rgb(0, 58, 250);"><a data-custom-class="link" href="http://www.youronlinechoices.com/" rel="noopener noreferrer" target="_blank"></a></span></li><li style="line-height: 1.5;"><span style="color: rgb(0, 58, 250);"><a data-custom-class="link" href="http://www.youronlinechoices.com/" rel="noopener noreferrer" target="_blank"><span style="font-size: 15px;">European Interactive Digital Advertising Alliance</span></a></span></li></ul><div><br></div><div><strong><span data-custom-class="heading_1"><h2>What about other tracking technologies, like web beacons?</h2></span></strong></div><div style="line-height: 1.5;"><span style="color: rgb(127, 127, 127);"><span style="color: rgb(89, 89, 89); font-size: 15px;"><span style="font-size: 15px; color: rgb(89, 89, 89);"><span data-custom-class="body_text">Cookies are not the only way to recognize or track visitors to a website. We may use other, similar technologies from time to time, like web beacons (sometimes called "tracking pixels" or "clear gifs"). These are tiny graphics files that contain a unique identifier that enables us to recognize when someone has visited our Website<bdt class="block-component"></bdt> or opened an email including them<bdt class="statement-end-if-in-editor"></bdt>. This allows us, for example, to monitor </span><span style="font-size: 15px; color: rgb(89, 89, 89);"><span style="color: rgb(89, 89, 89);"><span data-custom-class="body_text">the traffic patterns of users from one page within a website to another, to deliver or communicate with cookies, to understand whether you have come to the website from an online advertisement displayed on a third-party website, to improve site performance, and to measure the success of email marketing campaigns. In many instances, these technologies are reliant on cookies to function properly, and so declining cookies will impair their functioning.</span><bdt class="block-component"></bdt></span></span></span></span></span></div><div style="line-height: 1.5;"><br></div><div style="line-height: 1.5;"><span data-custom-class="heading_1"><strong><h2>Do you use Flash cookies or Local Shared Objects?</h2></strong></span></div><div style="line-height: 1.5;"><span style="font-size: 15px; color: rgb(89, 89, 89);"><span data-custom-class="body_text">Websites may also use so-called "Flash Cookies" (also known as Local Shared Objects or "LSOs") to, among other things, collect and store information about your use of our services, fraud prevention, and for other site operations.</span></span></div><div style="line-height: 1.5;"><br></div><div style="line-height: 1.5;"><span style="font-size: 15px; color: rgb(89, 89, 89);"><span data-custom-class="body_text">If you do not want Flash Cookies stored on your computer, you can adjust the settings of your Flash player to block Flash Cookies storage using the tools contained in the </span></span><span data-custom-class="body_text"><span style="color: rgb(0, 58, 250);"><a data-custom-class="link" href="http://www.macromedia.com/support/documentation/en/flashplayer/help/settings_manager07.html" rel="noopener noreferrer" target="_blank"><span style="font-size: 15px;">Website Storage Settings Panel</span></a></span><span style="font-size: 15px; color: rgb(89, 89, 89);">. You can also control Flash Cookies by going to the </span><span style="color: rgb(0, 58, 250);"><a data-custom-class="link" href="http://www.macromedia.com/support/documentation/en/flashplayer/help/settings_manager03.html" rel="noopener noreferrer" target="_blank"><span style="font-size: 15px;">Global Storage Settings Panel</span></a></span></span><span style="font-size: 15px; color: rgb(89, 89, 89);"><span data-custom-class="body_text"> and </span><span style="font-size:15px; color: rgb(89, 89, 89);"><span data-custom-class="body_text">following the instructions (which may include instructions that explain, for example, how to delete existing Flash Cookies (referred to "information" on the Macromedia site), how to prevent Flash LSOs from being placed on your computer without your being asked, and (for Flash Player 8 and later) how to block Flash Cookies that are not being delivered by the operator of the page you are on at the time).</span></span></span></div><div style="line-height: 1.5;"><br></div><div style="line-height: 1.5;"><span style="font-size: 15px; color: rgb(89, 89, 89);"><span style="font-size: 15px; color: rgb(89, 89, 89);"><span data-custom-class="body_text">Please note that setting the Flash Player to restrict or limit acceptance of Flash Cookies may reduce or impede the functionality of some Flash applications, including, potentially, Flash applications used in connection with our services or online content.</span></span></span><span style="color: rgb(127, 127, 127);"><span style="color: rgb(89, 89, 89); font-size: 15px;"><span style="font-size: 15px; color: rgb(89, 89, 89);"><span style="font-size: 15px; color: rgb(89, 89, 89);"><span style="color: rgb(89, 89, 89);"><bdt class="statement-end-if-in-editor"></bdt><bdt class="block-component"></bdt></span></span></span></span></span></div><div style="line-height: 1.5;"><br></div><div style="line-height: 1.5;"><strong><span data-custom-class="heading_1"><h2>Do you serve targeted advertising?</h2></span></strong></div><div style="line-height: 1.5;"><span style="font-size: 15px; color: rgb(89, 89, 89);"><span data-custom-class="body_text">Third parties may serve cookies on your computer or mobile device to serve advertising through our Website. These companies may use information about your visits to this and other websites in order to provide relevant advertisements about goods and services that you may be interested in. They may also employ technology that is used to measure the effectiveness of advertisements. They can accomplish this by using cookies or web beacons to collect information about your visits to this and other sites in order to provide relevant advertisements about goods and services of potential interest to you. The information collected through this process does not enable us or them to identify your name, contact details, or other details that directly identify you unless you choose to provide these.</span></span><span style="color: rgb(127, 127, 127);"><span style="color: rgb(89, 89, 89); font-size: 15px;"><span style="font-size: 15px; color: rgb(89, 89, 89);"><span style="font-size: 15px; color: rgb(89, 89, 89);"><span style="color: rgb(89, 89, 89);"><bdt class="statement-end-if-in-editor"></bdt></span></span></span></span></span></div><div style="line-height: 1.5;"><br></div><div style="line-height: 1.5;"><strong><span data-custom-class="heading_1"><h2>How often will you update this Cookie Policy?</h2></span></strong></div><div style="line-height: 1.5;"><span style="font-size: 15px; color: rgb(89, 89, 89);"><span style="font-size: 15px; color: rgb(89, 89, 89);"><span data-custom-class="body_text">We may update </span><span style="font-size: 15px; color: rgb(89, 89, 89);"><span data-custom-class="body_text">this Cookie Policy from time to time in order to reflect, for example, changes to the cookies we use or for other operational, legal, or regulatory reasons. Please therefore revisit this Cookie Policy regularly to stay informed about our use of cookies and related technologies.</span></span></span></span></div><div style="line-height: 1.5;"><br></div><div style="line-height: 1.5;"><span style="font-size: 15px; color: rgb(89, 89, 89);"><span style="font-size: 15px; color: rgb(89, 89, 89);"><span style="font-size: 15px; color: rgb(89, 89, 89);"><span data-custom-class="body_text">The date at the top of this Cookie Policy indicates when it was last updated.</span></span></span></span></div><div style="line-height: 1.5;"><br></div><div style="line-height: 1.5;"><strong><span data-custom-class="heading_1"><h2>Where can I get further information?</h2></span></strong></div><div style="line-height: 1.5;"><span style="font-size: 15px; color: rgb(89, 89, 89);"><span style="font-size: 15px; color: rgb(89, 89, 89);"><span style="font-size: 15px; color: rgb(89, 89, 89);"><span data-custom-class="body_text">If you have any questions about our use of cookies or other technologies, please<bdt class="block-component"></bdt> contact us at<bdt class="statement-end-if-in-editor"></bdt>:</span></span></span></span></div><div style="line-height: 1.5;"><br></div><div style="line-height: 1.5;"><span style="font-size: 15px; color: rgb(89, 89, 89);"><span style="font-size: 15px; color: rgb(89, 89, 89);"><span data-custom-class="body_text"><bdt class="question">Honest Mailbox</bdt></span></span></span></div><div style="line-height: 1.5;"><bdt class="block-component"><span style="font-size: 15px;"></span></bdt><span style="font-size: 15px;"><bdt class="question"><span data-custom-class="body_text">Kalwar road</span></bdt></span><bdt class="statement-end-if-in-editor"><span style="font-size: 15px;"></span></bdt></div><div style="line-height: 1.5;"><span style="font-size: 15px; color: rgb(89, 89, 89);"><span data-custom-class="body_text"><bdt class="block-component"></bdt></span></span></div><div style="line-height: 1.5;"><bdt class="block-component"></bdt><bdt class="question"><span data-custom-class="body_text">Jaipur,</span></bdt><bdt class="statement-end-if-in-editor"></bdt><span data-custom-class="body_text"><span style="font-size: 15px; color: rgb(89, 89, 89);"><bdt class="block-component"></bdt> <bdt class="question">Rajasthan</bdt><bdt class="statement-end-if-in-editor"></bdt><bdt class="block-component"></bdt> <bdt class="question">302012</bdt><bdt class="statement-end-if-in-editor"></bdt><bdt class="block-component"></bdt><bdt class="block-component"></bdt></span></span></div><div style="line-height: 1.5;"><span data-custom-class="body_text"><span style="font-size: 15px; color: rgb(89, 89, 89);"><bdt class="question">India</bdt><bdt class="statement-end-if-in-editor"></bdt></span></span><span data-custom-class="body_text"><span style="font-size: 15px; color: rgb(89, 89, 89);"><bdt class="statement-end-if-in-editor"><bdt class="block-component"></bdt></bdt></span></span><span data-custom-class="body_text"><span style="font-size: 15px; color: rgb(89, 89, 89);"><bdt class="block-component"></bdt></span></span></div><div style="display: none;"><a class="cookie123" href="https://app.termly.io/dsar/12180661-2478-4488-862b-6e527cac9ae7"></a></div></div><style>
+      ul {
+        list-style-type: square;
+      }
+      ul > li > ul {
+        list-style-type: circle;
+      }
+      ul > li > ul > li > ul {
+        list-style-type: square;
+      }
+      ol li {
+        font-family: Arial ;
+      }
+    </style>
+      </div>
+      <br><div><span data-custom-class='body_text'>This Cookie Policy was created using Termly's </span><a href="https://termly.io/products/cookie-consent-manager/" target="_blank" rel="noopener external" data-custom-class='link'>Cookie Consent Manager</a></div>
+              `,
+              }}
+            />
+          )}
         </div>
 
         {/* Footer */}
         <div className="mt-20 pt-8 border-t border-white/5 text-center">
-            <div className="flex items-center justify-center gap-2 mb-4">
-                <img src="/HM.png" alt="HM Logo" className="w-4 h-auto opacity-50" />
-            </div>
-            <p className="text-xs text-neutral-600 font-bebas tracking-[0.2em] uppercase">Private • Encrypted • Just You Two</p>
+          <div className="flex items-center justify-center gap-2 mb-4">
+            <img src="/HM.png" alt="HM Logo" className="w-4 h-auto opacity-50" />
+          </div>
+          <p className="text-xs text-neutral-600 font-inter tracking-[0.2em] uppercase">
+            Private • Encrypted • Just You Two
+          </p>
         </div>
 
       </div>

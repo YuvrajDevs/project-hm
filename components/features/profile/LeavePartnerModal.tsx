@@ -72,10 +72,9 @@ export const LeavePartnerModal: React.FC<LeavePartnerModalProps> = ({
                     </>
                   ) : (
                     <>
-                      This will close your shared safe space immediately. 
-                      You can always reconnect later, but some things are best handled 
-                      with a little more time. <br/><br/>
-                      <span className="text-red-400/80">Impulsive decisions are often the ones we regret most.</span>
+                      This will close your shared safe space immediately and **permanently delete** your shared history. 
+                      You can always reconnect as a fresh pair later, but this journey will be wiped. <br/><br/>
+                      <span className="text-red-400/80 font-bebas uppercase tracking-widest">Wiping Shared Memories & Messages</span>
                     </>
                   )}
                 </div>

@@ -1,5 +1,5 @@
 import type { Metadata } from "next";
-import { Bebas_Neue, Outfit } from "next/font/google";
+import { Bebas_Neue, Outfit, Inter } from "next/font/google";
 import "./globals.css";
 
 const bebasNeue = Bebas_Neue({
@@ -10,6 +10,11 @@ const bebasNeue = Bebas_Neue({
 
 const outfit = Outfit({
   variable: "--font-outfit",
+  subsets: ["latin"],
+});
+
+const inter = Inter({
+  variable: "--font-inter",
   subsets: ["latin"],
 });
 
@@ -28,7 +33,8 @@ export default function RootLayout({
   return (
     <html
       lang="en"
-      className={`${bebasNeue.variable} ${outfit.variable} antialiased dark scroll-smooth`}
+      suppressHydrationWarning
+      className={`${bebasNeue.variable} ${outfit.variable} ${inter.variable} antialiased dark scroll-smooth`}
     >
       <body className={`${outfit.className} min-h-screen bg-[#070707] text-neutral-50 overflow-x-hidden flex flex-col`}>
         <MailboxProvider>

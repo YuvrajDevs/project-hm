@@ -43,10 +43,10 @@ export const ArchiveDashboard = () => {
     {
       id: "sync",
       icon: <Thermometer className="w-5 h-5 text-yellow-500" />,
-      label: "Today's Sync",
-      value: `${metrics.syncScore}%`,
-      subtext: metrics.syncScore > 80 ? "Deeply Aligned" : (metrics.syncScore > 40 ? "Slightly off" : "Far apart"),
-      color: metrics.syncScore > 80 ? "text-yellow-400" : (metrics.syncScore > 40 ? "text-orange-400" : "text-red-400")
+      label: "Today's Connection",
+      value: `${metrics.connectionAvgToday.toFixed(1)}/10`,
+      subtext: metrics.connectionAvgToday >= 7 ? "Balanced & Deep" : (metrics.connectionAvgToday >= 4 ? "Nurturing stage" : "Handle with care"),
+      color: metrics.connectionAvgToday >= 7 ? "text-yellow-400" : (metrics.connectionAvgToday >= 4 ? "text-orange-400" : "text-red-400")
     },
     {
       id: "pulse",
@@ -69,8 +69,8 @@ export const ArchiveDashboard = () => {
         icon: <Wind className="w-5 h-5 text-emerald-500" />,
         label: "Current State",
         value: metrics.state,
-        subtext: "Based on recent pulse",
-        color: metrics.state === "Calm" ? "text-emerald-400" : (metrics.state === "Tense" ? "text-red-400" : "text-neutral-400")
+        subtext: "Live headspace sync",
+        color: metrics.state === "In Conflict" ? "text-red-500" : (metrics.state === "Deep Peace" ? "text-emerald-400" : "text-neutral-400")
     }
   ];
 
@@ -98,14 +98,14 @@ export const ArchiveDashboard = () => {
       </section>
 
       {/* 2. Metrics Cards (Moved above the calendar) */}
-      <section className="px-6 grid grid-cols-2 gap-4 relative z-10">
+      <section className="px-6 grid grid-cols-2 md:grid-cols-3 gap-6 relative z-10">
         {cards.map((card, idx) => (
           <motion.div
             key={card.id}
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ delay: 0.3 + idx * 0.05 }}
-            className="bg-white/5 border border-white/5 rounded-[2.5rem] p-6 space-y-4 backdrop-blur-3xl hover:bg-white/10 transition-all cursor-pointer group"
+            className="bg-white/5 border border-white/10 rounded-[2.5rem] p-6 md:p-10 space-y-4 md:space-y-6 backdrop-blur-3xl hover:bg-white/10 transition-all cursor-pointer group"
           >
             <div className="flex justify-between items-start">
               <div className="p-2.5 rounded-2xl bg-white/5 group-hover:scale-110 transition-transform">
@@ -114,9 +114,9 @@ export const ArchiveDashboard = () => {
             </div>
             
             <div className="space-y-1">
-              <div className="text-[10px] font-bebas tracking-widest text-neutral-500 uppercase">{card.label}</div>
-              <div className={cn("text-2xl font-bebas tracking-widest uppercase", card.color)}>{card.value}</div>
-              <div className="text-[9px] font-outfit text-neutral-600 uppercase tracking-wider">{card.subtext}</div>
+              <div className="text-[10px] md:text-xs font-bebas tracking-widest text-neutral-500 uppercase">{card.label}</div>
+              <div className={cn("text-2xl md:text-5xl font-bebas tracking-widest uppercase", card.color)}>{card.value}</div>
+              <div className="text-[9px] md:text-[11px] font-outfit text-neutral-600 uppercase tracking-wider">{card.subtext}</div>
             </div>
           </motion.div>
         ))}

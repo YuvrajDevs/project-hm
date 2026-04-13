@@ -11,3 +11,15 @@ export function formatDateId(date: Date): string {
     const day = String(date.getDate()).padStart(2, '0');
     return `${year}-${month}-${day}`;
 }
+export function getCheckInDateId(date: Date = new Date()): string {
+    const resetHour = 6;
+    const currentHour = date.getHours();
+    
+    // Copy date and adjust back by 1 day if before 6 AM
+    const adjustedDate = new Date(date.getTime());
+    if (currentHour < resetHour) {
+        adjustedDate.setDate(adjustedDate.getDate() - 1);
+    }
+    
+    return formatDateId(adjustedDate);
+}

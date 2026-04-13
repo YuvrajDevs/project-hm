@@ -7,7 +7,10 @@ import {
   where,
   onSnapshot, 
   addDoc, 
+  setDoc,
   updateDoc, 
+  deleteDoc,
+  getDocs,
   Timestamp,
   FirestoreDataConverter,
   QueryDocumentSnapshot,
@@ -84,7 +87,8 @@ export const saveCheckIn = async (coupleId: string, checkIn: Omit<DailyCheckIn, 
  * Quick React Helpers
  */
 export const sendQuickReact = async (coupleId: string, react: Omit<QuickReact, "id" | "createdAt">) => {
-  return addDoc(getCoupleCollection(coupleId, "reactions"), {
+  const reactionRef = doc(db, "couples", coupleId, "reactions", `latest_${react.senderUid}`);
+  return setDoc(reactionRef, {
     ...react,
     createdAt: Timestamp.now()
   });
@@ -181,6 +185,14 @@ export const endSafeSpaceSession = async (coupleId: string, sessionId: string, c
   });
 };
 
+export const updateUserMood = async (uid: string, mood: string) => {
+  const userRef = doc(db, "users", uid);
+  return updateDoc(userRef, {
+    currentMood: mood,
+    moodUpdatedAt: new Date().toISOString()
+  });
+};
+
 export const updatePartnerNickname = async (uid: string, nickname: string) => {
   const userRef = doc(db, "users", uid);
   return updateDoc(userRef, {
@@ -223,10 +235,112 @@ export const updateSafeSpaceTurn = async (coupleId: string, sessionId: string, n
   });
 };
 
+export const destroyCoupleData = async (coupleId: string) => {
+  const collections = ["mailbox", "checkins", "reactions", "safe_space_sessions", "events"];
+  
+  for (const colName of collections) {
+    const colRef = collection(db, "couples", coupleId, colName);
+    const snap = await getDocs(colRef);
+    for (const d of snap.docs) {
+      await deleteDoc(d.ref);
+    }
+  }
+  
+  // Finally delete the couple document itself
+  await deleteDoc(doc(db, "couples", coupleId));
+};
+
+export const resetCoupleHistory = async (coupleId: string) => {
+  const collections = ["mailbox", "checkins", "reactions", "safe_space_sessions", "events"];
+  
+  for (const colName of collections) {
+    const colRef = collection(db, "couples", coupleId, colName);
+    const snap = await getDocs(colRef);
+    for (const d of snap.docs) {
+      await deleteDoc(d.ref);
+    }
+  }
+};
+
+export const raiseWhiteFlag = async (coupleId: string, uid: string) => {
+  await updateDoc(doc(db, "couples", coupleId), {
+    whiteFlagBy: uid,
+    whiteFlagAt: new Date().toISOString()
+  });
+};
+
+export const lowerWhiteFlag = async (coupleId: string) => {
+  await updateDoc(doc(db, "couples", coupleId), {
+    whiteFlagBy: null,
+    whiteFlagAt: null
+  });
+};
+
+export const requestCoupleReset = async (coupleId: string, uid: string) => {
+  await updateDoc(doc(db, "couples", coupleId), {
+    resetRequestedBy: uid,
+    resetRequestStatus: "pending"
+  });
+};
+
+export const declineCoupleReset = async (coupleId: string) => {
+  await updateDoc(doc(db, "couples", coupleId), {
+    resetRequestStatus: "declined"
+  });
+  // Auto-clear decline status after 5 seconds? 
+  // Better done in the UI or a background effect, but let's clear it here for now if needed.
+  setTimeout(async () => {
+    await updateDoc(doc(db, "couples", coupleId), {
+      resetRequestStatus: null,
+      resetRequestedBy: null
+    });
+  }, 5000);
+};
+
+export const acceptCoupleReset = async (coupleId: string) => {
+  // 1. Fetch couple to find partners
+  const coupleRef = doc(db, "couples", coupleId);
+  const snap = await getDoc(coupleRef);
+  if (!snap.exists()) return;
+  const data = snap.data();
+
+  // 2. Wipe shared identity on user documents
+  const partners = [data.partnerA_uid, data.partnerB_uid];
+  for (const uid of partners) {
+    if (!uid) continue;
+    const userRef = doc(db, "users", uid);
+    await updateDoc(userRef, {
+      currentMood: null,
+      moodUpdatedAt: null,
+      partnerNickname: null,
+    });
+  }
+
+  // 3. Destroy mutual history sub-collections
+  await resetCoupleHistory(coupleId);
+
+  // 4. Clear couple-level flags and anniversary
+  await updateDoc(coupleRef, {
+    resetRequestStatus: null,
+    resetRequestedBy: null,
+    anniversaryDate: null,
+    whiteFlagBy: null,
+    whiteFlagAt: null,
+  });
+};
+
+export const cancelCoupleReset = async (coupleId: string) => {
+  await updateDoc(doc(db, "couples", coupleId), {
+    resetRequestStatus: null,
+    resetRequestedBy: null
+  });
+};
+
 export const unpairPartner = async (uid: string, partnerUid: string) => {
   const userRef = doc(db, "users", uid);
-  const partnerRef = doc(db, "users", partnerUid);
-  
+  const userSnap = await getDoc(userRef);
+  const coupleId = userSnap.data()?.coupleId;
+
   // Clear initiator
   await updateDoc(userRef, {
     coupleId: null,
@@ -235,12 +349,18 @@ export const unpairPartner = async (uid: string, partnerUid: string) => {
   });
   
   // Clear partner and set notification flag
-  return updateDoc(partnerRef, {
+  const partnerRef = doc(db, "users", partnerUid);
+  await updateDoc(partnerRef, {
     coupleId: null,
     partnerId: null,
     role: null,
     leftByPartner: true 
   });
+
+  // DESTROY SHARED DATA
+  if (coupleId) {
+    await destroyCoupleData(coupleId);
+  }
 };
 
 export const clearLeftStatus = async (uid: string) => {
@@ -264,8 +384,7 @@ export const deleteUserAccount = async (uid: string, partnerUid: string | null) 
     });
   }
 
-  const { deleteDoc, doc: firestoreDoc } = await import("firebase/firestore");
-  const userRef = firestoreDoc(db, "users", uid);
+  const userRef = doc(db, "users", uid);
   await deleteDoc(userRef);
 };
 
@@ -292,6 +411,5 @@ export const deleteCoupleEvent = async (coupleId: string, eventId: string) => {
   if (!snap.exists()) return;
   
   // Standard delete
-  const { deleteDoc } = await import("firebase/firestore");
   return deleteDoc(eventRef);
 };

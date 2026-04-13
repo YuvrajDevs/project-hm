@@ -10,7 +10,7 @@ import {
     Calendar as CalendarIcon, 
     Plus, Trash2, Gift, Sparkles 
 } from "lucide-react";
-import { formatDateId } from "@/lib/utils";
+import { formatDateId, getCheckInDateId } from "@/lib/utils";
 import { useMailbox } from "@/context/MailboxContext";
 
 interface StreakGridProps {
@@ -45,7 +45,7 @@ export const StreakGrid: React.FC<StreakGridProps> = ({ history }) => {
   const [eventRepeat, setEventRepeat] = useState<"none" | "monthly" | "yearly">("none");
   const [isSurprise, setIsSurprise] = useState(false);
 
-  const todayStr = formatDateId(new Date());
+  const todayStr = getCheckInDateId();
 
   // Navigation handlers
   const handlePrevMonth = () => {
@@ -75,17 +75,17 @@ export const StreakGrid: React.FC<StreakGridProps> = ({ history }) => {
     const partnerA = dayCheckins[0];
     const partnerB = dayCheckins[1];
 
-    let syncScore = 0;
-    if (partnerA && partnerB) {
-        const moodDiff = Math.abs(partnerA.mood - partnerB.mood);
-        const connDiff = Math.abs(partnerA.connection - partnerB.connection);
-        syncScore = Math.max(0, 100 - (moodDiff * 7) - (connDiff * 7));
+    let connectionScore = 0;
+    if (dayCheckins.length === 2) {
+        connectionScore = (partnerA.connection + partnerB.connection) / 2;
+    } else {
+        connectionScore = partnerA.connection; // Show single partner's if other hasn't synced
     }
 
     return {
         checkins: dayCheckins,
-        syncScore,
-        status: syncScore > 80 ? "aligned" : (syncScore > 50 ? "neutral" : "rough"),
+        syncScore: connectionScore,
+        status: connectionScore >= 7 ? "aligned" : (connectionScore >= 4 ? "neutral" : "rough"),
         count: dayCheckins.length
     };
   };
@@ -165,15 +165,16 @@ export const StreakGrid: React.FC<StreakGridProps> = ({ history }) => {
       </div>
 
       {/* Calendar Grid Container */}
-      <div className="bg-white/5 p-8 rounded-[2.5rem] border border-white/5 backdrop-blur-3xl relative overflow-hidden group/grid">
+      <div className="bg-white/5 p-8 md:p-16 rounded-[2.5rem] md:rounded-[4rem] border border-white/5 backdrop-blur-3xl relative overflow-hidden group/grid">
         {/* Master Grid (Header + Dates) */}
-        <div className="grid grid-cols-7 gap-y-8 gap-x-4 place-items-center relative z-10 h-full">
+        <div className="grid grid-cols-7 gap-y-10 md:gap-y-14 gap-x-4 md:gap-x-12 place-items-center relative z-10 h-full">
             {/* Row 1: Days Header */}
             {DAYS_OF_WEEK.map(day => (
-                <div key={day} className="text-center font-bebas text-[11px] tracking-widest text-neutral-600 uppercase">
+                <div key={day} className="text-center font-bebas text-[11px] md:text-sm tracking-[0.2em] text-neutral-600 uppercase">
                     {day[0]}
                 </div>
             ))}
+
 
             {/* Rows 2-7: Date Circles */}
             {days.map((date, idx) => {
@@ -200,13 +201,13 @@ export const StreakGrid: React.FC<StreakGridProps> = ({ history }) => {
                     >
                         <div 
                             className={cn(
-                                "w-10 h-10 rounded-full transition-all duration-500 flex items-center justify-center relative overflow-hidden",
+                                "w-10 h-10 md:w-16 md:h-16 rounded-full transition-all duration-500 flex items-center justify-center relative overflow-hidden",
                                 getStatusColor(info?.status, info?.count || 0, isCurrentMonth),
                                 isToday ? "border-2 border-white shadow-sm" : (info?.count || dayEvents.length ? "hover:scale-110 active:scale-95 shadow-lg border-2 border-white/10" : "border border-white/5")
                             )} 
                         >
                             <span className={cn(
-                                "text-[11px] font-bebas tracking-tighter transition-colors relative z-10",
+                                "text-[11px] md:text-xl font-bebas tracking-tighter transition-colors relative z-10",
                                 (info?.count ?? 0) >= 2 ? "text-black/80" : (isCurrentMonth ? "text-neutral-400" : "text-neutral-600")
                             )}>
                                 {d.getDate()}
@@ -239,11 +240,11 @@ export const StreakGrid: React.FC<StreakGridProps> = ({ history }) => {
                     initial={{ scale: 0.9, y: 20 }}
                     animate={{ scale: 1, y: 0 }}
                     exit={{ scale: 0.9, y: 20 }}
-                    className="w-full max-w-sm bg-neutral-900 border border-white/10 rounded-[2.5rem] overflow-hidden shadow-2xl flex flex-col max-h-[85vh]"
+                    className="w-full max-w-[320px] md:max-w-xl bg-neutral-900 border border-white/10 rounded-[2.5rem] overflow-hidden shadow-2xl flex flex-col max-h-[85vh]"
                     onClick={e => e.stopPropagation()}
                 >
                     {/* Modal Header */}
-                    <div className="relative p-8 pb-4 shrink-0">
+                    <div className="relative p-5 pb-2 shrink-0">
                         <button 
                             onClick={() => {
                                 setSelectedDate(null);
@@ -265,7 +266,7 @@ export const StreakGrid: React.FC<StreakGridProps> = ({ history }) => {
                     </div>
 
                     {/* Scrollable Body */}
-                    <div className="flex-1 overflow-y-auto p-8 pt-4 space-y-8 no-scrollbar">
+                    <div className="flex-1 overflow-y-auto p-5 pt-2 space-y-6 no-scrollbar">
                         {isAddingEvent ? (
                             /* Add Event Form */
                             <div className="space-y-6">
@@ -343,12 +344,12 @@ export const StreakGrid: React.FC<StreakGridProps> = ({ history }) => {
                                         {/* Sync Score Row */}
                                         <div className="flex justify-between items-center bg-white/5 p-6 border-b border-white/5">
                                             <div className="space-y-1">
-                                                <span className="font-bebas text-[10px] tracking-widest text-neutral-500 uppercase">Synchronicity</span>
-                                                <div className="text-5xl font-bebas text-white">{selectedData.syncScore}%</div>
+                                                <span className="font-bebas text-[10px] tracking-widest text-neutral-500 uppercase">Connection Level</span>
+                                                <div className="text-5xl font-bebas text-white">{selectedData.syncScore.toFixed(1)}/10</div>
                                             </div>
                                             <div className="w-12 h-12 rounded-full flex items-center justify-center bg-white/5">
-                                                {selectedData.syncScore > 80 ? <Star className="w-6 h-6 text-yellow-400 fill-current" /> : 
-                                                selectedData.syncScore > 50 ? <Sun className="w-6 h-6 text-orange-400" /> : 
+                                                {selectedData.syncScore >= 7 ? <Star className="w-6 h-6 text-yellow-400 fill-current" /> : 
+                                                selectedData.syncScore >= 4 ? <Sun className="w-6 h-6 text-orange-400" /> : 
                                                 <CloudRain className="w-6 h-6 text-red-400" />}
                                             </div>
                                         </div>
@@ -371,8 +372,8 @@ export const StreakGrid: React.FC<StreakGridProps> = ({ history }) => {
                                                                 <span className="text-xs font-bebas text-white">{checkin.mood}/10</span>
                                                             </div>
                                                             <div className="flex flex-col items-end">
-                                                                <span className="text-[8px] uppercase tracking-widest text-neutral-600 font-bebas">Word</span>
-                                                                <span className="text-xs font-bebas text-pink-500">{checkin.word}</span>
+                                                                <span className="text-[8px] uppercase tracking-widest text-neutral-600 font-bebas">Status</span>
+                                                                <span className="text-xs font-bebas text-pink-500">{checkin.moodStatus || (checkin as any).word}</span>
                                                             </div>
                                                         </div>
                                                     </div>

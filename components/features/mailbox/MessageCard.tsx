@@ -5,7 +5,7 @@ import { MailboxMessage, ResponseMode } from "@/lib/types";
 import { motion, AnimatePresence } from "framer-motion";
 import { useMailbox } from "@/context/MailboxContext";
 import { respondToMessage } from "@/lib/firestore-helpers";
-import { Heart, Clock, CheckCircle2, MessageCircle, Ear, Users } from "lucide-react";
+import { Heart, Clock, CheckCircle2, MessageCircle, Ear, Users, Send, ChevronLeft } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useSensoryFeedback } from "@/hooks/useSensoryFeedback";
 
@@ -35,6 +35,8 @@ export const MessageCard = ({ message }: { message: MailboxMessage }) => {
   const config = statusConfig[message.status] || { label: message.status, emoji: "❓", color: "bg-neutral-800" };
   
   const [timeLeft, setTimeLeft] = useState<string | null>(null);
+  const [isComposing, setIsComposing] = useState(false);
+  const [responseText, setResponseText] = useState("");
 
   useEffect(() => {
     if (message.response?.mode === "MINUTE" && message.response.timerExpiresAt) {
@@ -56,17 +58,20 @@ export const MessageCard = ({ message }: { message: MailboxMessage }) => {
     }
   }, [message.response]);
 
-  const handleResponse = async (mode: ResponseMode) => {
+  const handleResponse = async (mode: ResponseMode, text?: string) => {
     if (isSender) return;
     
     playPop();
     const responseObj: any = { mode };
+    if (text) responseObj.text = text;
+    
     if (mode === "MINUTE") {
       responseObj.timerExpiresAt = new Date(Date.now() + 30 * 60000).toISOString();
     }
 
     try {
       await respondToMessage(user!.coupleId!, message.id, responseObj);
+      setIsComposing(false);
     } catch (err) {
       console.error(err);
     }
@@ -85,7 +90,7 @@ export const MessageCard = ({ message }: { message: MailboxMessage }) => {
       )}
     >
       {/* Background Decor */}
-      <div className="absolute top-0 right-0 p-6 opacity-10 rotate-12 pointer-events-none">
+      <div className="absolute top-0 right-12 p-6 opacity-10 rotate-12 pointer-events-none">
         <Heart className="w-32 h-32 fill-current" />
       </div>
 
@@ -101,8 +106,8 @@ export const MessageCard = ({ message }: { message: MailboxMessage }) => {
               </h2>
           </div>
         </div>
-        <div className="text-[10px] font-bebas tracking-widest opacity-40 mt-1">
-            {new Date(message.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+        <div className="text-[10px] font-bebas tracking-widest opacity-60 bg-black/10 px-3 py-1.5 rounded-full backdrop-blur-sm border border-white/5">
+            {new Date(message.createdAt).toLocaleDateString([], { month: 'short', day: 'numeric' })}, {new Date(message.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
         </div>
       </div>
 
@@ -127,28 +132,72 @@ export const MessageCard = ({ message }: { message: MailboxMessage }) => {
                 <span className="font-bebas text-lg tracking-widest uppercase">Waiting for response...</span>
             </div>
           ) : (
-            <div className="flex flex-col sm:flex-row gap-4">
-                <button 
-                  onClick={() => handleResponse("LISTEN")}
-                  className="flex-1 bg-black/10 hover:bg-black/20 backdrop-blur-md border border-white/20 py-4 rounded-2xl flex flex-col items-center gap-2 transition-all group active:scale-95"
-                >
-                    <Ear className="w-6 h-6 group-hover:scale-110 transition-transform" />
-                    <span className="font-bebas text-lg uppercase tracking-widest">I'll Listen</span>
-                </button>
-                <button 
-                  onClick={() => handleResponse("HERE")}
-                  className="flex-1 bg-black/10 hover:bg-black/20 backdrop-blur-md border border-white/20 py-4 rounded-2xl flex flex-col items-center gap-2 transition-all group active:scale-95"
-                >
-                    <Users className="w-6 h-6 group-hover:scale-110 transition-transform" />
-                    <span className="font-bebas text-lg uppercase tracking-widest">I'm Here</span>
-                </button>
-                <button 
-                  onClick={() => handleResponse("MINUTE")}
-                  className="flex-1 bg-black/10 hover:bg-black/20 backdrop-blur-md border border-white/20 py-4 rounded-2xl flex flex-col items-center gap-2 transition-all group active:scale-95"
-                >
-                    <Clock className="w-6 h-6 group-hover:scale-110 transition-transform" />
-                    <span className="font-bebas text-lg uppercase tracking-widest">30 Mins</span>
-                </button>
+            <div className="relative">
+                <AnimatePresence mode="wait">
+                    {!isComposing ? (
+                        <motion.div 
+                            key="buttons"
+                            initial={{ opacity: 0, scale: 0.95 }}
+                            animate={{ opacity: 1, scale: 1 }}
+                            exit={{ opacity: 0, scale: 0.95 }}
+                            className="flex flex-col sm:flex-row gap-4"
+                        >
+                            <button 
+                                onClick={() => setIsComposing(true)}
+                                className="flex-1 bg-black/10 hover:bg-black/20 backdrop-blur-md border border-white/20 py-4 rounded-2xl flex flex-col items-center gap-2 transition-all group active:scale-95"
+                            >
+                                <Users className="w-6 h-6 group-hover:scale-110 transition-transform" />
+                                <span className="font-bebas text-lg uppercase tracking-widest">I'm Here</span>
+                            </button>
+                            <button 
+                                onClick={() => handleResponse("MINUTE")}
+                                className="flex-1 bg-black/10 hover:bg-black/20 backdrop-blur-md border border-white/20 py-4 rounded-2xl flex flex-col items-center gap-2 transition-all group active:scale-95"
+                            >
+                                <Clock className="w-6 h-6 group-hover:scale-110 transition-transform" />
+                                <span className="font-bebas text-lg uppercase tracking-widest">30 Mins</span>
+                            </button>
+                        </motion.div>
+                    ) : (
+                        <motion.div 
+                            key="composer"
+                            initial={{ opacity: 0, y: 10 }}
+                            animate={{ opacity: 1, y: 0 }}
+                            exit={{ opacity: 0, y: 10 }}
+                            className="space-y-4"
+                        >
+                            <div className="flex items-center justify-between mb-2">
+                                <button 
+                                    onClick={() => setIsComposing(false)}
+                                    className="flex items-center gap-2 text-white/60 hover:text-white transition-colors"
+                                >
+                                    <ChevronLeft className="w-4 h-4" />
+                                    <span className="font-bebas text-xs uppercase tracking-widest">Back</span>
+                                </button>
+                                <span className="font-bebas text-[10px] tracking-[0.2em] uppercase text-white/40">Add a short note</span>
+                            </div>
+                            <div className="flex gap-3">
+                                <div className="flex-1 relative">
+                                    <input 
+                                        autoFocus
+                                        value={responseText}
+                                        onChange={(e) => setResponseText(e.target.value.substring(0, 50))}
+                                        placeholder="Ex: I'm home in 5..."
+                                        className="w-full bg-black/20 border border-white/10 rounded-xl px-4 py-3 text-sm font-outfit placeholder:text-white/20 focus:outline-none focus:border-white/30 transition-all shadow-inner"
+                                    />
+                                    <span className="absolute right-3 bottom-0 top-0 flex items-center text-[10px] items-center text-white/20 pointer-events-none">
+                                        {responseText.length}/50
+                                    </span>
+                                </div>
+                                <button 
+                                    onClick={() => handleResponse("HERE", responseText)}
+                                    className="bg-white text-black p-3 rounded-xl hover:bg-neutral-100 transition-all active:scale-95 shadow-xl"
+                                >
+                                    <Send className="w-5 h-5" />
+                                </button>
+                            </div>
+                        </motion.div>
+                    )}
+                </AnimatePresence>
             </div>
           )
         ) : (
@@ -164,27 +213,29 @@ export const MessageCard = ({ message }: { message: MailboxMessage }) => {
                       {message.response.mode === "LISTEN" ? "Listening" : 
                        message.response.mode === "HERE" ? "Here with you" : "Coming in 30"}
                    </h4>
-                   <p className="text-[10px] uppercase tracking-widest opacity-60 font-bebas mt-1">
-                      Partner Acknowledged
-                   </p>
+                   {message.response.text ? (
+                       <p className="text-sm font-outfit opacity-80 mt-1 italic">&quot;{message.response.text}&quot;</p>
+                   ) : (
+                       <p className="text-[10px] uppercase tracking-widest opacity-60 font-bebas mt-1">
+                          Partner Acknowledged
+                       </p>
+                   )}
                 </div>
             </div>
             
-            {timeLeft && timeLeft !== "DONE" && (
-                <div className="font-mono text-3xl font-bold bg-black/20 px-4 py-2 rounded-xl">
-                    {timeLeft}
-                </div>
-            )}
-            
-            {(!timeLeft || timeLeft === "DONE") && (
-                <CheckCircle2 className="w-8 h-8 opacity-40 text-black" />
-            )}
+            <div className="flex items-center gap-4">
+                {timeLeft && timeLeft !== "DONE" && (
+                    <div className="font-mono text-3xl font-bold bg-black/20 px-4 py-2 rounded-xl">
+                        {timeLeft}
+                    </div>
+                )}
+                
+                {(!timeLeft || timeLeft === "DONE") && (
+                    <CheckCircle2 className="w-8 h-8 opacity-40 text-black" />
+                )}
+            </div>
           </div>
         )}
-      </div>
-
-      <div className="absolute bottom-6 right-8 text-[10px] font-bebas tracking-[0.3em] uppercase opacity-30">
-        {new Date(message.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
       </div>
     </motion.div>
   );

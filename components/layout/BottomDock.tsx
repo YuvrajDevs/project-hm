@@ -2,13 +2,13 @@
 
 import React from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { Plus, Smile, BarChart3, MessageSquareHeart, User } from "lucide-react";
+import { Plus, Smile, BarChart3, MessageSquareHeart, User, Inbox } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { cn } from "@/lib/utils";
 
 interface BottomDockProps {
-  activeView: "mailbox" | "archive";
-  onViewChange: (view: "mailbox" | "archive") => void;
+  activeView: "mailbox" | "archive" | "inbox";
+  onViewChange: (view: "mailbox" | "archive" | "inbox") => void;
   onComposeClick: () => void;
   onEmojiClick: () => void;
   showEmojiDot?: boolean;
@@ -41,6 +41,20 @@ export const BottomDock: React.FC<BottomDockProps> = ({
             transition={{ type: "spring", damping: 20, stiffness: 100 }}
             className="pointer-events-auto relative flex items-center gap-1 p-2 bg-black/40 backdrop-blur-3xl border border-white/10 rounded-[2.5rem] shadow-[0_20px_50px_rgba(0,0,0,0.5)]"
           >
+        {/* Far Left: Inbox Button */}
+        <button
+          onClick={() => onViewChange("inbox")}
+          className={cn(
+            "relative w-14 h-14 rounded-full flex items-center justify-center transition-all group active:scale-90",
+            activeView === "inbox" ? "text-white bg-white/10" : "text-neutral-400 hover:text-white hover:bg-white/5"
+          )}
+        >
+          <Inbox className="w-6 h-6 group-hover:scale-110 transition-transform" />
+          <span className="absolute -top-12 left-1/2 -translate-x-1/2 px-3 py-1 bg-white text-black text-[10px] font-bebas tracking-widest uppercase rounded-lg opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none">
+            Inbox
+          </span>
+        </button>
+
         {/* Left: Emoji Button */}
         <button
           onClick={onEmojiClick}
@@ -55,30 +69,33 @@ export const BottomDock: React.FC<BottomDockProps> = ({
           </span>
         </button>
 
-        {/* Center: Big Plus Button */}
-        <div className="relative mx-2">
+        {/* Center: Home Button (Logo) */}
+        <div className="relative mx-1">
             <button
-                onClick={onComposeClick}
-                className="w-18 h-18 bg-white text-black rounded-full flex items-center justify-center shadow-[0_0_30px_rgba(255,255,255,0.2)] hover:scale-105 active:scale-90 transition-all group"
+                onClick={() => onViewChange("mailbox")}
+                className={cn(
+                    "w-16 h-16 rounded-full flex items-center justify-center transition-all group p-1.5",
+                    activeView === "mailbox" ? "bg-pink-500 text-white shadow-[0_0_30px_rgba(236,72,153,0.4)]" : "bg-white/5 border border-white/10 text-white"
+                )}
             >
-                <Plus className="w-8 h-8 group-hover:rotate-90 transition-transform duration-300" />
+                <img src="/HM.png" alt="HM Logo" className="w-9 h-auto group-hover:scale-110 transition-transform" />
             </button>
             <span className="absolute -top-14 left-1/2 -translate-x-1/2 px-4 py-1.5 bg-white text-black text-[10px] font-bebas tracking-widest uppercase rounded-lg opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none whitespace-nowrap">
-                New Message
+                Home
             </span>
         </div>
 
         {/* Right: Dashboard Button */}
         <button
-          onClick={() => onViewChange(activeView === "mailbox" ? "archive" : "mailbox")}
+          onClick={() => onViewChange("archive")}
           className={cn(
             "relative w-14 h-14 rounded-full flex items-center justify-center transition-all group active:scale-90",
             activeView === "archive" ? "text-white bg-white/10" : "text-neutral-400 hover:text-white hover:bg-white/5"
           )}
         >
-          {activeView === "archive" ? <img src="/HM.png" alt="Mailbox" className="w-6 h-auto group-hover:scale-110 transition-transform drop-shadow-[0_0_10px_rgba(255,255,255,0.2)]" /> : <BarChart3 className="w-6 h-6 group-hover:scale-110 transition-transform" />}
+          <BarChart3 className="w-6 h-6 group-hover:scale-110 transition-transform" />
           <span className="absolute -top-12 left-1/2 -translate-x-1/2 px-3 py-1 bg-white text-black text-[10px] font-bebas tracking-widest uppercase rounded-lg opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none">
-            {activeView === "archive" ? "Mailbox" : "Archive"}
+            Archive
           </span>
         </button>
 

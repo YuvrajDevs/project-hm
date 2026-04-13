@@ -24,6 +24,7 @@ import {
   ChevronRight
 } from "lucide-react";
 import { AmbientBackground } from "../../ui/AmbientBackground";
+import { cn } from "@/lib/utils";
 
 export const SafeSpaceSession = () => {
   const { user, partner, activeSafeSpace } = useMailbox();
@@ -70,9 +71,10 @@ export const SafeSpaceSession = () => {
 
   return (
     <motion.div 
-        initial={{ opacity: 0 }}
-        animate={{ opacity: 1 }}
-        exit={{ opacity: 0 }}
+        initial={{ opacity: 0, scale: 0.95, filter: "blur(10px)" }}
+        animate={{ opacity: 1, scale: 1, filter: "blur(0px)" }}
+        exit={{ opacity: 0, scale: 1.05, filter: "blur(10px)" }}
+        transition={{ duration: 0.6, ease: [0.16, 1, 0.3, 1] }}
         className="fixed inset-0 z-50 bg-[#050505] flex flex-col font-outfit overflow-hidden"
     >
         <AmbientBackground variant="bright" />
@@ -106,12 +108,15 @@ export const SafeSpaceSession = () => {
             )}
             {messages.map((msg, i) => (
                 <motion.div 
-                    initial={{ opacity: 0, y: 20 }}
-                    animate={{ opacity: 1, y: 0 }}
+                    initial={{ opacity: 0, x: msg.senderUid === user?.uid ? 20 : -20 }}
+                    animate={{ opacity: 1, x: 0 }}
                     key={msg.id}
-                    className="max-w-xl mx-auto space-y-2"
+                    className={cn(
+                        "max-w-[80%] space-y-2",
+                        msg.senderUid === user?.uid ? "ml-auto text-right" : "mr-auto text-left"
+                    )}
                 >
-                    <div className="flex justify-between items-baseline mb-1">
+                    <div className={cn("flex items-baseline mb-1", msg.senderUid === user?.uid ? "justify-end" : "justify-start")}>
                         <span className="text-[10px] uppercase tracking-widest font-bebas text-neutral-600">
                             {msg.senderUid === user?.uid ? "You" : partner?.displayName}
                         </span>
@@ -152,7 +157,7 @@ export const SafeSpaceSession = () => {
                             value={inputText}
                             onChange={(e) => setInputText(e.target.value)}
                             placeholder="Share your thought honestly..."
-                            className="w-full bg-white/5 border border-white/10 rounded-2xl p-6 text-xl text-white focus:outline-none focus:border-indigo-500/50 min-h-[150px] transition-all resize-none"
+                            className="w-full bg-white/5 border border-white/10 rounded-2xl p-6 text-xl text-white focus:outline-none focus:border-indigo-500/50 h-[12vh] transition-all resize-none"
                             onKeyDown={(e) => {
                                 if (e.key === 'Enter' && !e.shiftKey) {
                                     e.preventDefault();

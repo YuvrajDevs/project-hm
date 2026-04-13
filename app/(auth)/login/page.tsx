@@ -6,6 +6,7 @@ import { signInWithPopup } from "firebase/auth";
 import { doc, getDoc, setDoc } from "firebase/firestore";
 import { motion } from "framer-motion";
 import { useRouter } from "next/navigation";
+import Link from "next/link";
 import { Heart, Sparkles } from "lucide-react";
 
 import { AmbientBackground } from "@/components/ui/AmbientBackground";
@@ -122,6 +123,13 @@ export default function Login() {
             {loading ? "Connecting..." : "Continue with Google"}
           </button>
 
+          <p className="text-neutral-600 text-[10px] text-center mt-6 font-outfit leading-relaxed px-4 max-w-[280px] mx-auto">
+            By continuing, you agree to our{" "}
+            <Link href="/terms-of-service" className="text-neutral-400 hover:text-white transition-colors underline underline-offset-2">Terms of Service</Link>
+            {" "}and{" "}
+            <Link href="/privacy-policy" className="text-neutral-400 hover:text-white transition-colors underline underline-offset-2">Privacy Policy</Link>.
+          </p>
+
           {error && (
             <motion.p
               initial={{ opacity: 0 }}
@@ -134,15 +142,18 @@ export default function Login() {
         </motion.div>
       </div>
 
-      {/* Footer */}
-      <motion.p
+      {/* Footer Legal Links */}
+      <motion.div
         initial={{ opacity: 0 }}
         animate={{ opacity: 1 }}
         transition={{ delay: 0.6 }}
-        className="absolute bottom-8 text-[9px] font-bebas tracking-[0.5em] text-neutral-700 uppercase"
+        className="absolute bottom-10 flex flex-wrap justify-center gap-x-6 gap-y-2 text-[10px] font-inter tracking-[0.2em] text-neutral-600 uppercase"
       >
-        Private • Encrypted • Just the two of you
-      </motion.p>
+        <Link href="/terms-of-service" className="hover:text-white transition-colors underline decoration-white/10 underline-offset-4">Terms</Link>
+        <Link href="/privacy-policy" className="hover:text-white transition-colors underline decoration-white/10 underline-offset-4">Privacy</Link>
+        <Link href="/cookie-policy" className="hover:text-white transition-colors underline decoration-white/10 underline-offset-4">Cookies</Link>
+        <Link href="/contact" className="hover:text-white transition-colors underline decoration-white/10 underline-offset-4">Contact</Link>
+      </motion.div>
     </div>
   );
 }

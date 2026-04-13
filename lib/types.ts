@@ -12,7 +12,9 @@ export interface User {
   role?: UserRole;
   profile?: EmotionalProfile;
   hasCompletedOnboarding?: boolean;
-  leftByPartner?: boolean; // New flag for closure flow
+  leftByPartner?: boolean; 
+  currentMood?: string;
+  moodUpdatedAt?: string;
   createdAt: string;
 }
 
@@ -51,7 +53,8 @@ export interface EmotionalProfile {
 // 📬 Mailbox Feature Types
 export type MailboxStatus = 
   | "IGNORING" | "OVERWHELMED" | "NEED_ATTENTION" | "DISTANT" 
-  | "ANXIOUS" | "LOVE_NOTE" | "SPACE_NEEDED" | "HARD_DAY";
+  | "ANXIOUS" | "LOVE_NOTE" | "SPACE_NEEDED" | "HARD_DAY"
+  | "CONNECTED";
 
 export type MailboxIntent = 
   | "LISTEN" | "REASSURE" | "ADVICE" | "TALK" | "SAY_IT";
@@ -81,7 +84,7 @@ export interface DailyCheckIn {
   userUid: string;
   mood: number; // 1-10
   connection: number; // 1-10
-  word: string;
+  moodStatus: string;
   reason?: string; // For gloomy moods
   joyReason?: string; // For happy moods
   dateId: string; // YYYY-MM-DD
@@ -95,13 +98,26 @@ export interface CompatibilityReport {
   starter: string;
 }
 
-// ⚡ Quick React Types
-export type ReactionType = "HUG" | "LOVE" | "THINKING" | "PROUD" | "SUPPORT";
+// ⚡ Quick React Types (Signals)
+export type ReactionType = 
+  | "REASSURANCE" 
+  | "PEACE" 
+  | "CLOSENESS" 
+  | "NOT_OKAY" 
+  | "FEELING_BETTER" 
+  | "LOVE"
+  | "GLOOMY"
+  | "CONFLICT"
+  | "ANXIOUS"
+  | "ENERGIZED"
+  | "TIRED"
+  | "APPRECIATIVE";
 
 export interface QuickReact {
   id: string;
   senderUid: string;
   type: ReactionType;
+  note?: string; // Optional short message (max 50 chars)
   createdAt: string;
 }
 
@@ -122,6 +138,13 @@ export interface SafeSpaceSession {
     requestedAt: string;
     status: "pending" | "approved" | "denied";
   };
+  // Collaborative Reset Flow
+  resetRequestedBy?: string;
+  resetRequestStatus?: "pending" | "declined" | null;
+
+  // White Flag Feature
+  whiteFlagBy?: string | null;
+  whiteFlagAt?: string | null;
   lastMicRequestAt?: string; // For 5min cooldown
   lastMessageAt: string;
   startedAt: string;

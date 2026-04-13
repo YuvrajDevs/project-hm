@@ -16,6 +16,7 @@ const statuses: { id: MailboxStatus; label: string; emoji: string; color: string
   { id: "LOVE_NOTE", label: "I Love You", emoji: "😌", color: "var(--status-love)" },
   { id: "SPACE_NEEDED", label: "Need Space", emoji: "🤐", color: "var(--status-space)" },
   { id: "HARD_DAY", label: "Hard Day", emoji: "😣", color: "var(--status-hardday)" },
+  { id: "CONNECTED", label: "Connected", emoji: "🤝", color: "var(--status-love)" },
 ];
 
 const intents: { id: MailboxIntent; label: string; emoji: string }[] = [
@@ -76,19 +77,19 @@ export const ComposeMessage = ({ onClose }: { onClose: () => void }) => {
       exit={{ opacity: 0 }}
       className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-sm"
     >
-      <div className="w-full max-w-2xl bg-[#0f0f0f] border border-white/10 rounded-[2.5rem] overflow-hidden flex flex-col max-h-[90vh]">
-        <header className="p-6 border-b border-white/5 flex justify-between items-center">
-          <h2 className="font-bebas text-2xl tracking-widest text-white">Compose Heart</h2>
-          <button onClick={onClose} className="p-2 hover:bg-white/5 rounded-full transition-colors text-neutral-500 hover:text-white">
-            <X className="w-6 h-6" />
+      <div className="w-full max-w-md bg-[#0f0f0f] border border-white/10 rounded-[2rem] overflow-hidden flex flex-col max-h-[90vh] shadow-2xl">
+        <header className="p-4 border-b border-white/5 flex justify-between items-center">
+          <h2 className="font-bebas text-xl tracking-widest text-white">Compose Heart</h2>
+          <button onClick={onClose} className="p-1.5 hover:bg-white/5 rounded-full transition-colors text-neutral-500 hover:text-white">
+            <X className="w-5 h-5" />
           </button>
         </header>
 
-        <div className="flex-1 overflow-y-auto p-6 space-y-10 custom-scrollbar">
+        <div className="flex-1 overflow-y-auto p-4 space-y-6 custom-scrollbar">
           {/* Status Selection */}
-          <section className="space-y-4">
+          <section className="space-y-3">
             <label className="text-[10px] font-bebas text-neutral-500 uppercase tracking-widest ml-1">How are you feeling?</label>
-            <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+            <div className="grid grid-cols-3 gap-2">
               {statuses.map((s) => (
                 <button
                   key={s.id}
@@ -96,23 +97,23 @@ export const ComposeMessage = ({ onClose }: { onClose: () => void }) => {
                       vibrateTick();
                       setStatus(s.id);
                   }}
-                  className={`flex flex-col items-center justify-center p-4 rounded-2xl border transition-all aspect-square gap-2 ${
+                  className={`flex flex-col items-center justify-center p-2.5 rounded-xl border transition-all aspect-square gap-1 ${
                     status === s.id 
                       ? "border-transparent text-black" 
                       : "border-white/5 bg-white/5 text-neutral-500 hover:border-white/20"
                   }`}
                   style={{ backgroundColor: status === s.id ? s.color : "" }}
                 >
-                  <span className="text-3xl">{s.emoji}</span>
-                  <span className="text-[10px] font-bebas uppercase tracking-tighter text-center leading-tight">{s.label}</span>
+                  <span className="text-xl">{s.emoji}</span>
+                  <span className="text-[11px] font-bebas uppercase tracking-tighter text-center leading-tight">{s.label}</span>
                 </button>
               ))}
             </div>
           </section>
 
           {/* Intent Selection */}
-          <section className="space-y-4">
-            <label className="text-[10px] font-bebas text-neutral-500 uppercase tracking-widest ml-1">What do you need right now?</label>
+          <section className="space-y-3">
+            <label className="text-[10px] font-bebas text-neutral-500 uppercase tracking-widest ml-1">What do you need?</label>
             <div className="flex flex-wrap gap-2">
               {intents.map((i) => (
                 <button
@@ -134,7 +135,7 @@ export const ComposeMessage = ({ onClose }: { onClose: () => void }) => {
           </section>
 
           {/* Short Note */}
-          <section className="space-y-4">
+          <section className="space-y-3">
             <div className="flex justify-between items-center ml-1">
                 <label className="text-[10px] font-bebas text-neutral-500 uppercase tracking-widest">Optional Note</label>
                 <span className={`text-[10px] font-mono ${note.length > 140 ? 'text-red-500' : 'text-neutral-600'}`}>{note.length}/140</span>
@@ -142,16 +143,17 @@ export const ComposeMessage = ({ onClose }: { onClose: () => void }) => {
             <textarea
               value={note}
               onChange={(e) => setNote(e.target.value)}
-              placeholder="Keep it brief. Focus on the core feeling..."
-              className="w-full bg-white/5 border border-white/10 rounded-2xl p-4 text-white font-outfit text-sm focus:outline-none focus:border-white/30 transition-all min-h-[100px] resize-none"
+              placeholder="Keep it brief..."
+              className="w-full bg-white/5 border border-white/10 rounded-xl p-3 text-white font-outfit text-sm focus:outline-none focus:border-white/30 transition-all min-h-[80px] resize-none"
               maxLength={140}
             />
           </section>
         </div>
 
         {/* Time Capsule Toggle Section */}
-        <div className="px-6 py-4 bg-black border-t border-white/5 space-y-4">
+        <div className="px-4 py-3 bg-black border-t border-white/5 space-y-3">
             <button 
+                type="button"
                 onClick={() => {
                     playPop();
                     setShowCapsuleParams(!showCapsuleParams);
@@ -165,6 +167,7 @@ export const ComposeMessage = ({ onClose }: { onClose: () => void }) => {
             <AnimatePresence>
                 {showCapsuleParams && (
                     <motion.div 
+                        key="capsule-params"
                         initial={{ height: 0, opacity: 0 }}
                         animate={{ height: "auto", opacity: 1 }}
                         exit={{ height: 0, opacity: 0 }}
@@ -201,11 +204,11 @@ export const ComposeMessage = ({ onClose }: { onClose: () => void }) => {
             </AnimatePresence>
         </div>
 
-        <footer className="p-6 border-t border-white/5">
+        <footer className="p-4 border-t border-white/5">
           <button
             disabled={!status || !intent || sending}
             onClick={handleSend}
-            className="w-full bg-white text-black font-bebas text-lg py-3 rounded-xl flex items-center justify-center gap-2 hover:bg-neutral-200 transition-all active:scale-95 disabled:opacity-30"
+            className="w-full bg-white text-black font-bebas text-lg py-3 rounded-xl flex items-center justify-center gap-2 hover:bg-neutral-200 transition-all active:scale-95 disabled:opacity-30 shadow-lg"
           >
             {sending ? <Loader2 className="w-5 h-5 animate-spin" /> : <><Send className="w-4 h-4" /> Send to Partner</>}
           </button>

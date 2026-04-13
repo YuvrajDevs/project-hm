@@ -85,7 +85,13 @@ export default function Pair() {
         return;
       }
 
-      const coupleId = `${partnerUid}_${user.uid}`;
+      const generateSessionId = () => {
+        const chars = "abcdefghijklmnopqrstuvwxyz0123456789";
+        let res = "";
+        for (let i = 0; i < 12; i++) res += chars.charAt(Math.floor(Math.random() * chars.length));
+        return res;
+      };
+      const coupleId = generateSessionId();
 
       await setDoc(doc(db, "couples", coupleId), {
         id: coupleId,

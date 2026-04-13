@@ -5,14 +5,20 @@ import { useMailbox } from "@/context/MailboxContext";
 import { MessageCard } from "./MessageCard";
 import { LockedCapsule } from "./LockedCapsule";
 import { DailyCheckIn } from "../checkin/DailyCheckIn";
+import { MoodStatusHub } from "../checkin/MoodStatusHub";
 import { SafeSpaceEntry } from "../safespace/SafeSpaceEntry";
 import { motion, AnimatePresence } from "framer-motion";
-import { Plus, Inbox, History, Heart, Sparkles } from "lucide-react";
+import { Plus, Inbox, History, Heart, Sparkles, MessageSquarePlus } from "lucide-react";
 
 import { AmbientBackground } from "../../ui/AmbientBackground";
 import { cn } from "@/lib/utils";
 
-export const MailboxScreen = () => {
+interface MailboxScreenProps {
+    onOpenCheckIn?: () => void;
+    onComposeClick?: () => void;
+}
+
+export const MailboxScreen: React.FC<MailboxScreenProps> = ({ onOpenCheckIn, onComposeClick }) => {
 
 
   const { messages, loading, user, metrics } = useMailbox();
@@ -26,9 +32,6 @@ export const MailboxScreen = () => {
                 <div className="space-y-2">
                     <h1 className="text-6xl font-bebas text-white tracking-widest uppercase leading-none">The Mailbox</h1>
                     <p className="text-neutral-500 font-outfit text-[10px] uppercase tracking-[0.4em]">Honest thoughts, safely landed.</p>
-                </div>
-                <div className="hidden md:flex items-center gap-3 text-neutral-600 font-bebas text-xs uppercase tracking-widest">
-                    <History className="w-4 h-4" /> History
                 </div>
             </header>
 
@@ -76,11 +79,30 @@ export const MailboxScreen = () => {
                 </section>
             )}
 
+            {/* Mood Hub Section */}
+            <section className="relative">
+                <MoodStatusHub />
+            </section>
+
             <section className="space-y-6">
+                <div className="flex items-center justify-between">
+                    <div className="space-y-1">
+                        <h2 className="text-3xl font-bebas text-white tracking-widest uppercase leading-none">Latest Thoughts</h2>
+                        <p className="text-[10px] text-neutral-500 font-bebas tracking-[0.2em] uppercase">The most recent context</p>
+                    </div>
+                    <button 
+                        onClick={onComposeClick}
+                        className="p-3 bg-white text-black rounded-xl hover:scale-105 active:scale-95 transition-all shadow-lg flex items-center gap-2"
+                    >
+                        <Plus className="w-5 h-5" />
+                        <span className="font-bebas text-sm tracking-widest uppercase">New Thought</span>
+                    </button>
+                </div>
+
                 {/* 1. Messages section */}
                 <div className="space-y-4">
                     {messages.length > 0 ? (
-                        messages.map((msg) => {
+                        messages.slice(0, 3).map((msg) => {
                             if (msg.unlockAt) {
                                 const isLocked = new Date(msg.unlockAt).getTime() > Date.now();
                                 if (isLocked) {
@@ -103,8 +125,7 @@ export const MailboxScreen = () => {
                 {/* 2. Safe Space */}
                 <SafeSpaceEntry />
 
-                {/* 3. Daily Sync */}
-                <DailyCheckIn />
+
             </section>
         </div>
     </div>
