@@ -88,7 +88,7 @@ export default function Login() {
 
           <div>
             <h1 className="text-6xl font-bebas tracking-[0.15em] text-white leading-none">
-              YOUR<br />SAFE SPACE
+              YOUR<br /><span className="text-transparent bg-clip-text bg-gradient-to-r from-pink-400 to-blue-400">SAFE SPACE</span>
             </h1>
             <p className="text-neutral-500 font-outfit text-xs mt-4 tracking-[0.3em] uppercase leading-relaxed">
               A private mailbox<br />for two hearts
