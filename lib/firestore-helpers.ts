@@ -278,21 +278,21 @@ export const lowerWhiteFlag = async (coupleId: string) => {
 
 export const requestCoupleReset = async (coupleId: string, uid: string) => {
   await updateDoc(doc(db, "couples", coupleId), {
-    resetRequestedBy: uid,
-    resetRequestStatus: "pending"
+    resetStatus: "pending",
+    resetBy: uid
   });
 };
 
-export const declineCoupleReset = async (coupleId: string) => {
+export const rejectCoupleReset = async (coupleId: string) => {
   await updateDoc(doc(db, "couples", coupleId), {
-    resetRequestStatus: "declined"
+    resetStatus: "declined"
   });
   // Auto-clear decline status after 5 seconds? 
   // Better done in the UI or a background effect, but let's clear it here for now if needed.
   setTimeout(async () => {
     await updateDoc(doc(db, "couples", coupleId), {
-      resetRequestStatus: null,
-      resetRequestedBy: null
+      resetStatus: null,
+      resetBy: null
     });
   }, 5000);
 };
@@ -321,8 +321,8 @@ export const acceptCoupleReset = async (coupleId: string) => {
 
   // 4. Clear couple-level flags and anniversary
   await updateDoc(coupleRef, {
-    resetRequestStatus: null,
-    resetRequestedBy: null,
+    resetStatus: null,
+    resetBy: null,
     anniversaryDate: null,
     whiteFlagBy: null,
     whiteFlagAt: null,
@@ -331,8 +331,8 @@ export const acceptCoupleReset = async (coupleId: string) => {
 
 export const cancelCoupleReset = async (coupleId: string) => {
   await updateDoc(doc(db, "couples", coupleId), {
-    resetRequestStatus: null,
-    resetRequestedBy: null
+    resetStatus: null,
+    resetBy: null
   });
 };
 

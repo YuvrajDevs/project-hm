@@ -418,23 +418,53 @@ export const MailboxProvider: React.FC<{ children: React.ReactNode }> = ({ child
   };
 
   const requestReset = async () => {
-    if (!user?.coupleId || !user.uid) return;
-    await requestCoupleReset(user.coupleId, user.uid);
+    if (!user?.coupleId) return;
+    try {
+      await updateDoc(doc(db, "couples", user.coupleId), {
+        resetStatus: "pending",
+        resetBy: user.uid
+      });
+    } catch (err) {
+      console.error(err);
+    }
   };
 
   const confirmReset = async () => {
     if (!user?.coupleId) return;
-    await acceptCoupleReset(user.coupleId);
+    try {
+      await acceptCoupleReset(user.coupleId);
+    } catch (err) {
+      console.error(err);
+    }
   };
 
   const rejectReset = async () => {
     if (!user?.coupleId) return;
-    await declineCoupleReset(user.coupleId);
+    try {
+      await updateDoc(doc(db, "couples", user.coupleId), {
+        resetStatus: "declined"
+      });
+      setTimeout(async () => {
+        await updateDoc(doc(db, "couples", user.coupleId), {
+          resetStatus: null,
+          resetBy: null
+        });
+      }, 5000);
+    } catch (err) {
+      console.error(err);
+    }
   };
 
   const cancelReset = async () => {
     if (!user?.coupleId) return;
-    await cancelCoupleReset(user.coupleId);
+    try {
+      await updateDoc(doc(db, "couples", user.coupleId), {
+        resetStatus: null,
+        resetBy: null
+      });
+    } catch (err) {
+      console.error(err);
+    }
   };
 
   const raiseFlag = async () => {

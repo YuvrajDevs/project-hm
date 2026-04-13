@@ -87,7 +87,7 @@ export default function Home() {
 
   useEffect(() => {
     const isAnyPopupOpen = showCheckInPopup || !!activeSafeSpace || isOverlayActive || 
-      ((couple as any)?.resetRequestStatus === "pending" && (couple as any)?.resetRequestedBy !== user?.uid) ||
+      ((couple as any)?.resetStatus === "pending" && (couple as any)?.resetBy !== user?.uid) ||
       (!!(couple as any)?.whiteFlagBy && (couple as any)?.whiteFlagBy !== user?.uid);
     
     if (isAnyPopupOpen) {

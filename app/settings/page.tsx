@@ -157,10 +157,10 @@ export default function SettingsPage() {
                     {!showResetConfirm ? (
                         <button
                             onClick={() => setShowResetConfirm(true)}
-                            disabled={(couple as any).resetRequestStatus === "pending" && (couple as any).resetRequestedBy === user.uid}
+                            disabled={(couple as any).resetStatus === "pending" && (couple as any).resetBy === user.uid}
                             className="w-full py-4 border border-white/10 text-white rounded-xl font-bebas tracking-widest uppercase hover:bg-white/10 transition-all font-bold disabled:opacity-50"
                         >
-                            {(couple as any).resetRequestStatus === "pending" && (couple as any).resetRequestedBy === user.uid 
+                            {(couple as any).resetStatus === "pending" && (couple as any).resetBy === user.uid 
                                 ? "Waiting for Partner..." 
                                 : "Reset History Together"}
                         </button>
@@ -184,13 +184,13 @@ export default function SettingsPage() {
 
                     {/* Pending Request / Rejection Messages */}
                     <AnimatePresence>
-                        {couple.resetRequestStatus === "pending" && couple.resetRequestedBy === user.uid && (
+                        {(couple as any).resetStatus === "pending" && (couple as any).resetBy === user.uid && (
                             <motion.div initial={{ opacity: 0, height: 0 }} animate={{ opacity: 1, height: "auto" }} className="mt-4 p-4 bg-white/5 border border-white/10 rounded-xl text-center">
                                 <p className="text-xs text-neutral-400 font-outfit uppercase tracking-wider">Awaiting your partner&apos;s agreement...</p>
                                 <button onClick={cancelReset} className="mt-2 text-[10px] text-pink-500 font-bebas uppercase tracking-widest hover:underline">Cancel Request</button>
                             </motion.div>
                         )}
-                        {couple.resetRequestStatus === "declined" && (
+                        {(couple as any).resetStatus === "declined" && (
                              <motion.div initial={{ opacity: 0, height: 0 }} animate={{ opacity: 1, height: "auto" }} className="mt-4 p-4 bg-red-500/10 border border-red-500/20 rounded-xl text-center">
                                 <p className="text-xs text-red-500 font-outfit leading-relaxed">
                                     Your partner refused. <br/>
