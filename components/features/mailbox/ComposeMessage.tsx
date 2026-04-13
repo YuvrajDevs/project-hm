@@ -4,7 +4,8 @@ import React, { useState } from "react";
 import { MailboxStatus, MailboxIntent } from "@/lib/types";
 import { motion, AnimatePresence } from "framer-motion";
 import { useMailbox } from "@/context/MailboxContext";
-import { X, Send, Hash } from "lucide-react";
+import { X, Send, Hash, Clock, Lock, Unlock } from "lucide-react";
+import { useSensoryFeedback } from "@/hooks/useSensoryFeedback";
 
 const statuses: { id: MailboxStatus; label: string; emoji: string; color: string }[] = [
   { id: "IGNORING", label: "Feeling Ignored", emoji: "😔", color: "var(--status-ignored)" },
@@ -31,6 +32,12 @@ export const ComposeMessage = ({ onClose }: { onClose: () => void }) => {
   const [intent, setIntent] = useState<MailboxIntent | null>(null);
   const [note, setNote] = useState("");
   const [sending, setSending] = useState(false);
+  const { playPop, playSend, vibrateTick } = useSensoryFeedback();
+
+  // Time Capsule States
+  const [showCapsuleParams, setShowCapsuleParams] = useState(false);
+  const [unlockAt, setUnlockAt] = useState<string>("");
+  const [isSecretBeforeUnlock, setIsSecretBeforeUnlock] = useState(false);
 
   React.useEffect(() => {
     document.body.style.overflow = 'hidden';
@@ -44,8 +51,16 @@ export const ComposeMessage = ({ onClose }: { onClose: () => void }) => {
   const handleSend = async () => {
     if (!status || !intent) return;
     setSending(true);
+    playSend();
     try {
-      await sendMessage({ status, intent, note: note.slice(0, 140) });
+      const payload: any = { status, intent, note: note.slice(0, 140) };
+      
+      if (showCapsuleParams && unlockAt) {
+          payload.unlockAt = new Date(unlockAt).toISOString();
+          payload.isSecretBeforeUnlock = isSecretBeforeUnlock;
+      }
+      
+      await sendMessage(payload);
       onClose();
     } catch (err) {
       console.error(err);
@@ -77,7 +92,10 @@ export const ComposeMessage = ({ onClose }: { onClose: () => void }) => {
               {statuses.map((s) => (
                 <button
                   key={s.id}
-                  onClick={() => setStatus(s.id)}
+                  onClick={() => {
+                      vibrateTick();
+                      setStatus(s.id);
+                  }}
                   className={`flex flex-col items-center justify-center p-4 rounded-2xl border transition-all aspect-square gap-2 ${
                     status === s.id 
                       ? "border-transparent text-black" 
@@ -99,7 +117,10 @@ export const ComposeMessage = ({ onClose }: { onClose: () => void }) => {
               {intents.map((i) => (
                 <button
                   key={i.id}
-                  onClick={() => setIntent(i.id)}
+                  onClick={() => {
+                      vibrateTick();
+                      setIntent(i.id);
+                  }}
                   className={`px-4 py-2.5 rounded-full border text-xs font-outfit transition-all flex items-center gap-2 ${
                     intent === i.id 
                       ? "bg-white text-black border-white" 
@@ -126,6 +147,58 @@ export const ComposeMessage = ({ onClose }: { onClose: () => void }) => {
               maxLength={140}
             />
           </section>
+        </div>
+
+        {/* Time Capsule Toggle Section */}
+        <div className="px-6 py-4 bg-black border-t border-white/5 space-y-4">
+            <button 
+                onClick={() => {
+                    playPop();
+                    setShowCapsuleParams(!showCapsuleParams);
+                }}
+                className="flex items-center gap-2 text-xs font-bebas tracking-widest uppercase text-neutral-400 hover:text-white transition-colors"
+            >
+                <Clock className="w-4 h-4" />
+                {showCapsuleParams ? "Remove Time Capsule" : "Send as Time Capsule"}
+            </button>
+            
+            <AnimatePresence>
+                {showCapsuleParams && (
+                    <motion.div 
+                        initial={{ height: 0, opacity: 0 }}
+                        animate={{ height: "auto", opacity: 1 }}
+                        exit={{ height: 0, opacity: 0 }}
+                        className="overflow-hidden space-y-4"
+                    >
+                        <div>
+                            <label className="text-[10px] font-bebas text-neutral-500 uppercase tracking-widest mb-2 block ml-1">Unlock Date & Time</label>
+                            <input 
+                                type="datetime-local" 
+                                value={unlockAt}
+                                onChange={(e) => setUnlockAt(e.target.value)}
+                                className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-3 text-white font-outfit text-sm focus:outline-none focus:border-pink-500/50 transition-colors"
+                            />
+                        </div>
+                        <button 
+                            onClick={() => {
+                                vibrateTick();
+                                setIsSecretBeforeUnlock(!isSecretBeforeUnlock);
+                            }}
+                            className="w-full bg-white/5 border border-white/10 rounded-xl p-4 flex items-center justify-between hover:bg-white/10 transition-all text-left"
+                        >
+                            <div>
+                                <p className="font-bebas text-sm tracking-widest uppercase text-white">
+                                    {isSecretBeforeUnlock ? "Secret Capsule" : "Public Capsule"}
+                                </p>
+                                <p className="text-[10px] uppercase tracking-widest text-neutral-500 font-bebas">
+                                    {isSecretBeforeUnlock ? "Completely hidden until the date" : "Visible as a locked box in their mailbox"}
+                                </p>
+                            </div>
+                            {isSecretBeforeUnlock ? <Lock className="w-5 h-5 text-neutral-400" /> : <Unlock className="w-5 h-5 text-pink-500" />}
+                        </button>
+                    </motion.div>
+                )}
+            </AnimatePresence>
         </div>
 
         <footer className="p-6 border-t border-white/5">

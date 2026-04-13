@@ -7,6 +7,7 @@ import { useMailbox } from "@/context/MailboxContext";
 import { respondToMessage } from "@/lib/firestore-helpers";
 import { Heart, Clock, CheckCircle2, MessageCircle, Ear, Users } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { useSensoryFeedback } from "@/hooks/useSensoryFeedback";
 
 const statusConfig: Record<string, { label: string; emoji: string; color: string }> = {
   IGNORING: { label: "Feeling Ignored", emoji: "😔", color: "bg-[#9d8df1]" },
@@ -29,6 +30,7 @@ const intentLabels: Record<string, string> = {
 
 export const MessageCard = ({ message }: { message: MailboxMessage }) => {
   const { user } = useMailbox();
+  const { playPop } = useSensoryFeedback();
   const isSender = message.senderUid === user?.uid;
   const config = statusConfig[message.status] || { label: message.status, emoji: "❓", color: "bg-neutral-800" };
   
@@ -57,6 +59,7 @@ export const MessageCard = ({ message }: { message: MailboxMessage }) => {
   const handleResponse = async (mode: ResponseMode) => {
     if (isSender) return;
     
+    playPop();
     const responseObj: any = { mode };
     if (mode === "MINUTE") {
       responseObj.timerExpiresAt = new Date(Date.now() + 30 * 60000).toISOString();

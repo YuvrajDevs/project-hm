@@ -5,14 +5,17 @@ import { motion } from "framer-motion";
 import { useMailbox } from "@/context/MailboxContext";
 import { startSafeSpaceSession } from "@/lib/firestore-helpers";
 import { Coffee, ShieldCheck, ArrowRight, MessageCircle } from "lucide-react";
+import { useSensoryFeedback } from "@/hooks/useSensoryFeedback";
 
 export const SafeSpaceEntry = () => {
   const { user, activeSafeSpace } = useMailbox();
   const [starting, setStarting] = useState(false);
+  const { playHeartbeat } = useSensoryFeedback();
 
   const handleStart = async () => {
     if (!user?.coupleId) return;
     setStarting(true);
+    playHeartbeat();
     try {
       await startSafeSpaceSession(user.coupleId, user.uid);
     } catch (err) {
@@ -39,6 +42,7 @@ export const SafeSpaceEntry = () => {
                 </div>
             </div>
             <button 
+                onClick={playHeartbeat}
                 className="bg-indigo-500 text-white font-bebas text-lg p-3 md:px-8 md:py-3 rounded-xl hover:bg-indigo-400 transition-all flex items-center justify-center gap-2"
             >
                 <span className="hidden md:inline">Join Now</span> <ArrowRight className="w-5 h-5 md:w-4 md:h-4" />

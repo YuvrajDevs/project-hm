@@ -3,6 +3,7 @@
 import React, { useState } from "react";
 import { useMailbox } from "@/context/MailboxContext";
 import { MessageCard } from "./MessageCard";
+import { LockedCapsule } from "./LockedCapsule";
 import { DailyCheckIn } from "../checkin/DailyCheckIn";
 import { SafeSpaceEntry } from "../safespace/SafeSpaceEntry";
 import { motion, AnimatePresence } from "framer-motion";
@@ -79,9 +80,18 @@ export const MailboxScreen = () => {
                 {/* 1. Messages section */}
                 <div className="space-y-4">
                     {messages.length > 0 ? (
-                        messages.map((msg) => (
-                            <MessageCard key={msg.id} message={msg} />
-                        ))
+                        messages.map((msg) => {
+                            if (msg.unlockAt) {
+                                const isLocked = new Date(msg.unlockAt).getTime() > Date.now();
+                                if (isLocked) {
+                                    if (msg.isSecretBeforeUnlock && msg.senderUid !== user?.uid) {
+                                        return null; // Don't even show it
+                                    }
+                                    return <LockedCapsule key={msg.id} message={msg} />;
+                                }
+                            }
+                            return <MessageCard key={msg.id} message={msg} />;
+                        })
                     ) : (
                         <div className="h-40 flex flex-col items-center justify-center bg-white/5 border border-white/5 rounded-[2rem] text-neutral-600 gap-2">
                              <Inbox className="w-8 h-8 opacity-20" />

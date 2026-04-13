@@ -12,6 +12,7 @@ import { QuickReact, IncomingReactionIndicator } from "@/components/features/rea
 import { ComposeMessage } from "@/components/features/mailbox/ComposeMessage";
 import { useRouter } from "next/navigation";
 import { motion, AnimatePresence } from "framer-motion";
+import { useTabObserver } from "@/hooks/useTabObserver";
 import { Heart, Loader2, LogOut, MessageSquareHeart, User as UserIcon, Users, Settings } from "lucide-react";
 import { AmbientBackground } from "@/components/ui/AmbientBackground";
 
@@ -24,7 +25,8 @@ export default function Home() {
     activeSafeSpace, 
     logout, 
     clearPartnerLeftStatus,
-    sendMessage 
+    sendMessage,
+    messages
   } = useMailbox();
 
   const [activeView, setActiveView] = React.useState<"mailbox" | "archive">("mailbox");
@@ -33,6 +35,43 @@ export default function Home() {
   const [overlayDismissed, setOverlayDismissed] = React.useState(false);
   
   const router = useRouter();
+  const { isHidden } = useTabObserver();
+  const previousMessagesLength = React.useRef(messages.length);
+
+  useEffect(() => {
+    // If the tab just became hidden, store current amounts
+    if (isHidden) {
+      previousMessagesLength.current = messages.length;
+    } else {
+      // It became visible again, clear title flashing
+      document.title = "Honest Mailbox";
+    }
+  }, [isHidden, messages.length]);
+
+  useEffect(() => {
+    if (isHidden) {
+       let alertString = "Honest Mailbox";
+       let hasAlert = false;
+       if (messages.length > previousMessagesLength.current!) {
+           alertString = "(1) New Message!";
+           hasAlert = true;
+       }
+       if (activeSafeSpace) {
+           alertString = "(!) Safe Space Active!";
+           hasAlert = true;
+       }
+
+       if (hasAlert) {
+           const interval = setInterval(() => {
+               document.title = document.title === "Honest Mailbox" ? alertString : "Honest Mailbox";
+           }, 1000);
+           return () => {
+             clearInterval(interval);
+             if (!isHidden) document.title = "Honest Mailbox";
+           };
+       }
+    }
+  }, [isHidden, messages.length, activeSafeSpace]);
 
   useEffect(() => {
     if (!loading) {

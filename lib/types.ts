@@ -71,6 +71,8 @@ export interface MailboxMessage {
     text?: string;
     timerExpiresAt?: string; // for "Give me a minute"
   };
+  unlockAt?: string; // ISO date for time capsule
+  isSecretBeforeUnlock?: boolean;
 }
 
 // 🌡️ Daily Check-In Types
