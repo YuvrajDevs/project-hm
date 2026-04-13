@@ -24,7 +24,7 @@ import {
   updateUserMood, 
   deleteUserAccount,
   requestCoupleReset,
-  declineCoupleReset,
+  rejectCoupleReset,
   acceptCoupleReset,
   cancelCoupleReset,
   raiseWhiteFlag,
@@ -419,12 +419,9 @@ export const MailboxProvider: React.FC<{ children: React.ReactNode }> = ({ child
   };
 
   const requestReset = async () => {
-    if (!user?.coupleId) return;
+    if (!user?.coupleId || !user?.uid) return;
     try {
-      await updateDoc(doc(db, "couples", user.coupleId), {
-        resetStatus: "pending",
-        resetBy: user.uid
-      });
+      await requestCoupleReset(user.coupleId, user.uid);
     } catch (err) {
       console.error(err);
     }
@@ -442,15 +439,7 @@ export const MailboxProvider: React.FC<{ children: React.ReactNode }> = ({ child
   const rejectReset = async () => {
     if (!user?.coupleId) return;
     try {
-      await updateDoc(doc(db, "couples", user.coupleId), {
-        resetStatus: "declined"
-      });
-      setTimeout(async () => {
-        await updateDoc(doc(db, "couples", user.coupleId), {
-          resetStatus: null,
-          resetBy: null
-        });
-      }, 5000);
+      await rejectCoupleReset(user.coupleId);
     } catch (err) {
       console.error(err);
     }
@@ -459,10 +448,7 @@ export const MailboxProvider: React.FC<{ children: React.ReactNode }> = ({ child
   const cancelReset = async () => {
     if (!user?.coupleId) return;
     try {
-      await updateDoc(doc(db, "couples", user.coupleId), {
-        resetStatus: null,
-        resetBy: null
-      });
+      await cancelCoupleReset(user.coupleId);
     } catch (err) {
       console.error(err);
     }
