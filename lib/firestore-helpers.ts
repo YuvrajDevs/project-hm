@@ -253,6 +253,22 @@ export const clearLeftStatus = async (uid: string) => {
   });
 };
 
+export const deleteUserAccount = async (uid: string, partnerUid: string | null) => {
+  if (partnerUid) {
+    const partnerRef = doc(db, "users", partnerUid);
+    await updateDoc(partnerRef, {
+      coupleId: null,
+      partnerId: null,
+      role: null,
+      leftByPartner: true 
+    });
+  }
+
+  const { deleteDoc, doc: firestoreDoc } = await import("firebase/firestore");
+  const userRef = firestoreDoc(db, "users", uid);
+  await deleteDoc(userRef);
+};
+
 /**
  * Event Helpers
  */

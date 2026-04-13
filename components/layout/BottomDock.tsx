@@ -2,7 +2,8 @@
 
 import React from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { Plus, Smile, BarChart3, MessageSquareHeart } from "lucide-react";
+import { Plus, Smile, BarChart3, MessageSquareHeart, User } from "lucide-react";
+import { useRouter } from "next/navigation";
 import { cn } from "@/lib/utils";
 
 interface BottomDockProps {
@@ -20,6 +21,7 @@ export const BottomDock: React.FC<BottomDockProps> = ({
   onEmojiClick,
   showEmojiDot = false
 }) => {
+  const router = useRouter();
   const [internalHidden, setInternalHidden] = React.useState(false);
 
   React.useEffect(() => {
@@ -77,6 +79,17 @@ export const BottomDock: React.FC<BottomDockProps> = ({
           {activeView === "archive" ? <img src="/HM.png" alt="Mailbox" className="w-6 h-auto group-hover:scale-110 transition-transform drop-shadow-[0_0_10px_rgba(255,255,255,0.2)]" /> : <BarChart3 className="w-6 h-6 group-hover:scale-110 transition-transform" />}
           <span className="absolute -top-12 left-1/2 -translate-x-1/2 px-3 py-1 bg-white text-black text-[10px] font-bebas tracking-widest uppercase rounded-lg opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none">
             {activeView === "archive" ? "Mailbox" : "Archive"}
+          </span>
+        </button>
+
+        {/* Far Right: Profile Button */}
+        <button
+          onClick={() => router.push("/profile")}
+          className="relative w-14 h-14 rounded-full flex items-center justify-center text-neutral-400 hover:text-white hover:bg-white/5 transition-all group active:scale-90"
+        >
+          <User className="w-6 h-6 group-hover:scale-110 transition-transform" />
+          <span className="absolute -top-12 left-1/2 -translate-x-1/2 px-3 py-1 bg-white text-black text-[10px] font-bebas tracking-widest uppercase rounded-lg opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none whitespace-nowrap">
+            Profile
           </span>
         </button>
       </motion.nav>

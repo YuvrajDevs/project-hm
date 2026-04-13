@@ -3,7 +3,7 @@
 import React from "react";
 import { motion } from "framer-motion";
 import { useRouter } from "next/navigation";
-import { Heart, Plus, User, Sparkles, MessageSquareHeart } from "lucide-react";
+import { Heart, Plus, User, Sparkles, MessageSquareHeart, Settings } from "lucide-react";
 import { AmbientBackground } from "@/components/ui/AmbientBackground";
 
 export const SingleHub = () => {
@@ -21,10 +21,10 @@ export const SingleHub = () => {
         </div>
         
         <button 
-          onClick={() => router.push("/profile")}
+          onClick={() => router.push("/settings")}
           className="w-12 h-12 rounded-full bg-white/5 border border-white/5 flex items-center justify-center hover:bg-white/10 transition-all text-neutral-400 hover:text-white backdrop-blur-xl group"
         >
-          <User className="w-6 h-6 group-hover:scale-110 transition-transform" />
+          <Settings className="w-6 h-6 group-hover:scale-110 transition-transform" />
         </button>
       </div>
 
@@ -57,13 +57,20 @@ export const SingleHub = () => {
             </p>
           </div>
 
-          <div className="pt-2 grid gap-3">
+          <div className="pt-2 flex flex-col md:flex-row gap-3">
             <button
               onClick={() => router.push("/pair")}
-              className="w-full py-4 bg-white text-black rounded-2xl font-bebas tracking-[0.2em] uppercase text-base hover:bg-neutral-200 active:scale-[0.98] transition-all flex items-center justify-center gap-3 shadow-[0_20px_40px_rgba(255,255,255,0.05)]"
+              className="flex-1 py-4 bg-white text-black rounded-2xl font-bebas tracking-[0.2em] uppercase text-base hover:bg-neutral-200 active:scale-[0.98] transition-all flex items-center justify-center gap-3 shadow-[0_20px_40px_rgba(255,255,255,0.05)]"
             >
               <Plus className="w-5 h-5" />
-              Connect with Someone
+              Connect
+            </button>
+            <button
+              onClick={() => router.push("/profile")}
+              className="flex-1 py-4 bg-white/5 border border-white/10 text-white rounded-2xl font-bebas tracking-[0.2em] uppercase text-base hover:bg-white/10 active:scale-[0.98] transition-all flex items-center justify-center gap-3"
+            >
+              <User className="w-5 h-5" />
+              Your Profile
             </button>
           </div>
         </motion.div>

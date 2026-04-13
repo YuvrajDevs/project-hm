@@ -12,7 +12,7 @@ import { QuickReact, IncomingReactionIndicator } from "@/components/features/rea
 import { ComposeMessage } from "@/components/features/mailbox/ComposeMessage";
 import { useRouter } from "next/navigation";
 import { motion, AnimatePresence } from "framer-motion";
-import { Heart, Loader2, LogOut, MessageSquareHeart, User as UserIcon, Users } from "lucide-react";
+import { Heart, Loader2, LogOut, MessageSquareHeart, User as UserIcon, Users, Settings } from "lucide-react";
 import { AmbientBackground } from "@/components/ui/AmbientBackground";
 
 export default function Home() {
@@ -94,10 +94,10 @@ export default function Home() {
           <span className="font-bebas text-xl tracking-widest text-white uppercase">Honest Mailbox</span>
         </div>
         <button 
-          onClick={() => router.push("/profile")}
-          className="w-10 h-10 rounded-full bg-white/5 border border-white/5 flex items-center justify-center hover:bg-white/10 transition-all text-neutral-400 hover:text-white pointer-events-auto"
+          onClick={() => router.push("/settings")}
+          className="w-10 h-10 rounded-full bg-white/5 border border-white/5 flex items-center justify-center hover:bg-white/10 transition-all text-neutral-400 hover:text-white pointer-events-auto shadow-2xl"
         >
-          {isPaired ? <Users className="w-5 h-5" /> : <UserIcon className="w-5 h-5" />}
+          <Settings className="w-5 h-5" />
         </button>
       </header>
 

@@ -25,7 +25,8 @@ import {
   clearLeftStatus,
   subscribeToEvents,
   saveCoupleEvent,
-  deleteCoupleEvent
+  deleteCoupleEvent,
+  deleteUserAccount
 } from "@/lib/firestore-helpers";
 import { formatDateId } from "@/lib/utils";
 
@@ -57,6 +58,7 @@ interface MailboxContextType {
   sendMessage: (msg: Omit<MailboxMessage, "id" | "senderUid" | "createdAt">) => Promise<void>;
   addEvent: (event: Omit<CoupleEvent, "id" | "createdAt" | "createdBy">) => Promise<void>;
   removeEvent: (eventId: string) => Promise<void>;
+  wipeoutUserAccount: () => Promise<void>;
 }
 
 const MailboxContext = createContext<MailboxContextType | undefined>(undefined);
@@ -349,6 +351,16 @@ export const MailboxProvider: React.FC<{ children: React.ReactNode }> = ({ child
     await deleteCoupleEvent(user.coupleId, eventId);
   };
 
+  const wipeoutUserAccount = async () => {
+    if (!user?.uid) return;
+    try {
+        await deleteUserAccount(user.uid, user.partnerId || null);
+        await firebaseSignOut(auth);
+    } catch (err) {
+        console.error("Failed to wipeout user:", err);
+    }
+  };
+
   const value = useMemo(() => ({
     user,
     couple,
@@ -367,7 +379,8 @@ export const MailboxProvider: React.FC<{ children: React.ReactNode }> = ({ child
     clearPartnerLeftStatus,
     sendMessage,
     addEvent,
-    removeEvent
+    removeEvent,
+    wipeoutUserAccount
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }), [user, couple, partner, messages, reactions, checkins, events, activeSafeSpace, metrics, loading, hasOnboarded, isPaired]);
 
