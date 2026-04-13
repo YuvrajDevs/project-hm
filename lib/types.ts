@@ -34,6 +34,12 @@ export interface Couple {
     }
   },
   anniversaryDate?: string; // ISO date YYYY-MM-DD
+  // Reset Flow
+  resetRequestedBy?: string;
+  resetRequestStatus?: "pending" | "declined" | null;
+  // White Flag Feature
+  whiteFlagBy?: string | null;
+  whiteFlagAt?: string | null;
 }
 
 export interface EmotionalProfile {
@@ -138,13 +144,6 @@ export interface SafeSpaceSession {
     requestedAt: string;
     status: "pending" | "approved" | "denied";
   };
-  // Collaborative Reset Flow
-  resetRequestedBy?: string;
-  resetRequestStatus?: "pending" | "declined" | null;
-
-  // White Flag Feature
-  whiteFlagBy?: string | null;
-  whiteFlagAt?: string | null;
   lastMicRequestAt?: string; // For 5min cooldown
   lastMessageAt: string;
   startedAt: string;
