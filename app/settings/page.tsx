@@ -157,10 +157,10 @@ export default function SettingsPage() {
                     {!showResetConfirm ? (
                         <button
                             onClick={() => setShowResetConfirm(true)}
-                            disabled={couple.resetRequestStatus === "pending" && couple.resetRequestedBy === user.uid}
+                            disabled={(couple as any).resetRequestStatus === "pending" && (couple as any).resetRequestedBy === user.uid}
                             className="w-full py-4 border border-white/10 text-white rounded-xl font-bebas tracking-widest uppercase hover:bg-white/10 transition-all font-bold disabled:opacity-50"
                         >
-                            {(couple.resetRequestStatus === "pending" && couple.resetRequestedBy === user.uid) 
+                            {(couple as any).resetRequestStatus === "pending" && (couple as any).resetRequestedBy === user.uid 
                                 ? "Waiting for Partner..." 
                                 : "Reset History Together"}
                         </button>

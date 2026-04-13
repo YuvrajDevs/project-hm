@@ -20,7 +20,7 @@ export const ResetRequestOverlay = () => {
     };
     
     // Only show if a reset is pending and I am NOT the one who requested it
-    if (!couple || couple.resetRequestStatus !== "pending" || couple.resetRequestedBy === user?.uid) {
+    if (!couple || (couple as any).resetRequestStatus !== "pending" || (couple as any).resetRequestedBy === user?.uid) {
         return null;
     }
 
