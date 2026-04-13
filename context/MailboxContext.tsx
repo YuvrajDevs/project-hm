@@ -50,8 +50,9 @@ interface MailboxContextType {
   metrics: {
     streak: number;
     syncScore: number;
+    connectionAvgToday: number;
     unreadCount: number;
-    state: "Calm" | "Neutral" | "Tense";
+    state: string;
     historyCheckins: DailyCheckIn[];
     lastActivity: { time: string; type: string; initiator: string } | null;
     reactsCount: number;
