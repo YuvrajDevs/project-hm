@@ -93,7 +93,7 @@ export default function SettingsPage() {
               </button>
             </div>
 
-            <Link href="/privacy" className="bg-white/5 border border-white/10 rounded-2xl p-5 flex items-center justify-between hover:bg-white/10 transition-all group block">
+            <Link href="/privacy-policy" className="bg-white/5 border border-white/10 rounded-2xl p-5 flex items-center justify-between hover:bg-white/10 transition-all group block">
               <div className="flex items-center gap-4">
                 <div className="p-3 bg-white/5 rounded-xl">
                   <Lock className="w-5 h-5 text-white" />
