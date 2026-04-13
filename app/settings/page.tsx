@@ -46,7 +46,7 @@ export default function SettingsPage() {
 
   return (
     <div className="min-h-screen bg-[#070707] text-white overflow-y-auto font-outfit relative">
-      <AmbientBackground variant="default" />
+      <AmbientBackground variant="standard" />
 
       {/* Header */}
       <header className="sticky top-0 left-0 right-0 p-6 z-50 flex items-center justify-between bg-gradient-to-b from-black to-transparent">
