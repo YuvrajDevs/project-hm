@@ -28,7 +28,7 @@ export const PartnerLeftOverlay: React.FC<PartnerLeftOverlayProps> = ({ onClearD
   };
 
   return (
-    <div className="fixed inset-0 z-[200] flex items-center justify-center p-6 bg-black/80 backdrop-blur-md">
+    <div className="fixed inset-0 z-[200] flex items-center justify-center p-6 overlay-backdrop">
       {/* Background Ambiance */}
       <div className="absolute inset-0 overflow-hidden pointer-events-none">
         <div className="absolute top-[-10%] left-[-10%] w-[40%] h-[40%] rounded-full" style={{ backgroundImage: "radial-gradient(circle at center, rgba(236,72,153,0.1), transparent 70%)" }} />

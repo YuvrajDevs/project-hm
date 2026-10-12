@@ -7,6 +7,8 @@ import { LockedCapsule } from "./LockedCapsule";
 import { DailyCheckIn } from "../checkin/DailyCheckIn";
 import { MoodStatusHub } from "../checkin/MoodStatusHub";
 import { SafeSpaceEntry } from "../safespace/SafeSpaceEntry";
+import { WhiteFlagButton } from "./WhiteFlagButton";
+import { PartnerNotes } from "../notes/PartnerNotes";
 import { motion, AnimatePresence } from "framer-motion";
 import { Plus, Inbox, History, Heart, Sparkles, MessageSquarePlus } from "lucide-react";
 
@@ -21,7 +23,7 @@ interface MailboxScreenProps {
 export const MailboxScreen: React.FC<MailboxScreenProps> = ({ onOpenCheckIn, onComposeClick }) => {
 
 
-  const { messages, loading, user, metrics } = useMailbox();
+  const { messages, loading, user, metrics, now } = useMailbox();
 
   if (loading) return null;
 
@@ -47,16 +49,16 @@ export const MailboxScreen: React.FC<MailboxScreenProps> = ({ onOpenCheckIn, onC
                         <div className="space-y-4">
                             <div className="flex items-center gap-2">
                                 <Sparkles className="w-4 h-4 text-yellow-400" />
-                                <span className="text-[10px] font-bebas tracking-[0.4em] text-neutral-500 uppercase">Current Rhythm</span>
+                                <span className="text-[10px] font-bebas tracking-[0.4em] text-neutral-500 uppercase">Check-in Streak</span>
                             </div>
                             <div className="space-y-1">
                                 <h2 className="text-7xl font-bebas text-white leading-none tracking-tight">
-                                    {metrics.streak} <span className="text-2xl text-neutral-600">Days</span>
+                                    {metrics.streak} <span className="text-2xl text-neutral-600">{metrics.streak === 1 ? "Day" : "Days"}</span>
                                 </h2>
                                 <p className="text-neutral-500 font-outfit text-xs uppercase tracking-widest leading-relaxed">
                                     {metrics.streak > 0 
-                                        ? "Your heartbeat is in perfect synchronization." 
-                                        : "Start your streak today with a sync."}
+                                        ? "Days in a row you both checked in." 
+                                        : "Check in together today to start a streak."}
                                 </p>
                             </div>
                         </div>
@@ -104,7 +106,7 @@ export const MailboxScreen: React.FC<MailboxScreenProps> = ({ onOpenCheckIn, onC
                     {messages.length > 0 ? (
                         messages.slice(0, 3).map((msg) => {
                             if (msg.unlockAt) {
-                                const isLocked = new Date(msg.unlockAt).getTime() > Date.now();
+                                const isLocked = new Date(msg.unlockAt).getTime() > now;
                                 if (isLocked) {
                                     if (msg.isSecretBeforeUnlock && msg.senderUid !== user?.uid) {
                                         return null; // Don't even show it
@@ -121,11 +123,27 @@ export const MailboxScreen: React.FC<MailboxScreenProps> = ({ onOpenCheckIn, onC
                         </div>
                     )}
                 </div>
+            </section>
 
-                {/* 2. Safe Space */}
+            {/* 2. Safe Space */}
+            <section>
                 <SafeSpaceEntry />
+            </section>
 
+            {/* White Flag: a one-tap way to pause an argument */}
+            <section className="bg-white/5 border border-white/5 rounded-[2rem] p-6 flex flex-col md:flex-row md:items-center justify-between gap-4">
+                <div className="space-y-1">
+                    <h2 className="text-2xl font-bebas text-white tracking-widest uppercase leading-none">White Flag</h2>
+                    <p className="text-neutral-500 font-outfit text-xs leading-relaxed">
+                        Mid-argument and want to stop fighting? Raise it. It isn&apos;t an apology, just a signal that you two matter more than winning.
+                    </p>
+                </div>
+                <WhiteFlagButton />
+            </section>
 
+            {/* 3. Partner Notes */}
+            <section>
+                <PartnerNotes />
             </section>
         </div>
     </div>

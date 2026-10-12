@@ -20,12 +20,25 @@ export const LeavePartnerModal: React.FC<LeavePartnerModalProps> = ({
 }) => {
   const [step, setStep] = useState(1);
   const [loading, setLoading] = useState(false);
+  const [error, setError] = useState("");
+
+  // Always start from the first step
+  React.useEffect(() => {
+    if (isOpen) { setStep(1); setError(""); }
+  }, [isOpen]);
 
   const handleConfirm = async () => {
     setLoading(true);
-    await onConfirm();
-    setLoading(false);
-    onClose();
+    setError("");
+    try {
+      await onConfirm();
+      onClose();
+    } catch (err) {
+      console.error(err);
+      setError("Couldn't disconnect. Check your connection and try again.");
+    } finally {
+      setLoading(false);
+    }
   };
 
   return (
@@ -37,7 +50,7 @@ export const LeavePartnerModal: React.FC<LeavePartnerModalProps> = ({
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
             onClick={onClose}
-            className="absolute inset-0 bg-black/80 backdrop-blur-md"
+            className="absolute inset-0 overlay-backdrop"
           />
           
           <motion.div
@@ -67,12 +80,12 @@ export const LeavePartnerModal: React.FC<LeavePartnerModalProps> = ({
                   {step === 1 ? (
                     <>
                       Every relationship has its storms. Leaving is a big step. 
-                      Before you go, take a breath. Are you sure you've said everything 
+                      Before you go, take a breath. Are you sure you&apos;ve said everything 
                       you needed to say to <span className="text-white font-medium">{partnerName}</span>?
                     </>
                   ) : (
                     <>
-                      This will close your shared safe space immediately and **permanently delete** your shared history. 
+                      This will close your shared safe space immediately and <span className="text-white font-medium">permanently delete</span> your shared history. 
                       You can always reconnect as a fresh pair later, but this journey will be wiped. <br/><br/>
                       <span className="text-red-400/80 font-bebas uppercase tracking-widest">Wiping Shared Memories & Messages</span>
                     </>
@@ -105,6 +118,9 @@ export const LeavePartnerModal: React.FC<LeavePartnerModalProps> = ({
                     >
                       {loading ? "Closing space..." : "End connection now"}
                     </button>
+                    {error && (
+                      <p className="text-rose-500 text-[10px] uppercase font-bebas tracking-widest text-center">{error}</p>
+                    )}
                     <button
                       onClick={() => setStep(1)}
                       className="w-full py-4 bg-white/5 text-white border border-white/5 rounded-2xl font-bebas tracking-widest uppercase hover:bg-white/10 transition-all"

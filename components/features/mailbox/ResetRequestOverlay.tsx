@@ -20,7 +20,7 @@ export const ResetRequestOverlay = () => {
     };
     
     // Only show if a reset is pending and I am NOT the one who requested it
-    if (!couple || (couple as any).resetStatus !== "pending" || (couple as any).resetBy === user?.uid) {
+    if (!couple || couple.resetStatus !== "pending" || couple.resetBy === user?.uid) {
         return null;
     }
 
@@ -29,7 +29,7 @@ export const ResetRequestOverlay = () => {
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
-            className="fixed inset-0 z-[200] flex items-center justify-center p-6 bg-black/90 backdrop-blur-2xl"
+            className="fixed inset-0 z-[200] flex items-center justify-center p-6 overlay-backdrop"
         >
             <div className="max-w-md w-full space-y-8 text-center">
                 <motion.div 
@@ -76,7 +76,7 @@ export const ResetRequestOverlay = () => {
                                     onClick={handleConfirm}
                                     className="w-full bg-white text-black font-bebas text-xl py-5 rounded-[2rem] flex items-center justify-center gap-2 hover:bg-neutral-200 active:scale-[0.98] transition-all shadow-[0_0_30px_rgba(255,255,255,0.1)]"
                                 >
-                                    <Sparkles className="w-5 h-5" /> Let's Start Over
+                                    <Sparkles className="w-5 h-5" /> Let&apos;s Start Over
                                 </button>
                                 
                                 <button 
@@ -90,7 +90,7 @@ export const ResetRequestOverlay = () => {
                     </AnimatePresence>
 
                     <p className="text-[10px] font-bebas text-neutral-600 tracking-[0.3em] uppercase pt-4">
-                        You'll stay connected as a couple
+                        You&apos;ll stay connected as a couple
                     </p>
                 </motion.div>
             </div>

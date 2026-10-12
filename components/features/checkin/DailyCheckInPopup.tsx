@@ -3,11 +3,11 @@
 import React, { useState, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { useMailbox } from "@/context/MailboxContext";
-import { saveCheckIn, sendQuickReact } from "@/lib/firestore-helpers";
-import { Sparkles, Heart, Activity, ArrowRight, X, Zap, Send } from "lucide-react";
+import { Activity, ArrowRight, X, Zap, Send, Sparkles, Heart } from "lucide-react";
 import { getCheckInDateId } from "@/lib/utils";
 import { MoodSelector } from "./MoodSelector";
 import { ReactionType } from "@/lib/types";
+import { useSensoryFeedback } from "@/hooks/useSensoryFeedback";
 
 interface DailyCheckInPopupProps {
   onClose: () => void;
@@ -29,12 +29,14 @@ const LABEL_TO_TYPE: Record<string, ReactionType> = {
 };
 
 export const DailyCheckInPopup: React.FC<DailyCheckInPopupProps> = ({ onClose }) => {
-  const { user, partner, checkins, updateMood } = useMailbox();
+  const { user, partner, checkins, updateMood, sendSignal, saveDailyCheckIn } = useMailbox();
+  const { playChime, playTick } = useSensoryFeedback();
   const [step, setStep] = useState<"intro" | "mood" | "connection" | "moodStatus" | "summary">("intro");
   const [mood, setMood] = useState(5);
   const [connection, setConnection] = useState(5);
   const [moodStatus, setMoodStatus] = useState("");
   const [saving, setSaving] = useState(false);
+  const [error, setError] = useState("");
 
   useEffect(() => {
     const userCheckIn = checkins.find(c => c.userUid === user?.uid);
@@ -49,32 +51,30 @@ export const DailyCheckInPopup: React.FC<DailyCheckInPopupProps> = ({ onClose })
   const handleSubmit = async () => {
     if (!user?.coupleId || !moodStatus) return;
     setSaving(true);
+    setError("");
     try {
-      // 1. Save standard check-in
-      await saveCheckIn(user.coupleId, {
-        userUid: user.uid,
+      // 1. Save standard check-in (the partner gets one notification for the whole sync)
+      await saveDailyCheckIn({
         mood,
         connection,
         moodStatus,
         dateId: today,
       });
 
-      // 2. Clear previous and Send new Signal (QuickReact) so splash works
+      // 2. Send signal (triggers splash)
       const type = LABEL_TO_TYPE[moodStatus];
       if (type) {
-        await sendQuickReact(user.coupleId, {
-            senderUid: user.uid,
-            type,
-            note: ""
-        });
+        await sendSignal(type, undefined, false);
       }
 
       // 3. Update persistent user mood label
-      await updateMood(moodStatus);
+      await updateMood(moodStatus, false);
 
+      playChime();
       setStep("summary");
     } catch (err) {
       console.error(err);
+      setError("Couldn't save your check-in. Try again.");
     } finally {
       setSaving(false);
     }
@@ -96,7 +96,7 @@ export const DailyCheckInPopup: React.FC<DailyCheckInPopupProps> = ({ onClose })
   };
 
   return (
-    <div className="fixed inset-0 z-[100] flex items-center justify-center p-6 bg-black/90 backdrop-blur-xl">
+    <div className="fixed inset-0 z-[100] flex items-center justify-center p-6 overlay-backdrop">
       <motion.div 
         initial={{ opacity: 0, scale: 0.9, y: 20 }}
         animate={{ opacity: 1, scale: 1, y: 0 }}
@@ -113,11 +113,9 @@ export const DailyCheckInPopup: React.FC<DailyCheckInPopupProps> = ({ onClose })
             <div className="w-2 h-2 rounded-full bg-pink-500 animate-pulse" />
             <span className="font-bebas text-[10px] tracking-[0.4em] text-neutral-500 uppercase">Daily Heart-Sync</span>
           </div>
-          {step === "summary" && (
-            <button onClick={onClose} className="p-2 rounded-full bg-white/5 hover:bg-white/10 transition-colors">
-              <X className="w-4 h-4 text-neutral-400" />
-            </button>
-          )}
+          <button onClick={onClose} aria-label="Close" className="p-2 rounded-full bg-white/5 hover:bg-white/10 transition-colors">
+            <X className="w-4 h-4 text-neutral-400" />
+          </button>
         </div>
 
         <div className="p-6 pt-6">
@@ -132,11 +130,14 @@ export const DailyCheckInPopup: React.FC<DailyCheckInPopupProps> = ({ onClose })
                 <div className="space-y-3">
                     <h2 className="text-4xl font-bebas text-white tracking-wider uppercase leading-none">Time to Sync Up</h2>
                     <p className="text-neutral-500 font-outfit text-sm leading-relaxed px-4">
-                      Taking 30 seconds to check in helps you stay aligned and deeply connected through the day's noise.
+                      Taking 30 seconds to check in helps you stay aligned and deeply connected through the day&apos;s noise.
                     </p>
                 </div>
                 <button 
-                  onClick={() => setStep("mood")}
+                  onClick={() => {
+                    playTick();
+                    setStep("mood");
+                  }}
                   className="w-full bg-white text-black font-bebas text-lg py-4 rounded-2xl hover:bg-neutral-200 active:scale-95 transition-all shadow-xl"
                 >
                     Start Sync
@@ -147,7 +148,7 @@ export const DailyCheckInPopup: React.FC<DailyCheckInPopupProps> = ({ onClose })
             {step === "mood" && (
               <motion.div key="mood" initial={{ opacity: 0, x: 20 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: -20 }} className="space-y-8 py-4">
                 <div className="space-y-1">
-                    <h3 className="text-3xl font-bebas text-white tracking-widest uppercase">How's your mood?</h3>
+                    <h3 className="text-3xl font-bebas text-white tracking-widest uppercase">How&apos;s your mood?</h3>
                     <p className="text-neutral-500 font-outfit text-xs uppercase tracking-widest leading-relaxed">Honest feeling right now</p>
                 </div>
                 <div className="space-y-8">
@@ -163,7 +164,10 @@ export const DailyCheckInPopup: React.FC<DailyCheckInPopupProps> = ({ onClose })
                     </div>
                     <div className="text-8xl font-bebas text-center text-white select-none">{mood}</div>
                     <button 
-                      onClick={() => setStep("connection")}
+                      onClick={() => {
+                        playTick();
+                        setStep("connection");
+                      }}
                       className="w-full bg-white text-black font-bebas text-xl py-4 rounded-2xl flex items-center justify-center gap-2 hover:bg-neutral-200 transition-colors"
                     >
                         Next <ArrowRight className="w-5 h-5" />
@@ -191,7 +195,10 @@ export const DailyCheckInPopup: React.FC<DailyCheckInPopupProps> = ({ onClose })
                     </div>
                     <div className="text-8xl font-bebas text-center text-white select-none">{connection}</div>
                     <button 
-                      onClick={() => setStep("moodStatus")}
+                      onClick={() => {
+                        playTick();
+                        setStep("moodStatus");
+                      }}
                       className="w-full bg-white text-black font-bebas text-xl py-4 rounded-2xl flex items-center justify-center gap-2 hover:bg-neutral-200 transition-colors"
                     >
                         Final Step <ArrowRight className="w-5 h-5" />
@@ -218,7 +225,7 @@ export const DailyCheckInPopup: React.FC<DailyCheckInPopupProps> = ({ onClose })
                             onClick={handleSubmit}
                             className="w-full bg-white text-black font-bebas text-xl py-5 rounded-2xl flex items-center justify-center gap-2 disabled:opacity-30 transition-all shadow-[0_0_15px_rgba(255,255,255,0.1)]"
                         >
-                            {saving ? "Saving..." : <><Send className="w-5 h-5" /> Finish Sync</>}
+                            {saving ? "Saving..." : error ? "Try Again" : <><Send className="w-5 h-5" /> Finish Sync</>}
                         </button>
                     </div>
                 </motion.div>

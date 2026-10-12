@@ -1,43 +1,36 @@
 "use client";
 
-import React, { useState } from "react";
-import { MailboxStatus, MailboxIntent } from "@/lib/types";
+import React, { useState, useMemo } from "react";
+import { MailboxStatus, MailboxIntent, MailboxMessage } from "@/lib/types";
 import { motion, AnimatePresence } from "framer-motion";
 import { useMailbox } from "@/context/MailboxContext";
 import { X, Send, Hash, Clock, Lock, Unlock } from "lucide-react";
 import { useSensoryFeedback } from "@/hooks/useSensoryFeedback";
+import { PREMIUM_ICONS, INTENT_ICONS } from "@/lib/constants";
 
-const statuses: { id: MailboxStatus; label: string; emoji: string; color: string }[] = [
-  { id: "IGNORING", label: "Feeling Ignored", emoji: "😔", color: "var(--status-ignored)" },
-  { id: "OVERWHELMED", label: "Overwhelmed", emoji: "😤", color: "var(--status-overwhelmed)" },
-  { id: "NEED_ATTENTION", label: "Need Attention", emoji: "🥺", color: "var(--status-attention)" },
-  { id: "DISTANT", label: "Feeling Distant", emoji: "😶", color: "var(--status-distant)" },
-  { id: "ANXIOUS", label: "Anxious About Us", emoji: "😰", color: "var(--status-anxious)" },
-  { id: "LOVE_NOTE", label: "I Love You", emoji: "😌", color: "var(--status-love)" },
-  { id: "SPACE_NEEDED", label: "Need Space", emoji: "🤐", color: "var(--status-space)" },
-  { id: "HARD_DAY", label: "Hard Day", emoji: "😣", color: "var(--status-hardday)" },
-  { id: "CONNECTED", label: "Connected", emoji: "🤝", color: "var(--status-love)" },
-];
+const composeStatuses = (Object.keys(PREMIUM_ICONS) as MailboxStatus[]).map(id => ({
+    id,
+    ...PREMIUM_ICONS[id]
+}));
 
-const intents: { id: MailboxIntent; label: string; emoji: string }[] = [
-  { id: "LISTEN", label: "Just Listen", emoji: "👂" },
-  { id: "REASSURE", label: "Reassure Me", emoji: "🤗" },
-  { id: "ADVICE", label: "Give Me Advice", emoji: "💡" },
-  { id: "TALK", label: "Let's Talk", emoji: "🤝" },
-  { id: "SAY_IT", label: "Just Needed to Say It", emoji: "🙏" },
-];
+const intents = (Object.keys(INTENT_ICONS) as MailboxIntent[]).map(id => ({
+  id,
+  ...INTENT_ICONS[id]
+}));
 
 export const ComposeMessage = ({ onClose }: { onClose: () => void }) => {
-  const { sendMessage } = useMailbox();
+  const { sendMessage, partner, user } = useMailbox();
   const [status, setStatus] = useState<MailboxStatus | null>(null);
-  const [intent, setIntent] = useState<MailboxIntent | null>(null);
+  const [intent, setIntent] = useState<MailboxIntent | null>(user?.profile?.defaultIntent ?? null);
   const [note, setNote] = useState("");
   const [sending, setSending] = useState(false);
+  const [error, setError] = useState("");
   const { playPop, playSend, vibrateTick } = useSensoryFeedback();
 
   // Time Capsule States
   const [showCapsuleParams, setShowCapsuleParams] = useState(false);
   const [unlockAt, setUnlockAt] = useState<string>("");
+  const [timezoneMode, setTimezoneMode] = useState<"MINE" | "PARTNERS">("MINE");
   const [isSecretBeforeUnlock, setIsSecretBeforeUnlock] = useState(false);
 
   React.useEffect(() => {
@@ -49,15 +42,68 @@ export const ComposeMessage = ({ onClose }: { onClose: () => void }) => {
     };
   }, []);
 
+  const isDifferentTZ = useMemo(() => {
+    const myTZ = Intl.DateTimeFormat().resolvedOptions().timeZone;
+    const partnerTZ = partner?.timezone || myTZ;
+    return myTZ !== partnerTZ;
+  }, [partner?.timezone]);
+
+  const previewInfo = useMemo(() => {
+    if (!unlockAt || !isDifferentTZ) return null;
+    const localDate = new Date(unlockAt);
+    if (isNaN(localDate.getTime())) return null;
+
+    const partnerTZ = partner?.timezone || Intl.DateTimeFormat().resolvedOptions().timeZone;
+    const myTZ = Intl.DateTimeFormat().resolvedOptions().timeZone;
+
+    if (timezoneMode === "MINE") {
+        const partnerTime = localDate.toLocaleTimeString([], { timeZone: partnerTZ, hour: '2-digit', minute: '2-digit' });
+        return { 
+            main: `Unlocks at ${localDate.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })} for you`,
+            sub: `That's ${partnerTime} for ${partner?.displayName || 'partner'}`
+        };
+    } else {
+        try {
+            const partnerDateStr = localDate.toLocaleString('en-US', { timeZone: partnerTZ });
+            const myDateStr = localDate.toLocaleString('en-US', { timeZone: myTZ });
+            const diff = new Date(myDateStr).getTime() - new Date(partnerDateStr).getTime();
+            
+            const adjustedForMe = new Date(localDate.getTime() + diff);
+            return {
+                main: `Unlocks at ${unlockAt.split('T')[1]} for them`,
+                sub: `That's ${adjustedForMe.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })} for you`
+            };
+        } catch (e) {
+            return null;
+        }
+    }
+  }, [unlockAt, timezoneMode, partner?.timezone, partner?.displayName]);
+
   const handleSend = async () => {
     if (!status || !intent) return;
+    if (showCapsuleParams && unlockAt && new Date(unlockAt).getTime() <= Date.now()) {
+      setError("Pick an unlock time in the future.");
+      return;
+    }
     setSending(true);
+    setError("");
     playSend();
     try {
-      const payload: any = { status, intent, note: note.slice(0, 140) };
+      const payload: Omit<MailboxMessage, "id" | "senderUid" | "createdAt"> = { status, intent, note: note.slice(0, 140) };
       
       if (showCapsuleParams && unlockAt) {
-          payload.unlockAt = new Date(unlockAt).toISOString();
+          if (timezoneMode === "MINE") {
+              payload.unlockAt = new Date(unlockAt).toISOString();
+          } else {
+              // Calculate UTC from Partner's perspective
+              const partnerTZ = partner?.timezone || Intl.DateTimeFormat().resolvedOptions().timeZone;
+              const myTZ = Intl.DateTimeFormat().resolvedOptions().timeZone;
+              const localDate = new Date(unlockAt);
+              const partnerDateStr = localDate.toLocaleString('en-US', { timeZone: partnerTZ });
+              const myDateStr = localDate.toLocaleString('en-US', { timeZone: myTZ });
+              const diff = new Date(myDateStr).getTime() - new Date(partnerDateStr).getTime();
+              payload.unlockAt = new Date(localDate.getTime() + diff).toISOString();
+          }
           payload.isSecretBeforeUnlock = isSecretBeforeUnlock;
       }
       
@@ -65,6 +111,7 @@ export const ComposeMessage = ({ onClose }: { onClose: () => void }) => {
       onClose();
     } catch (err) {
       console.error(err);
+      setError("Couldn't send. Check your connection and try again.");
     } finally {
       setSending(false);
     }
@@ -75,7 +122,7 @@ export const ComposeMessage = ({ onClose }: { onClose: () => void }) => {
       initial={{ opacity: 0 }} 
       animate={{ opacity: 1 }} 
       exit={{ opacity: 0 }}
-      className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-sm"
+      className="fixed inset-0 z-50 flex items-center justify-center p-4 overlay-backdrop"
     >
       <div className="w-full max-w-md bg-[#0f0f0f] border border-white/10 rounded-[2rem] overflow-hidden flex flex-col max-h-[90vh] shadow-2xl">
         <header className="p-4 border-b border-white/5 flex justify-between items-center">
@@ -89,23 +136,34 @@ export const ComposeMessage = ({ onClose }: { onClose: () => void }) => {
           {/* Status Selection */}
           <section className="space-y-3">
             <label className="text-[10px] font-bebas text-neutral-500 uppercase tracking-widest ml-1">How are you feeling?</label>
-            <div className="grid grid-cols-3 gap-2">
-              {statuses.map((s) => (
+            <div className="grid grid-cols-3 gap-3">
+              {composeStatuses.map((s) => (
                 <button
                   key={s.id}
                   onClick={() => {
                       vibrateTick();
                       setStatus(s.id);
                   }}
-                  className={`flex flex-col items-center justify-center p-2.5 rounded-xl border transition-all aspect-square gap-1 ${
+                  className={`flex flex-col items-center justify-center p-3 rounded-2xl border transition-all aspect-square gap-2 group relative overflow-hidden ${
                     status === s.id 
-                      ? "border-transparent text-black" 
-                      : "border-white/5 bg-white/5 text-neutral-500 hover:border-white/20"
+                      ? "border-white bg-white/10" 
+                      : "border-white/5 bg-white/5 text-neutral-500 hover:border-white/20 hover:bg-white/[0.07]"
                   }`}
-                  style={{ backgroundColor: status === s.id ? s.color : "" }}
                 >
-                  <span className="text-xl">{s.emoji}</span>
-                  <span className="text-[11px] font-bebas uppercase tracking-tighter text-center leading-tight">{s.label}</span>
+                  {status === s.id && (
+                      <motion.div 
+                        layoutId="active-bg"
+                        className="absolute inset-0 bg-white/10 blur-xl scale-75 rounded-full"
+                      />
+                  )}
+                  <img 
+                    src={s.url} 
+                    alt={s.label}
+                    className={`w-10 h-10 relative z-10 drop-shadow-lg transition-all ${status === s.id ? 'scale-110 rotate-3' : 'grayscale-[0.5] opacity-60 group-hover:grayscale-0 group-hover:opacity-100 group-hover:scale-105'}`}
+                  />
+                  <span className={`text-[9px] font-bebas uppercase tracking-widest text-center leading-tight relative z-10 transition-colors ${status === s.id ? 'text-white' : 'text-neutral-500'}`}>
+                    {s.label}
+                  </span>
                 </button>
               ))}
             </div>
@@ -127,9 +185,9 @@ export const ComposeMessage = ({ onClose }: { onClose: () => void }) => {
                       ? "bg-white text-black border-white" 
                       : "bg-white/5 border-white/5 text-neutral-400 hover:border-white/20"
                   }`}
-                >
-                  <span>{i.emoji}</span> {i.label}
-                </button>
+                 >
+                   <img src={i.url} alt={i.label} className="w-5 h-5 object-contain" /> {i.label}
+                 </button>
               ))}
             </div>
           </section>
@@ -173,14 +231,56 @@ export const ComposeMessage = ({ onClose }: { onClose: () => void }) => {
                         exit={{ height: 0, opacity: 0 }}
                         className="overflow-hidden space-y-4"
                     >
-                        <div>
-                            <label className="text-[10px] font-bebas text-neutral-500 uppercase tracking-widest mb-2 block ml-1">Unlock Date & Time</label>
-                            <input 
-                                type="datetime-local" 
-                                value={unlockAt}
-                                onChange={(e) => setUnlockAt(e.target.value)}
-                                className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-3 text-white font-outfit text-sm focus:outline-none focus:border-pink-500/50 transition-colors"
-                            />
+                        <div className="space-y-3">
+                            <div className="flex items-center justify-between ml-1">
+                                <label className="text-[10px] font-bebas text-neutral-500 uppercase tracking-widest">
+                                    {isDifferentTZ ? "Set by clock of:" : "Unlock Date & Time"}
+                                </label>
+                                {isDifferentTZ && (
+                                    <div className="flex bg-white/5 rounded-lg p-0.5 border border-white/10">
+                                        <button 
+                                            onClick={() => { vibrateTick(); setTimezoneMode("MINE"); }}
+                                            className={`px-3 py-1 rounded-md text-[9px] font-bebas tracking-widest uppercase transition-all ${timezoneMode === "MINE" ? "bg-white text-black shadow-lg" : "text-neutral-500"}`}
+                                        >
+                                            You
+                                        </button>
+                                        <button 
+                                            onClick={() => { vibrateTick(); setTimezoneMode("PARTNERS"); }}
+                                            className={`px-3 py-1 rounded-md text-[9px] font-bebas tracking-widest uppercase transition-all ${timezoneMode === "PARTNERS" ? "bg-white text-black shadow-lg" : "text-neutral-500"}`}
+                                        >
+                                            Partner
+                                        </button>
+                                    </div>
+                                )}
+                            </div>
+                            <div className="relative">
+                                <input 
+                                    type="datetime-local" 
+                                    value={unlockAt}
+                                    onChange={(e) => setUnlockAt(e.target.value)}
+                                    className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-3 text-white font-outfit text-sm focus:outline-none focus:border-pink-500/50 transition-colors"
+                                />
+                                {unlockAt && isDifferentTZ && (
+                                    <motion.div 
+                                        initial={{ opacity: 0, y: 5 }}
+                                        animate={{ opacity: 1, y: 0 }}
+                                        className="mt-2 px-3 py-2 rounded-lg bg-pink-500/5 border border-pink-500/10"
+                                    >
+                                        {previewInfo ? (
+                                            <>
+                                                <p className="text-[11px] font-bebas tracking-[0.05em] text-pink-400 uppercase leading-none">
+                                                    {previewInfo.main}
+                                                </p>
+                                                <p className="text-[9px] font-outfit text-neutral-500 mt-1 opacity-80">
+                                                    {previewInfo.sub}
+                                                </p>
+                                            </>
+                                        ) : (
+                                            <p className="text-[9px] font-outfit text-neutral-500">Calculating times...</p>
+                                        )}
+                                    </motion.div>
+                                )}
+                            </div>
                         </div>
                         <button 
                             onClick={() => {
@@ -204,7 +304,10 @@ export const ComposeMessage = ({ onClose }: { onClose: () => void }) => {
             </AnimatePresence>
         </div>
 
-        <footer className="p-4 border-t border-white/5">
+        <footer className="p-4 border-t border-white/5 space-y-3">
+          {error && (
+            <p className="text-rose-500 text-[10px] uppercase font-bebas tracking-widest text-center">{error}</p>
+          )}
           <button
             disabled={!status || !intent || sending}
             onClick={handleSend}

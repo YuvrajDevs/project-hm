@@ -5,12 +5,13 @@ import { motion } from "framer-motion";
 import { useMailbox } from "@/context/MailboxContext";
 import { cn } from "@/lib/utils";
 import { getCheckInDateId } from "@/lib/utils";
+import { REACTION_ICONS } from "@/lib/constants";
 
 export const MoodStatusHub = () => {
   const { user, partner } = useMailbox();
 
   const todayId = getCheckInDateId();
-  const needsUpdate = !user?.moodUpdatedAt || user.moodUpdatedAt.split('T')[0] !== todayId;
+  const needsUpdate = !user?.moodUpdatedAt || getCheckInDateId(new Date(user.moodUpdatedAt)) !== todayId;
 
   const openSignalSelector = () => {
     window.dispatchEvent(new CustomEvent('openSignalSelector'));
@@ -45,17 +46,21 @@ export const MoodStatusHub = () => {
                     </div>
                 )}
                 
-                <span className="font-bebas text-[10px] tracking-[0.4em] text-neutral-600 uppercase">You are feeling</span>
-                <div className="mt-2 flex items-center gap-3">
-                    <span className="text-3xl">
+                <span className="font-bebas text-[10px] tracking-[0.4em] text-neutral-500 uppercase">You are feeling</span>
+                <div className="mt-3 flex flex-col items-start gap-2 sm:flex-row sm:items-center sm:gap-4">
+                    <div className="w-12 h-12 flex items-center justify-center relative">
+                        <div className="absolute inset-0 bg-white/10 blur-xl rounded-full" />
                         {user?.currentMood ? (
-                            // Simple lookup or default if not found
-                            ["❤️", "🕊️", "🫂", "🤍", "🌤️", "✨", "🌧️", "🌑", "😰", "⚡", "🥱", "🔋"].find((e, i) => 
-                                ["Love", "Peace", "Closeness", "Reassurance", "Brighter", "Appreciative", "Not Okay", "Gloomy", "Anxious", "In Conflict", "Tired", "Energized"][i] === user.currentMood
-                            ) || "✨"
-                        ) : ""}
-                    </span>
-                    <div className="text-2xl font-bebas text-white tracking-widest uppercase truncate pb-1">
+                            <img 
+                                src={Object.values(REACTION_ICONS).find(icon => icon.label === user.currentMood)?.url || REACTION_ICONS.APPRECIATIVE.url} 
+                                alt={user.currentMood}
+                                className="w-full h-full object-contain relative z-10 drop-shadow-xl animate-float"
+                            />
+                        ) : (
+                            <img src={REACTION_ICONS.APPRECIATIVE.url} alt="Set Mood" className="w-full h-full object-contain relative z-10 opacity-20 grayscale" />
+                        )}
+                    </div>
+                    <div className="text-xl sm:text-2xl font-bebas text-white tracking-widest uppercase leading-tight break-words">
                         {user?.currentMood || "Set Mood"}
                     </div>
                 </div>
@@ -74,19 +79,26 @@ export const MoodStatusHub = () => {
                 onClick={replayPartnerSignal}
                 className="w-full bg-white/5 border border-white/5 rounded-[2rem] p-6 text-left relative overflow-hidden flex flex-col justify-center min-h-[140px] hover:border-white/10 transition-all group/partner"
             >
-                <span className="font-bebas text-[10px] tracking-[0.4em] text-neutral-600 uppercase">
+                <span className="font-bebas text-[10px] tracking-[0.4em] text-neutral-500 uppercase">
                     {partner?.displayName?.split(' ')[0] || "Partner"} is feeling
                 </span>
-                <div className="mt-2 flex items-center gap-3 group-hover/partner:scale-105 transition-transform origin-left">
-                    <span className="text-3xl">
-                        {partner?.currentMood ? (
-                            ["❤️", "🕊️", "🫂", "🤍", "🌤️", "✨", "🌧️", "🌑", "😰", "⚡", "🥱", "🔋"].find((e, i) => 
-                                ["Love", "Peace", "Closeness", "Reassurance", "Brighter", "Appreciative", "Not Okay", "Gloomy", "Anxious", "In Conflict", "Tired", "Energized"][i] === partner.currentMood
-                            ) || "✨"
-                        ) : ""}
-                    </span>
-                    <div className="text-2xl font-bebas text-blue-400 tracking-widest uppercase truncate pb-1">
-                        {partner?.currentMood || "Offline"}
+                <div className="mt-3 flex flex-col items-start gap-2 sm:flex-row sm:items-center sm:gap-4 group-hover/partner:scale-105 transition-transform origin-left">
+                    <div className="w-12 h-12 flex items-center justify-center relative">
+                         <div className="absolute inset-0 bg-blue-500/10 blur-xl rounded-full" />
+                         {partner?.currentMood ? (
+                            <img 
+                                src={Object.values(REACTION_ICONS).find(icon => icon.label === partner.currentMood)?.url || REACTION_ICONS.APPRECIATIVE.url} 
+                                alt={partner.currentMood}
+                                className="w-full h-full object-contain relative z-10 drop-shadow-xl animate-float"
+                            />
+                        ) : (
+                            <div className="w-full h-full bg-white/5 rounded-full border border-white/10 flex items-center justify-center">
+                                <span className="text-neutral-700 text-xs font-bebas">?</span>
+                            </div>
+                        )}
+                    </div>
+                    <div className="text-xl sm:text-2xl font-bebas text-blue-400 tracking-widest uppercase leading-tight break-words">
+                        {partner?.currentMood || "Not Shared Yet"}
                     </div>
                 </div>
                 {partner?.currentMood && (

@@ -25,12 +25,22 @@ import {
 } from "lucide-react";
 import { AmbientBackground } from "../../ui/AmbientBackground";
 import { cn } from "@/lib/utils";
+import { useSensoryFeedback } from "@/hooks/useSensoryFeedback";
 
 export const SafeSpaceSession = () => {
   const { user, partner, activeSafeSpace } = useMailbox();
   const [messages, setMessages] = useState<SafeSpaceMessage[]>([]);
   const [inputText, setInputText] = useState("");
   const [showClosure, setShowClosure] = useState(false);
+  const { playTransition, playSend } = useSensoryFeedback();
+
+  const isMyTurn = activeSafeSpace?.currentTurnUid === user?.uid;
+
+  useEffect(() => {
+    if (isMyTurn) {
+      playTransition();
+    }
+  }, [isMyTurn, playTransition]);
 
   useEffect(() => {
     if (!user?.coupleId || !activeSafeSpace?.id) return;
@@ -40,16 +50,21 @@ export const SafeSpaceSession = () => {
     return () => unsub();
   }, [user?.coupleId, activeSafeSpace?.id]);
 
-  const isMyTurn = activeSafeSpace?.currentTurnUid === user?.uid;
   const hasRequestFromPartner = activeSafeSpace?.micRequest?.uid === partner?.uid;
   
   // Cooldown logic (5 mins)
   const lastRequest = activeSafeSpace?.lastMicRequestAt ? new Date(activeSafeSpace.lastMicRequestAt).getTime() : 0;
-  const cooldownActive = Date.now() - lastRequest < 5 * 60 * 1000;
+  const [clock, setClock] = useState(() => Date.now());
+  useEffect(() => {
+    const interval = setInterval(() => setClock(Date.now()), 15000);
+    return () => clearInterval(interval);
+  }, []);
+  const cooldownActive = clock - lastRequest < 5 * 60 * 1000;
 
   const handleSendMessage = async () => {
     if (!inputText.trim() || !user?.coupleId || !activeSafeSpace?.id) return;
     try {
+      playSend();
       await sendSafeSpaceMessage(user.coupleId, activeSafeSpace.id, user.uid, inputText);
       setInputText("");
     } catch (err) {
@@ -64,7 +79,7 @@ export const SafeSpaceSession = () => {
 
   const handleEndSession = async (mood: 1 | 2 | 3) => {
     if (!user?.coupleId || !activeSafeSpace?.id) return;
-    await endSafeSpaceSession(user.coupleId, activeSafeSpace.id, mood);
+    await endSafeSpaceSession(user.coupleId, activeSafeSpace.id, mood, user.uid, partner?.uid);
   };
 
   if (!activeSafeSpace) return null;
@@ -208,7 +223,7 @@ export const SafeSpaceSession = () => {
                     initial={{ opacity: 0 }}
                     animate={{ opacity: 1 }}
                     exit={{ opacity: 0 }}
-                    className="fixed inset-0 z-[60] bg-black/90 backdrop-blur-xl flex items-center justify-center p-6"
+                    className="fixed inset-0 z-[60] overlay-backdrop flex items-center justify-center p-6"
                 >
                     <div className="max-w-md w-full bg-[#0a0a0a] border border-white/10 rounded-[3rem] p-10 text-center space-y-10">
                         <div className="space-y-4">

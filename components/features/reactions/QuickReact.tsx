@@ -3,42 +3,31 @@
 import React, { useState, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { useMailbox } from "@/context/MailboxContext";
-import { sendQuickReact } from "@/lib/firestore-helpers";
 import { ReactionType, QuickReact as QuickReactType } from "@/lib/types";
 import { X, Send, Sparkles } from "lucide-react";
+import { useSensoryFeedback } from "@/hooks/useSensoryFeedback";
+import { REACTION_ICONS } from "@/lib/constants";
 
 interface ReactionConfig {
     type: ReactionType;
-    emoji: string;
+    url: string;
     label: string;
     description: string;
     color: string;
     bgColor: string;
 }
 
-const REACTIONS: ReactionConfig[] = [
-  // Row 1: Positive / Connection
-  { type: "LOVE", emoji: "❤️", label: "Love", description: "Just simple, pure love", color: "#ef4444", bgColor: "bg-red-50/95" },
-  { type: "PEACE", emoji: "🕊️", label: "Peace", description: "Choosing us over conflict", color: "#0ea5e9", bgColor: "bg-sky-50/95" },
-  { type: "CLOSENESS", emoji: "🫂", label: "Closeness", description: "I need you near me", color: "#8b5cf6", bgColor: "bg-violet-50/95" },
-  { type: "REASSURANCE", emoji: "🤍", label: "Reassurance", description: "I'm here with you", color: "#ffffff", bgColor: "bg-white/95" },
-  { type: "FEELING_BETTER", emoji: "🌤️", label: "Brighter", description: "The light is coming back", color: "#f59e0b", bgColor: "bg-amber-50/95" },
-  { type: "APPRECIATIVE", emoji: "✨", label: "Appreciative", description: "I see what you do", color: "#fbbf24", bgColor: "bg-yellow-50/95" },
-  
-  // Row 2: Vulnerable / Low Energy
-  { type: "NOT_OKAY", emoji: "🌧️", label: "Not Okay", description: "I'm feeling a bit low", color: "#64748b", bgColor: "bg-slate-100/95" },
-  { type: "GLOOMY", emoji: "🌑", label: "Gloomy", description: "Lost in my thoughts", color: "#475569", bgColor: "bg-slate-200/95" },
-  { type: "ANXIOUS", emoji: "😰", label: "Anxious", description: "A bit overwhelmed", color: "#0ea5e9", bgColor: "bg-sky-100/95" },
-  { type: "CONFLICT", emoji: "⚡", label: "In Conflict", description: "Feeling some friction", color: "#dc2626", bgColor: "bg-red-100/95" },
-  { type: "TIRED", emoji: "🥱", label: "Tired", description: "Battery is low", color: "#94a3b8", bgColor: "bg-slate-50/95" },
-  { type: "ENERGIZED", emoji: "🔋", label: "Energized", description: "Ready to go", color: "#22c55e", bgColor: "bg-green-50/95" },
-];
+const REACTIONS = (Object.keys(REACTION_ICONS) as ReactionType[]).map(type => ({
+    type,
+    ...REACTION_ICONS[type]
+}));
 
 export const QuickReact = ({ onClose }: { onClose: () => void }) => {
-  const { user, updateMood } = useMailbox();
+  const { user, updateMood, sendSignal } = useMailbox();
   const [selected, setSelected] = useState<ReactionConfig | null>(null);
   const [note, setNote] = useState("");
   const [cooldown, setCooldown] = useState(0);
+  const { playSend, playPop } = useSensoryFeedback();
 
   useEffect(() => {
     document.body.style.overflow = 'hidden';
@@ -69,11 +58,8 @@ export const QuickReact = ({ onClose }: { onClose: () => void }) => {
     if (!user?.coupleId || !selected || cooldown > 0) return;
     
     try {
-      await sendQuickReact(user.coupleId, {
-        senderUid: user.uid,
-        type: selected.type,
-        note: note.trim() || "",
-      });
+      playSend();
+      await sendSignal(selected.type, note.trim() || "");
       
       // SYNC: Update user's global mood state
       await updateMood(selected.label);
@@ -86,7 +72,7 @@ export const QuickReact = ({ onClose }: { onClose: () => void }) => {
   };
 
   return (
-    <div className="fixed inset-0 z-[110] flex items-center justify-center px-4 bg-black/40 backdrop-blur-md" onClick={onClose}>
+    <div className="fixed inset-0 z-[110] flex items-center justify-center px-4 overlay-backdrop" onClick={onClose}>
       <motion.div 
         initial={{ opacity: 0, scale: 0.95, y: 20 }}
         animate={{ opacity: 1, scale: 1, y: 0 }}
@@ -108,9 +94,11 @@ export const QuickReact = ({ onClose }: { onClose: () => void }) => {
                             onClick={() => setSelected(r)}
                             className="flex flex-col items-center justify-center p-4 bg-white/5 border border-white/5 rounded-3xl hover:bg-white/10 transition-all group active:scale-95 space-y-2"
                         >
-                            <span className="text-3xl md:text-4xl group-hover:scale-110 transition-transform">
-                                {r.emoji}
-                            </span>
+                            <img 
+                                src={r.url} 
+                                alt={r.label} 
+                                className="w-10 h-10 md:w-12 md:h-12 group-hover:scale-110 transition-transform object-contain drop-shadow-md" 
+                            />
                             <span className="text-[8px] md:text-[10px] font-bebas tracking-widest text-neutral-500 uppercase group-hover:text-white transition-colors">
                                 {r.label}
                             </span>
@@ -132,7 +120,7 @@ export const QuickReact = ({ onClose }: { onClose: () => void }) => {
                         <X className="w-6 h-6" />
                     </button>
                     <div className="text-center flex-1 pr-6">
-                        <div className="text-6xl mb-4">{selected.emoji}</div>
+                        <img src={selected.url} alt={selected.label} className="w-20 h-20 mx-auto mb-4 object-contain drop-shadow-2xl animate-float" />
                         <h3 className="text-2xl font-bebas text-white tracking-widest uppercase">{selected.label}</h3>
                         <p className="text-neutral-500 font-outfit text-[10px] uppercase tracking-widest">{selected.description}</p>
                     </div>
@@ -168,6 +156,7 @@ export const IncomingReactionIndicator = () => {
   const { partner, reactions } = useMailbox();
   const [activeSplash, setActiveSplash] = useState<QuickReactType | null>(null);
   const [isManual, setIsManual] = useState(false);
+  const { playDewdrop } = useSensoryFeedback();
 
   useEffect(() => {
     // 1. Auto Trigger on NEW reactions
@@ -175,6 +164,7 @@ export const IncomingReactionIndicator = () => {
     if (latestPartnerReact) {
       const timeDiff = Date.now() - new Date(latestPartnerReact.createdAt).getTime();
       if (timeDiff < 5000) { 
+        playDewdrop();
         setActiveSplash(latestPartnerReact);
         setIsManual(false);
         const timer = setTimeout(() => setActiveSplash(null), 3500);
@@ -236,8 +226,8 @@ export const IncomingReactionIndicator = () => {
                             style={{ backgroundColor: reactionConfig.color }}
                             className="absolute inset-0 rounded-full blur-3xl"
                         />
-                        <div className="relative bg-white border border-neutral-100 rounded-full w-full h-full flex items-center justify-center shadow-2xl">
-                            <span className="text-8xl select-none leading-none">{reactionConfig.emoji}</span>
+                        <div className="relative bg-white border border-neutral-100 rounded-full w-full h-full flex items-center justify-center shadow-2xl overflow-hidden p-6">
+                            <img src={reactionConfig.url} alt={reactionConfig.label} className="w-full h-full object-contain" />
                         </div>
                     </div>
 

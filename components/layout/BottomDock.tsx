@@ -5,6 +5,7 @@ import { motion, AnimatePresence } from "framer-motion";
 import { Plus, Smile, BarChart3, MessageSquareHeart, User, Inbox } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { cn } from "@/lib/utils";
+import { useSensoryFeedback } from "@/hooks/useSensoryFeedback";
 
 interface BottomDockProps {
   activeView: "mailbox" | "archive" | "inbox";
@@ -23,9 +24,16 @@ export const BottomDock: React.FC<BottomDockProps> = ({
 }) => {
   const router = useRouter();
   const [internalHidden, setInternalHidden] = React.useState(false);
+  const { playTick, vibrateTick } = useSensoryFeedback();
+
+  const handleNav = (view: "mailbox" | "archive" | "inbox") => {
+    playTick();
+    vibrateTick();
+    onViewChange(view);
+  };
 
   React.useEffect(() => {
-    const handlePopup = (e: any) => setInternalHidden(e.detail.isOpen);
+    const handlePopup = (e: Event) => setInternalHidden((e as CustomEvent<{ isOpen: boolean }>).detail.isOpen);
     window.addEventListener('popupStateChange', handlePopup);
     return () => window.removeEventListener('popupStateChange', handlePopup);
   }, []);
@@ -43,7 +51,7 @@ export const BottomDock: React.FC<BottomDockProps> = ({
           >
         {/* Far Left: Inbox Button */}
         <button
-          onClick={() => onViewChange("inbox")}
+          onClick={() => handleNav("inbox")}
           className={cn(
             "relative w-14 h-14 rounded-full flex items-center justify-center transition-all group active:scale-90",
             activeView === "inbox" ? "text-white bg-white/10" : "text-neutral-400 hover:text-white hover:bg-white/5"
@@ -57,7 +65,11 @@ export const BottomDock: React.FC<BottomDockProps> = ({
 
         {/* Left: Emoji Button */}
         <button
-          onClick={onEmojiClick}
+          onClick={() => {
+            playTick();
+            vibrateTick();
+            onEmojiClick();
+          }}
           className="relative w-14 h-14 rounded-full flex items-center justify-center text-neutral-400 hover:text-white hover:bg-white/5 transition-all group active:scale-90"
         >
           <Smile className="w-6 h-6 group-hover:scale-110 transition-transform" />
@@ -72,7 +84,7 @@ export const BottomDock: React.FC<BottomDockProps> = ({
         {/* Center: Home Button (Logo) */}
         <div className="relative mx-1">
             <button
-                onClick={() => onViewChange("mailbox")}
+                onClick={() => handleNav("mailbox")}
                 className={cn(
                     "w-16 h-16 rounded-full flex items-center justify-center transition-all group p-1.5",
                     activeView === "mailbox" ? "bg-pink-500 text-white shadow-[0_0_30px_rgba(236,72,153,0.4)]" : "bg-white/5 border border-white/10 text-white"
@@ -87,7 +99,7 @@ export const BottomDock: React.FC<BottomDockProps> = ({
 
         {/* Right: Dashboard Button */}
         <button
-          onClick={() => onViewChange("archive")}
+          onClick={() => handleNav("archive")}
           className={cn(
             "relative w-14 h-14 rounded-full flex items-center justify-center transition-all group active:scale-90",
             activeView === "archive" ? "text-white bg-white/10" : "text-neutral-400 hover:text-white hover:bg-white/5"
@@ -101,7 +113,11 @@ export const BottomDock: React.FC<BottomDockProps> = ({
 
         {/* Far Right: Profile Button */}
         <button
-          onClick={() => router.push("/profile")}
+          onClick={() => {
+            playTick();
+            vibrateTick();
+            router.push("/profile");
+          }}
           className="relative w-14 h-14 rounded-full flex items-center justify-center text-neutral-400 hover:text-white hover:bg-white/5 transition-all group active:scale-90"
         >
           <User className="w-6 h-6 group-hover:scale-110 transition-transform" />

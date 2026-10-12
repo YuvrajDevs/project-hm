@@ -1,36 +1,52 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# Honest Mailbox
 
-## Getting Started
+A private two-person space for couples: say how you feel, say what you need, check in daily, and repair after conflict.
 
-First, run the development server:
+## Stack
+
+- Next.js 16 (App Router, client components), React 19, Tailwind 4, framer-motion
+- Firebase Auth (Google sign-in) and Cloud Firestore; no server code
+- Hosted on Vercel
+
+## Run locally
 
 ```bash
+npm install
 npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+`.env.local` needs the six `NEXT_PUBLIC_FIREBASE_*` values from the Firebase console (Project settings → Your apps).
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+## Checks
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+```bash
+npx tsc --noEmit        # types
+npm run lint            # lint (0 errors expected)
+npm run build           # production build
+npm run test:rules      # Firestore security rules, in the emulator (needs Java)
+```
 
-## Learn More
+## Data model
 
-To learn more about Next.js, take a look at the following resources:
+| Path | What | Who can read |
+|---|---|---|
+| `users/{uid}` | Profile, mood, pairing link | Owner and their current partner |
+| `users/{uid}/notes` | Private notes about the partner | Owner only |
+| `users/{uid}/notifications` | In-app notifications | Owner only (partner can create) |
+| `invites/{code}` | One-use pairing code, 7-day expiry | Anyone signed in who has the code; never listable |
+| `couples/{id}` | The couple and its settings | The two members |
+| `couples/{id}/mailbox` | Notes and responses | The two members |
+| `couples/{id}/capsules` | Sealed time-capsule contents | Sender; receiver only after unlock |
+| `couples/{id}/checkins`, `reactions`, `events`, `safe_space_sessions` | Daily check-ins, signals, special days, safe space | The two members |
+| `contactMessages` | Contact form submissions | Nobody from the app (read in the console) |
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+## Deploying
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+1. Deploy the app first (merge to `main`; Vercel builds it).
+2. Then deploy the rules: `firebase deploy --only firestore:rules --project <project-id>`.
 
-## Deploy on Vercel
+Always in that order: the rules assume the current app's pairing and capsule flows, so older app code will fail against them.
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
+## Design
 
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+All UI follows [DESIGN_SYSTEM.md](DESIGN_SYSTEM.md).

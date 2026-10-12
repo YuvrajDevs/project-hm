@@ -117,7 +117,7 @@ Department of Consumer Affairs in writing at 1625 North Market Blvd., Suite N
             <img src="/HM.png" alt="HM Logo" className="w-4 h-auto opacity-50" />
           </div>
           <p className="text-xs text-neutral-600 font-bebas tracking-[0.2em] uppercase">
-            Private • Encrypted • Just You Two
+            Private • Just You Two
           </p>
         </div>
 

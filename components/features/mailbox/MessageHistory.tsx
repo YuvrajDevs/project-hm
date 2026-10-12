@@ -15,7 +15,7 @@ interface MessageHistoryProps {
 type FilterType = "all" | "received" | "sent";
 
 export const MessageHistory: React.FC<MessageHistoryProps> = ({ onComposeClick }) => {
-    const { messages, user, loading } = useMailbox();
+    const { messages, user, loading, now, hasOlderMessages, loadOlderMessages } = useMailbox();
     const [filter, setFilter] = useState<FilterType>("all");
 
     const filteredMessages = useMemo(() => {
@@ -97,7 +97,7 @@ export const MessageHistory: React.FC<MessageHistoryProps> = ({ onComposeClick }
                                     transition={{ duration: 0.3, delay: index * 0.05 }}
                                     layout
                                 >
-                                    {msg.unlockAt && new Date(msg.unlockAt).getTime() > Date.now() ? (
+                                    {msg.unlockAt && new Date(msg.unlockAt).getTime() > now ? (
                                         (msg.isSecretBeforeUnlock && msg.senderUid !== user?.uid) ? null : (
                                             <LockedCapsule message={msg} />
                                         )
@@ -127,6 +127,15 @@ export const MessageHistory: React.FC<MessageHistoryProps> = ({ onComposeClick }
                             </motion.div>
                         )}
                     </AnimatePresence>
+
+                    {hasOlderMessages && (
+                        <button
+                            onClick={loadOlderMessages}
+                            className="w-full py-4 bg-white/5 border border-white/10 text-white rounded-2xl font-bebas tracking-widest uppercase hover:bg-white/10 active:scale-[0.98] transition-all"
+                        >
+                            Load Older Notes
+                        </button>
+                    )}
                 </div>
             </div>
         </div>

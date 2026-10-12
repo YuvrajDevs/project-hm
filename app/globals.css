@@ -67,6 +67,19 @@ h1, h2, h3, h4, h5, h6 {
   border: 1px solid var(--card-dark-border);
 }
 
+/* Dialog backdrop: the page stays visible but blurred behind any popup (never a black wall) */
+.overlay-backdrop {
+  background: rgba(10, 10, 10, 0.35);
+  -webkit-backdrop-filter: blur(24px) saturate(120%);
+  backdrop-filter: blur(24px) saturate(120%);
+}
+
+/* Dialog surface: solid enough to read on top of the blurred page */
+.overlay-panel {
+  background: rgba(20, 20, 20, 0.92);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+}
+
 /* Subtle Shadows */
 .shadow-soft {
   box-shadow: 0 4px 20px -2px rgba(0, 0, 0, 0.5);

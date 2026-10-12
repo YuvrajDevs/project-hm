@@ -2,43 +2,189 @@ rules_version = '2';
 
 service cloud.firestore {
   match /databases/{database}/documents {
-    
-    // Helper: Is the user authenticated?
+
     function isAuthenticated() {
       return request.auth != null;
     }
 
-    // Helper: Is the user part of this couple?
+    function isOwner(userId) {
+      return isAuthenticated() && request.auth.uid == userId;
+    }
+
+    // Membership is decided by the couple document, never by a field a user can set on their own profile
+    function isMember(coupleData) {
+      return isAuthenticated()
+        && (request.auth.uid == coupleData.partnerA_uid || request.auth.uid == coupleData.partnerB_uid);
+    }
+
     function isPartOfCouple(coupleId) {
-      let couple = get(/databases/$(database)/documents/couples/$(coupleId)).data;
-      return request.auth.uid == couple.partnerA_uid || request.auth.uid == couple.partnerB_uid;
+      return isMember(get(/databases/$(database)/documents/couples/$(coupleId)).data);
     }
 
-    // User profiles: Users can read their own or their partner's profile
+    function changedOnly(fields) {
+      return request.resource.data.diff(resource.data).affectedKeys().hasOnly(fields);
+    }
+
+    // ─── User profiles ───────────────────────────────────────────────────────
     match /users/{userId} {
-      allow write: if isAuthenticated() && request.auth.uid == userId;
-      allow read: if isAuthenticated() && (
-        request.auth.uid == userId || 
-        get(/databases/$(database)/documents/users/$(request.auth.uid)).data.coupleId == resource.data.coupleId
+      // Your own profile, or the profile of the person currently paired with you
+      allow read: if isOwner(userId)
+        || (isAuthenticated() && resource.data.get('partnerId', null) == request.auth.uid);
+
+      allow create, delete: if isOwner(userId);
+
+      // Your own profile, except the pairing fields (see below)
+      allow update: if isOwner(userId) && (
+        !request.resource.data.diff(resource.data).affectedKeys().hasAny(['coupleId', 'partnerId', 'role'])
+        || isLinkChange(userId)
       );
-    }
 
-    // Invites: Authenticated users can create/read invites
-    // (Validation of 'used' status should happen in a cloud function or careful client logic)
-    match /invites/{inviteId} {
-      allow read, create: if isAuthenticated();
-      allow update: if isAuthenticated(); // For marking as used
-    }
+      // The other person may only touch the pairing fields, and only to link or unlink
+      allow update: if isAuthenticated() && request.auth.uid != userId
+        && changedOnly(['coupleId', 'partnerId', 'role', 'leftByPartner'])
+        && isLinkChange(userId);
 
-    // Couples: Only partners can read their couple doc
-    match /couples/{coupleId} {
-      allow read: if isAuthenticated() && isPartOfCouple(coupleId);
-      allow create: if isAuthenticated(); // During pairing
-      
-      // Sub-collections: Locked to partners only
-      match /{allSubcollections=**} {
-        allow read, write: if isAuthenticated() && isPartOfCouple(coupleId);
+      // Linking: both people must be named on the couple document written in the same transaction,
+      // and this profile must not already be paired.
+      // Unlinking: only someone currently paired with this profile (or the owner) can clear the link.
+      function isLinkChange(userId) {
+        let before = resource.data;
+        let after = request.resource.data;
+        return (
+          after.get('coupleId', null) != null
+          && before.get('coupleId', null) == null
+          && isMember(getAfter(/databases/$(database)/documents/couples/$(after.coupleId)).data)
+          && userId in [
+            getAfter(/databases/$(database)/documents/couples/$(after.coupleId)).data.partnerA_uid,
+            getAfter(/databases/$(database)/documents/couples/$(after.coupleId)).data.partnerB_uid
+          ]
+          && after.partnerId != userId
+          && after.partnerId in [
+            getAfter(/databases/$(database)/documents/couples/$(after.coupleId)).data.partnerA_uid,
+            getAfter(/databases/$(database)/documents/couples/$(after.coupleId)).data.partnerB_uid
+          ]
+        ) || (
+          after.get('coupleId', null) == null
+          && after.get('partnerId', null) == null
+          && after.get('role', null) == null
+          && (request.auth.uid == userId || before.get('partnerId', null) == request.auth.uid)
+        );
       }
+
+      // Private notes: never visible to the partner
+      match /notes/{noteId} {
+        allow read, write: if isOwner(userId);
+      }
+
+      // In-app notifications: written by the partner, read and cleared by the owner
+      match /notifications/{notificationId} {
+        allow read, update, delete: if isOwner(userId);
+        allow create: if isAuthenticated()
+          && request.resource.data.uid == userId
+          && request.resource.data.read == false
+          && get(/databases/$(database)/documents/users/$(userId)).data.get('partnerId', null) == request.auth.uid;
+      }
+    }
+
+    // ─── Invites ─────────────────────────────────────────────────────────────
+    // A code can be looked up by anyone who has it, but codes can never be listed.
+    match /invites/{inviteId} {
+      allow get: if isAuthenticated();
+      allow list: if false;
+
+      allow create: if isAuthenticated()
+        && request.resource.data.createdBy == request.auth.uid
+        && request.resource.data.used == false;
+
+      // One use, by someone other than the creator, before it expires
+      allow update: if isAuthenticated()
+        && resource.data.used == false
+        && resource.data.createdBy != request.auth.uid
+        && request.resource.data.used == true
+        && request.resource.data.usedBy == request.auth.uid
+        && changedOnly(['used', 'usedBy'])
+        && (!('expiresAt' in resource.data) || resource.data.expiresAt > request.time);
+
+      allow delete: if isAuthenticated() && resource.data.createdBy == request.auth.uid;
+    }
+
+    // ─── Couples ─────────────────────────────────────────────────────────────
+    match /couples/{coupleId} {
+      allow read, delete: if isMember(resource.data);
+
+      // Created by the person accepting an invite, together with that invite being consumed
+      allow create: if isAuthenticated()
+        && request.resource.data.partnerB_uid == request.auth.uid
+        && request.resource.data.partnerA_uid != request.auth.uid
+        && request.resource.data.partnerA_uid is string
+        && isConsumingInvite(request.resource.data.inviteCode, request.resource.data.partnerA_uid);
+
+      // The invite must be unused, belong to the other partner, and be claimed by the caller in this same transaction
+      function isConsumingInvite(code, creatorUid) {
+        let before = get(/databases/$(database)/documents/invites/$(code)).data;
+        let after = getAfter(/databases/$(database)/documents/invites/$(code)).data;
+        return before.used == false
+          && before.createdBy == creatorUid
+          && after.used == true
+          && after.usedBy == request.auth.uid;
+      }
+
+      // Members can change settings, never who the members are
+      allow update: if isMember(resource.data)
+        && !request.resource.data.diff(resource.data).affectedKeys().hasAny(['partnerA_uid', 'partnerB_uid', 'id', 'inviteCode']);
+
+      match /mailbox/{messageId} {
+        allow read, delete: if isPartOfCouple(coupleId);
+        allow create: if isPartOfCouple(coupleId) && request.resource.data.senderUid == request.auth.uid;
+        allow update: if isPartOfCouple(coupleId) && request.resource.data.senderUid == resource.data.senderUid;
+      }
+
+      // Time capsule contents: only the sender can read them before the unlock time.
+      // Never listable, so a partner cannot browse what is waiting for them.
+      match /capsules/{messageId} {
+        allow get: if isPartOfCouple(coupleId)
+          && (resource.data.senderUid == request.auth.uid || resource.data.unlockAtTs <= request.time);
+        allow list: if false;
+        allow create: if isPartOfCouple(coupleId) && request.resource.data.senderUid == request.auth.uid;
+        allow update: if isPartOfCouple(coupleId)
+          && resource.data.senderUid == request.auth.uid
+          && request.resource.data.senderUid == resource.data.senderUid
+          && request.resource.data.unlockAtTs == resource.data.unlockAtTs;
+        allow delete: if isPartOfCouple(coupleId);
+      }
+
+      match /checkins/{checkinId} {
+        allow read, delete: if isPartOfCouple(coupleId);
+        allow create, update: if isPartOfCouple(coupleId) && request.resource.data.userUid == request.auth.uid;
+      }
+
+      match /reactions/{reactionId} {
+        allow read, delete: if isPartOfCouple(coupleId);
+        allow create, update: if isPartOfCouple(coupleId) && request.resource.data.senderUid == request.auth.uid;
+      }
+
+      match /events/{eventId} {
+        allow read, delete: if isPartOfCouple(coupleId);
+        allow create: if isPartOfCouple(coupleId) && request.resource.data.createdBy == request.auth.uid;
+        allow update: if isPartOfCouple(coupleId);
+      }
+
+      match /safe_space_sessions/{sessionId} {
+        allow read, write: if isPartOfCouple(coupleId);
+
+        match /messages/{messageId} {
+          allow read, delete: if isPartOfCouple(coupleId);
+          allow create: if isPartOfCouple(coupleId) && request.resource.data.senderUid == request.auth.uid;
+        }
+      }
+    }
+
+    // ─── Contact form ────────────────────────────────────────────────────────
+    // Write-only from the app; read in the Firebase console
+    match /contactMessages/{messageId} {
+      allow create: if request.resource.data.keys().hasOnly(['name', 'email', 'purpose', 'message', 'createdAt'])
+        && request.resource.data.email is string && request.resource.data.email.size() <= 200
+        && request.resource.data.message is string && request.resource.data.message.size() <= 4000;
     }
   }
 }

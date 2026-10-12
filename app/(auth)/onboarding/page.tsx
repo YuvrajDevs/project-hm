@@ -3,6 +3,7 @@
 import React, { useState, useEffect } from "react";
 import { auth, db } from "@/lib/firebase";
 import { doc, updateDoc } from "firebase/firestore";
+import { useAuthGuard } from "@/hooks/useAuthGuard";
 import { motion, AnimatePresence } from "framer-motion";
 import { useRouter } from "next/navigation";
 import { MessageCircle, Cloud, Battery, Heart, ChevronRight, User } from "lucide-react";
@@ -41,12 +42,47 @@ const profileSteps = [
 
 const TOTAL_STEPS = profileSteps.length + 1; // +1 for name step
 
+// Onboarding answers land in the same profile tags the profile page edits
+const ANSWER_TO_TAG: Record<string, { category: "howToShowUp" | "offSignals" | "loveLanguages"; tag: string }> = {
+  "Just listen silently": { category: "howToShowUp", tag: "Just listen" },
+  "Give me advice": { category: "howToShowUp", tag: "Be direct" },
+  "Physical touch": { category: "loveLanguages", tag: "Touch" },
+  "Distract me": { category: "howToShowUp", tag: "Distract me" },
+  "Withdraw and hide": { category: "offSignals", tag: "Withdraw" },
+  "Talk it out": { category: "offSignals", tag: "Talk it out" },
+  "Clean & organize": { category: "offSignals", tag: "Clean & organize" },
+  "Sleep it off": { category: "offSignals", tag: "Sleep it off" },
+  "I say it directly": { category: "offSignals", tag: "Say it directly" },
+  "I go quiet": { category: "offSignals", tag: "Get quiet" },
+  "I leave the room": { category: "offSignals", tag: "Leave the room" },
+  "I zone out on my phone": { category: "offSignals", tag: "Zone out" },
+  "Words of affirmation": { category: "loveLanguages", tag: "Words" },
+  "Acts of service": { category: "loveLanguages", tag: "Acts" },
+  "Little surprises": { category: "loveLanguages", tag: "Gifts" },
+  "Quality time": { category: "loveLanguages", tag: "Time" },
+};
+
+const buildProfileUpdate = (answers: Record<string, string>) => {
+  const update: Record<string, string[] | string> = {};
+  for (const answer of Object.values(answers)) {
+    const mapped = ANSWER_TO_TAG[answer];
+    if (!mapped) continue;
+    const key = `profile.${mapped.category}`;
+    const existing = (update[key] as string[] | undefined) || [];
+    if (!existing.includes(mapped.tag)) update[key] = [...existing, mapped.tag];
+  }
+  if (Object.keys(update).length > 0) update["profile.updatedAt"] = new Date().toISOString();
+  return update;
+};
+
 export default function Onboarding() {
   const [step, setStep] = useState(0); // 0 = name, 1-4 = profile
   const [name, setName] = useState("");
   const [answers, setAnswers] = useState<Record<string, string>>({});
   const [submitting, setSubmitting] = useState(false);
+  const [error, setError] = useState("");
   const router = useRouter();
+  useAuthGuard();
 
   // Pre-fill name from Google if available
   useEffect(() => {
@@ -64,24 +100,20 @@ export default function Onboarding() {
   };
 
   const handleSkip = async () => {
-    if (!name.trim()) return;
-    setSubmitting(true);
     const user = auth.currentUser;
-    if (!user) return;
+    if (!name.trim() || !user) return;
+    setSubmitting(true);
+    setError("");
     try {
+      // Skipping never touches an existing profile
       await updateDoc(doc(db, "users", user.uid), {
         displayName: name.trim(),
-        profile: {
-          supportPreference: "",
-          overwhelmedInstinct: "",
-          spaceSignal: "",
-          loveSignal: "",
-        },
         hasCompletedOnboarding: true,
       });
       router.push("/");
     } catch (err) {
       console.error(err);
+      setError("Couldn't save. Check your connection and try again.");
       setSubmitting(false);
     }
   };
@@ -95,30 +127,27 @@ export default function Onboarding() {
       setStep((s) => s + 1);
     } else {
       // Final step — save everything
-      setSubmitting(true);
       const user = auth.currentUser;
       if (!user) return;
+      setSubmitting(true);
+      setError("");
       try {
         await updateDoc(doc(db, "users", user.uid), {
           displayName: name.trim(),
-          profile: {
-            supportPreference: updatedAnswers.support,
-            overwhelmedInstinct: updatedAnswers.overwhelmed,
-            spaceSignal: updatedAnswers.space,
-            loveSignal: updatedAnswers.love,
-          },
+          ...buildProfileUpdate(updatedAnswers),
           hasCompletedOnboarding: true,
         });
         router.push("/");
       } catch (err) {
         console.error(err);
+        setError("Couldn't save. Check your connection and try again.");
         setSubmitting(false);
       }
     }
   };
 
   // Progress dots — total including name step
-  const ProgressDots = () => (
+  const renderProgressDots = () => (
     <div className="flex justify-center gap-1.5">
       {Array.from({ length: TOTAL_STEPS }).map((_, i) => (
         <div
@@ -151,7 +180,7 @@ export default function Onboarding() {
 
       {/* Progress */}
       <div className="flex-none px-8 pb-6 z-10">
-        <ProgressDots />
+        {renderProgressDots()}
       </div>
 
       {/* Content — takes remaining height */}
@@ -255,6 +284,12 @@ export default function Onboarding() {
             )}
 
           </AnimatePresence>
+
+          {error && (
+            <p className="text-rose-500 text-[10px] uppercase font-bebas tracking-widest text-center mt-6">
+              {error}
+            </p>
+          )}
         </div>
       </div>
 

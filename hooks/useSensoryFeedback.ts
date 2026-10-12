@@ -8,7 +8,7 @@ export const useSensoryFeedback = () => {
   useEffect(() => {
     // Only init if window exists
     if (typeof window !== "undefined") {
-      const AudioCtx = window.AudioContext || (window as any).webkitAudioContext;
+      const AudioCtx = window.AudioContext || (window as unknown as { webkitAudioContext?: typeof AudioContext }).webkitAudioContext;
       if (AudioCtx) {
         audioCtxRef.current = new AudioCtx();
       }
@@ -123,5 +123,88 @@ export const useSensoryFeedback = () => {
     }
   }, []);
 
-  return { playPop, playSend, playHeartbeat, vibrateTick };
+  const playChime = useCallback(async () => {
+    if (!audioCtxRef.current) return;
+    await resumeCtx();
+    const ctx = audioCtxRef.current;
+    if (ctx.state !== "running") return;
+
+    // Harmonic chime (major third)
+    const playNote = (freq: number, delay: number) => {
+      const osc = ctx.createOscillator();
+      const gainNode = ctx.createGain();
+      osc.type = "sine";
+      osc.frequency.setValueAtTime(freq, ctx.currentTime + delay);
+      gainNode.gain.setValueAtTime(0, ctx.currentTime + delay);
+      gainNode.gain.linearRampToValueAtTime(0.2, ctx.currentTime + delay + 0.1);
+      gainNode.gain.exponentialRampToValueAtTime(0.01, ctx.currentTime + delay + 0.5);
+      osc.connect(gainNode);
+      gainNode.connect(ctx.destination);
+      osc.start(ctx.currentTime + delay);
+      osc.stop(ctx.currentTime + delay + 0.5);
+    };
+
+    playNote(659.25, 0); // E5
+    playNote(830.61, 0.1); // G#5
+    playNote(987.77, 0.2); // B5
+  }, []);
+
+  const playDewdrop = useCallback(async () => {
+    if (!audioCtxRef.current) return;
+    await resumeCtx();
+    const ctx = audioCtxRef.current;
+    if (ctx.state !== "running") return;
+
+    const osc = ctx.createOscillator();
+    const gainNode = ctx.createGain();
+    osc.type = "sine";
+    osc.frequency.setValueAtTime(1200, ctx.currentTime);
+    osc.frequency.exponentialRampToValueAtTime(800, ctx.currentTime + 0.1);
+    gainNode.gain.setValueAtTime(0.2, ctx.currentTime);
+    gainNode.gain.exponentialRampToValueAtTime(0.01, ctx.currentTime + 0.1);
+    osc.connect(gainNode);
+    gainNode.connect(ctx.destination);
+    osc.start();
+    osc.stop(ctx.currentTime + 0.1);
+  }, []);
+
+  const playTick = useCallback(async () => {
+    if (!audioCtxRef.current) return;
+    await resumeCtx();
+    const ctx = audioCtxRef.current;
+    if (ctx.state !== "running") return;
+
+    const osc = ctx.createOscillator();
+    const gainNode = ctx.createGain();
+    osc.type = "sine";
+    osc.frequency.setValueAtTime(150, ctx.currentTime);
+    gainNode.gain.setValueAtTime(0.05, ctx.currentTime);
+    gainNode.gain.linearRampToValueAtTime(0, ctx.currentTime + 0.02);
+    osc.connect(gainNode);
+    gainNode.connect(ctx.destination);
+    osc.start();
+    osc.stop(ctx.currentTime + 0.02);
+  }, []);
+
+  const playTransition = useCallback(async () => {
+    if (!audioCtxRef.current) return;
+    await resumeCtx();
+    const ctx = audioCtxRef.current;
+    if (ctx.state !== "running") return;
+
+    const osc = ctx.createOscillator();
+    const gainNode = ctx.createGain();
+    osc.type = "sine";
+    osc.frequency.setValueAtTime(200, ctx.currentTime);
+    osc.frequency.exponentialRampToValueAtTime(100, ctx.currentTime + 0.5);
+    gainNode.gain.setValueAtTime(0, ctx.currentTime);
+    gainNode.gain.linearRampToValueAtTime(0.1, ctx.currentTime + 0.1);
+    gainNode.gain.exponentialRampToValueAtTime(0.01, ctx.currentTime + 0.5);
+    osc.connect(gainNode);
+    gainNode.connect(ctx.destination);
+    osc.start();
+    osc.stop(ctx.currentTime + 0.5);
+  }, []);
+
+  return { playPop, playSend, playHeartbeat, vibrateTick, playChime, playDewdrop, playTick, playTransition };
 };

@@ -67,7 +67,7 @@ export default function CookiePolicy() {
             <img src="/HM.png" alt="HM Logo" className="w-4 h-auto opacity-50" />
           </div>
           <p className="text-xs text-neutral-600 font-inter tracking-[0.2em] uppercase">
-            Private • Encrypted • Just You Two
+            Private • Just You Two
           </p>
         </div>
 
