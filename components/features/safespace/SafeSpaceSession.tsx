@@ -25,12 +25,22 @@ import {
 } from "lucide-react";
 import { AmbientBackground } from "../../ui/AmbientBackground";
 import { cn } from "@/lib/utils";
+import { useSensoryFeedback } from "@/hooks/useSensoryFeedback";
 
 export const SafeSpaceSession = () => {
   const { user, partner, activeSafeSpace } = useMailbox();
   const [messages, setMessages] = useState<SafeSpaceMessage[]>([]);
   const [inputText, setInputText] = useState("");
   const [showClosure, setShowClosure] = useState(false);
+  const { playTransition, playSend } = useSensoryFeedback();
+
+  const isMyTurn = activeSafeSpace?.currentTurnUid === user?.uid;
+
+  useEffect(() => {
+    if (isMyTurn) {
+      playTransition();
+    }
+  }, [isMyTurn, playTransition]);
 
   useEffect(() => {
     if (!user?.coupleId || !activeSafeSpace?.id) return;
@@ -40,7 +50,6 @@ export const SafeSpaceSession = () => {
     return () => unsub();
   }, [user?.coupleId, activeSafeSpace?.id]);
 
-  const isMyTurn = activeSafeSpace?.currentTurnUid === user?.uid;
   const hasRequestFromPartner = activeSafeSpace?.micRequest?.uid === partner?.uid;
   
   // Cooldown logic (5 mins)
@@ -50,6 +59,7 @@ export const SafeSpaceSession = () => {
   const handleSendMessage = async () => {
     if (!inputText.trim() || !user?.coupleId || !activeSafeSpace?.id) return;
     try {
+      playSend();
       await sendSafeSpaceMessage(user.coupleId, activeSafeSpace.id, user.uid, inputText);
       setInputText("");
     } catch (err) {

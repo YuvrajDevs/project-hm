@@ -11,10 +11,12 @@ import {
   updateDoc, 
   deleteDoc,
   getDocs,
+  arrayUnion,
   Timestamp,
   FirestoreDataConverter,
   QueryDocumentSnapshot,
-  SnapshotOptions
+  SnapshotOptions,
+  limit
 } from "firebase/firestore";
 import { db } from "./firebase";
 import { 
@@ -24,7 +26,9 @@ import {
   MailboxMessage,
   DailyCheckIn,
   QuickReact,
-  SafeSpaceSession
+  SafeSpaceSession,
+  PartnerNote,
+  AppNotification
 } from "./types";
 
 /**
@@ -65,32 +69,87 @@ export const subscribeToMailbox = (coupleId: string, callback: (messages: Mailbo
   });
 };
 
-export const sendMailboxMessage = async (coupleId: string, message: Omit<MailboxMessage, "id" | "createdAt">) => {
-  return addDoc(getCoupleCollection(coupleId, "mailbox"), {
+export const sendMailboxMessage = async (coupleId: string, message: Omit<MailboxMessage, "id" | "createdAt">, partnerUid: string) => {
+  const docRef = await addDoc(getCoupleCollection(coupleId, "mailbox"), {
     ...message,
     createdAt: Timestamp.now()
+  });
+
+  // Notify partner
+  await sendNotification(partnerUid, {
+    uid: partnerUid,
+    type: "MAILBOX",
+    title: "New Note",
+    body: "You have a new note in your mailbox.",
+  });
+
+  return docRef;
+};
+
+export const markMessageAsRead = async (coupleId: string, messageId: string) => {
+  const msgRef = doc(db, "couples", coupleId, "mailbox", messageId);
+  return updateDoc(msgRef, {
+    readAt: new Date().toISOString()
+  });
+};
+
+export const updateMailboxMessage = async (coupleId: string, messageId: string, updates: Partial<MailboxMessage>) => {
+  const msgRef = doc(db, "couples", coupleId, "mailbox", messageId);
+  return updateDoc(msgRef, {
+    ...updates,
+    updatedAt: Timestamp.now()
+  });
+};
+
+export const deleteMailboxMessage = async (coupleId: string, messageId: string) => {
+  const msgRef = doc(db, "couples", coupleId, "mailbox", messageId);
+  return deleteDoc(msgRef);
+};
+
+export const hideMessageForUser = async (coupleId: string, messageId: string, uid: string) => {
+  const msgRef = doc(db, "couples", coupleId, "mailbox", messageId);
+  return updateDoc(msgRef, {
+    hiddenFor: arrayUnion(uid)
   });
 };
 
 /**
  * Daily Check-In Helpers
  */
-export const saveCheckIn = async (coupleId: string, checkIn: Omit<DailyCheckIn, "id" | "createdAt">) => {
+export const saveCheckIn = async (coupleId: string, checkIn: Omit<DailyCheckIn, "id" | "createdAt">, partnerUid: string) => {
   // Check-ins are stored per couple but identified by user UID
-  return addDoc(getCoupleCollection(coupleId, "checkins"), {
+  const docRef = await addDoc(getCoupleCollection(coupleId, "checkins"), {
     ...checkIn,
     createdAt: Timestamp.now()
   });
+
+  // Notify partner
+  await sendNotification(partnerUid, {
+    uid: partnerUid,
+    type: "CHECK_IN",
+    title: "Daily Check-In",
+    body: "Your partner just completed their daily check-in.",
+  });
+
+  return docRef;
 };
 
 /**
  * Quick React Helpers
  */
-export const sendQuickReact = async (coupleId: string, react: Omit<QuickReact, "id" | "createdAt">) => {
+export const sendQuickReact = async (coupleId: string, react: Omit<QuickReact, "id" | "createdAt">, partnerUid: string) => {
   const reactionRef = doc(db, "couples", coupleId, "reactions", `latest_${react.senderUid}`);
-  return setDoc(reactionRef, {
+  await setDoc(reactionRef, {
     ...react,
     createdAt: Timestamp.now()
+  });
+
+  // Notify partner
+  await sendNotification(partnerUid, {
+    uid: partnerUid,
+    type: "REACTION",
+    title: "New Signal",
+    body: `Your partner sent you a ${react.type.toLowerCase()} signal.`,
   });
 };
 
@@ -185,11 +244,27 @@ export const endSafeSpaceSession = async (coupleId: string, sessionId: string, c
   });
 };
 
-export const updateUserMood = async (uid: string, mood: string) => {
+export const updateUserMood = async (uid: string, mood: string, partnerUid?: string) => {
   const userRef = doc(db, "users", uid);
-  return updateDoc(userRef, {
+  await updateDoc(userRef, {
     currentMood: mood,
     moodUpdatedAt: new Date().toISOString()
+  });
+
+  if (partnerUid) {
+    await sendNotification(partnerUid, {
+      uid: partnerUid,
+      type: "CHECK_IN",
+      title: "Mood Updated",
+      body: `Your partner's mood is now ${mood}.`,
+    });
+  }
+};
+
+export const updateUserTimezone = async (uid: string, timezone: string) => {
+  const userRef = doc(db, "users", uid);
+  return updateDoc(userRef, {
+    timezone
   });
 };
 
@@ -217,13 +292,21 @@ export const updateProfile = async (uid: string, profile: EmotionalProfile) => {
   });
 };
 
-export const respondToMessage = async (coupleId: string, messageId: string, response: { mode: string; text?: string; timerExpiresAt?: string }) => {
+export const respondToMessage = async (coupleId: string, messageId: string, response: { mode: string; text?: string; timerExpiresAt?: string }, partnerUid: string) => {
   const messageRef = doc(db, "couples", coupleId, "mailbox", messageId);
-  return updateDoc(messageRef, {
+  await updateDoc(messageRef, {
     response: {
       ...response,
       respondedAt: Timestamp.now()
     }
+  });
+
+  // Notify partner
+  await sendNotification(partnerUid, {
+    uid: partnerUid,
+    type: "MAILBOX",
+    title: "New Response",
+    body: "Your partner responded to your message.",
   });
 };
 
@@ -412,4 +495,84 @@ export const deleteCoupleEvent = async (coupleId: string, eventId: string) => {
   
   // Standard delete
   return deleteDoc(eventRef);
+};
+
+/**
+ * Partner Notes Helpers
+ */
+export const subscribeToPartnerNotes = (uid: string, callback: (notes: PartnerNote[]) => void) => {
+  const q = query(
+    collection(db, "users", uid, "notes"),
+    orderBy("createdAt", "desc")
+  ).withConverter(converter<PartnerNote>());
+  
+  return onSnapshot(q, (snapshot) => {
+    callback(snapshot.docs.map(doc => doc.data()));
+  });
+};
+
+export const addPartnerNote = async (uid: string, text: string) => {
+  return addDoc(collection(db, "users", uid, "notes"), {
+    userUid: uid,
+    text,
+    createdAt: Timestamp.now()
+  });
+};
+
+export const deletePartnerNote = async (uid: string, noteId: string) => {
+  const noteRef = doc(db, "users", uid, "notes", noteId);
+  return deleteDoc(noteRef);
+};
+
+export const updatePartnerNote = async (uid: string, noteId: string, text: string) => {
+  const noteRef = doc(db, "users", uid, "notes", noteId);
+  return updateDoc(noteRef, {
+    text,
+    updatedAt: Timestamp.now()
+  });
+};
+
+/**
+ * Notifications Helpers
+ */
+export const sendNotification = async (toUid: string, notification: Omit<AppNotification, "id" | "createdAt" | "read">) => {
+  const notisRef = collection(db, "users", toUid, "notifications");
+  return addDoc(notisRef, {
+    ...notification,
+    read: false,
+    createdAt: Timestamp.now()
+  });
+};
+
+export const markNotificationAsRead = async (uid: string, notiId: string) => {
+  const notiRef = doc(db, "users", uid, "notifications", notiId);
+  return updateDoc(notiRef, { read: true });
+};
+
+export const markAllNotificationsAsRead = async (uid: string) => {
+  const notisRef = collection(db, "users", uid, "notifications");
+  const q = query(notisRef, where("read", "==", false));
+  const snap = await getDocs(q);
+  for (const d of snap.docs) {
+    await updateDoc(d.ref, { read: true });
+  }
+};
+
+export const updateUserNotificationSettings = async (uid: string, enabled: boolean) => {
+  const userRef = doc(db, "users", uid);
+  return updateDoc(userRef, {
+    "settings.notificationsEnabled": enabled
+  });
+};
+
+export const subscribeToNotifications = (uid: string, callback: (notis: AppNotification[]) => void) => {
+  const q = query(
+    collection(db, "users", uid, "notifications"),
+    orderBy("createdAt", "desc"),
+    limit(50)
+  ).withConverter(converter<AppNotification>());
+  
+  return onSnapshot(q, (snapshot) => {
+    callback(snapshot.docs.map(doc => doc.data()));
+  });
 };

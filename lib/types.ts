@@ -15,6 +15,7 @@ export interface User {
   leftByPartner?: boolean; 
   currentMood?: string;
   moodUpdatedAt?: string;
+  timezone?: string;
   createdAt: string;
 }
 
@@ -82,6 +83,8 @@ export interface MailboxMessage {
   };
   unlockAt?: string; // ISO date for time capsule
   isSecretBeforeUnlock?: boolean;
+  readAt?: string; // Track when receiver first viewed
+  hiddenFor?: string[]; // UIDs of users who 'deleted' for themselves
 }
 
 // 🌡️ Daily Check-In Types
@@ -171,5 +174,12 @@ export interface CoupleEvent {
   repeat: "none" | "monthly" | "yearly";
   isSurprise: boolean;
   createdBy: string;
+  createdAt: string;
+}
+// 📝 Partner Notes Types
+export interface PartnerNote {
+  id: string;
+  userUid: string; // The person who wrote the note
+  text: string;    // The note itself (max 140 chars)
   createdAt: string;
 }

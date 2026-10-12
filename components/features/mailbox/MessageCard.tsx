@@ -4,39 +4,31 @@ import React, { useState, useEffect } from "react";
 import { MailboxMessage, ResponseMode } from "@/lib/types";
 import { motion, AnimatePresence } from "framer-motion";
 import { useMailbox } from "@/context/MailboxContext";
-import { respondToMessage } from "@/lib/firestore-helpers";
-import { Heart, Clock, CheckCircle2, MessageCircle, Ear, Users, Send, ChevronLeft } from "lucide-react";
+import { Heart, Clock, CheckCircle2, MessageCircle, Ear, Users, Send, ChevronLeft, Trash2, Edit3, Eye, MoreVertical } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useSensoryFeedback } from "@/hooks/useSensoryFeedback";
+import { EditMessage } from "./EditMessage";
 
-const statusConfig: Record<string, { label: string; emoji: string; color: string }> = {
-  IGNORING: { label: "Feeling Ignored", emoji: "😔", color: "bg-[#9d8df1]" },
-  OVERWHELMED: { label: "Overwhelmed", emoji: "😤", color: "bg-[#ff6b35]" },
-  NEED_ATTENTION: { label: "Need Attention", emoji: "🥺", color: "bg-[#ff85a1]" },
-  DISTANT: { label: "Feeling Distant", emoji: "😶", color: "bg-[#6a0572]" },
-  ANXIOUS: { label: "Anxious About Us", emoji: "😰", color: "bg-[#00b4d8]" },
-  LOVE_NOTE: { label: "I Love You", emoji: "😌", color: "bg-[#ef476f]" },
-  SPACE_NEEDED: { label: "Need Space", emoji: "🤐", color: "bg-[#06d6a0]" },
-  HARD_DAY: { label: "Hard Day", emoji: "😣", color: "bg-[#ffd166]" },
-};
-
-const intentLabels: Record<string, string> = {
-  LISTEN: "Just Listen",
-  REASSURE: "Reassure Me",
-  ADVICE: "Give Me Advice",
-  TALK: "Let's Talk",
-  SAY_IT: "Just Needed to Say It",
-};
+import { PREMIUM_ICONS, INTENT_LABELS } from "@/lib/constants";
 
 export const MessageCard = ({ message }: { message: MailboxMessage }) => {
-  const { user } = useMailbox();
-  const { playPop } = useSensoryFeedback();
+  const { user, markAsRead, deleteForMe, respondToNote } = useMailbox();
+  const { playPop, vibrateTick } = useSensoryFeedback();
   const isSender = message.senderUid === user?.uid;
-  const config = statusConfig[message.status] || { label: message.status, emoji: "❓", color: "bg-neutral-800" };
+  const config = PREMIUM_ICONS[message.status] || { label: message.status, url: "", color: "bg-neutral-800" };
   
   const [timeLeft, setTimeLeft] = useState<string | null>(null);
   const [isComposing, setIsComposing] = useState(false);
   const [responseText, setResponseText] = useState("");
+  const [isEditing, setIsEditing] = useState(false);
+  const [showOptions, setShowOptions] = useState(false);
+
+  // Mark as Read Logic
+  useEffect(() => {
+    if (!isSender && !message.readAt && user?.coupleId) {
+      markAsRead(message.id);
+    }
+  }, [message.id, isSender, message.readAt, user?.coupleId]);
 
   useEffect(() => {
     if (message.response?.mode === "MINUTE" && message.response.timerExpiresAt) {
@@ -70,7 +62,7 @@ export const MessageCard = ({ message }: { message: MailboxMessage }) => {
     }
 
     try {
-      await respondToMessage(user!.coupleId!, message.id, responseObj);
+      await respondToNote(message.id, responseObj);
       setIsComposing(false);
     } catch (err) {
       console.error(err);
@@ -100,20 +92,66 @@ export const MessageCard = ({ message }: { message: MailboxMessage }) => {
               {isSender ? "You Sent" : "Partner Received"}
           </span>
           <div className="flex items-center gap-3">
-              <span className="text-3xl md:text-5xl">{config.emoji}</span>
+              <div className="relative group">
+                  <div className="absolute inset-0 bg-white/20 blur-2xl rounded-full opacity-0 group-hover:opacity-40 transition-opacity" />
+                  <img 
+                    src={config.url} 
+                    alt={config.label}
+                    className="w-12 h-12 md:w-16 md:h-16 relative z-10 drop-shadow-2xl animate-float"
+                  />
+              </div>
               <h2 className="text-3xl md:text-4xl font-bebas tracking-tight uppercase leading-none">
                   {config.label}
               </h2>
           </div>
         </div>
-        <div className="text-[10px] font-bebas tracking-widest opacity-60 bg-black/10 px-3 py-1.5 rounded-full backdrop-blur-sm border border-white/5">
-            {new Date(message.createdAt).toLocaleDateString([], { month: 'short', day: 'numeric' })}, {new Date(message.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+        <div className="flex items-center gap-3 relative z-20">
+            <div className="text-[10px] font-bebas tracking-widest opacity-60 bg-black/10 px-3 py-1.5 rounded-full backdrop-blur-sm border border-white/5">
+                {new Date(message.createdAt).toLocaleDateString([], { month: 'short', day: 'numeric' })}, {new Date(message.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+            </div>
+            
+            <div className="relative">
+                <button 
+                  onClick={() => { vibrateTick(); setShowOptions(!showOptions); }}
+                  className="p-1.5 rounded-full hover:bg-black/10 transition-colors"
+                >
+                    <MoreVertical className="w-4 h-4" />
+                </button>
+                
+                <AnimatePresence>
+                  {showOptions && (
+                    <motion.div 
+                      initial={{ opacity: 0, y: 10, scale: 0.9 }}
+                      animate={{ opacity: 1, y: 0, scale: 1 }}
+                      exit={{ opacity: 0, y: 10, scale: 0.9 }}
+                      className="absolute right-0 top-full mt-2 w-48 bg-neutral-900 border border-white/10 rounded-2xl shadow-2xl p-2 flex flex-col gap-1"
+                    >
+                        {isSender && !message.readAt && !message.response && (
+                          <button 
+                            onClick={() => { setIsEditing(true); setShowOptions(false); }}
+                            className="w-full flex items-center gap-3 px-3 py-2.5 hover:bg-white/5 rounded-xl text-left transition-colors"
+                          >
+                            <Edit3 className="w-4 h-4 text-blue-400" />
+                            <span className="font-bebas text-sm uppercase tracking-widest">Edit Thought</span>
+                          </button>
+                        )}
+                        <button 
+                          onClick={() => { deleteForMe(message.id); setShowOptions(false); }}
+                          className="w-full flex items-center gap-3 px-3 py-2.5 hover:bg-red-500/10 rounded-xl text-left transition-colors"
+                        >
+                          <Trash2 className="w-4 h-4 text-red-400" />
+                          <span className="font-bebas text-sm uppercase tracking-widest text-red-200">Delete for Me</span>
+                        </button>
+                    </motion.div>
+                  )}
+                </AnimatePresence>
+            </div>
         </div>
       </div>
 
       <div className="space-y-4 relative z-10 flex-1">
         <div className="inline-block px-3 py-1 rounded-full bg-black/10 border border-white/10 font-bebas text-[10px] tracking-widest uppercase">
-            {intentLabels[message.intent]}
+            {INTENT_LABELS[message.intent]}
         </div>
         
         {message.note && (
@@ -127,9 +165,17 @@ export const MessageCard = ({ message }: { message: MailboxMessage }) => {
 
         {!message.response ? (
           isSender ? (
-            <div className="flex items-center gap-3 text-white/50 animate-pulse">
-                <Clock className="w-5 h-5" />
-                <span className="font-bebas text-lg tracking-widest uppercase">Waiting for response...</span>
+            <div className="flex items-center justify-between w-full">
+                <div className="flex items-center gap-3 text-white/50 animate-pulse">
+                    <Clock className="w-5 h-5" />
+                    <span className="font-bebas text-lg tracking-widest uppercase">Waiting for response...</span>
+                </div>
+                {message.readAt && (
+                  <div className="flex items-center gap-1.5 px-3 py-1 rounded-full bg-white/5 border border-white/10">
+                    <Eye className="w-3 h-3 text-blue-400" />
+                    <span className="text-[9px] font-bebas tracking-widest uppercase text-blue-200">Partner Read</span>
+                  </div>
+                )}
             </div>
           ) : (
             <div className="relative">
@@ -237,6 +283,12 @@ export const MessageCard = ({ message }: { message: MailboxMessage }) => {
           </div>
         )}
       </div>
+
+      <EditMessage 
+        isOpen={isEditing} 
+        onClose={() => setIsEditing(false)} 
+        message={message} 
+      />
     </motion.div>
   );
 };

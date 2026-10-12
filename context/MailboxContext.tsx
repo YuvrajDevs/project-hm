@@ -34,19 +34,34 @@ import {
   subscribeToEvents,
   saveCoupleEvent,
   deleteCoupleEvent,
-  startSafeSpaceSession
+  startSafeSpaceSession,
+  updateMailboxMessage,
+  deleteMailboxMessage,
+  hideMessageForUser,
+  subscribeToNotifications,
+  markNotificationAsRead,
+  markAllNotificationsAsRead,
+  updateUserNotificationSettings,
+  sendQuickReact,
+  saveCheckIn,
+  respondToMessage
 } from "@/lib/firestore-helpers";
 import { formatDateId, getCheckInDateId } from "@/lib/utils";
 
 interface MailboxContextType {
+  fbUser: FirebaseUser | null | "loading";
   user: User | null;
   couple: Couple | null;
   partner: User | null;
   messages: MailboxMessage[];
   reactions: QuickReact[];
-  checkins: DailyCheckIn[];
   events: CoupleEvent[];
+  notifications: AppNotification[];
+  unreadNotificationsCount: number;
+  notificationsEnabled: boolean;
   activeSafeSpace: SafeSpaceSession | null;
+  checkins: DailyCheckIn[];
+  historyCheckins: DailyCheckIn[];
   metrics: {
     streak: number;
     syncScore: number;
@@ -65,6 +80,12 @@ interface MailboxContextType {
   leavePartner: () => Promise<void>;
   clearPartnerLeftStatus: () => Promise<void>;
   sendMessage: (msg: Omit<MailboxMessage, "id" | "senderUid" | "createdAt">) => Promise<void>;
+  respondToNote: (messageId: string, response: { mode: string; text?: string; timerExpiresAt?: string }) => Promise<void>;
+  saveDailyCheckIn: (checkIn: Omit<DailyCheckIn, "id" | "userUid" | "createdAt">) => Promise<void>;
+  sendSignal: (type: ReactionType, note?: string) => Promise<void>;
+  markNotiRead: (id: string) => Promise<void>;
+  clearAllNotis: () => Promise<void>;
+  toggleNotifications: (enabled: boolean) => Promise<void>;
   addEvent: (event: Omit<CoupleEvent, "id" | "createdAt" | "createdBy">) => Promise<void>;
   removeEvent: (eventId: string) => Promise<void>;
   wipeoutUserAccount: () => Promise<void>;
@@ -79,6 +100,10 @@ interface MailboxContextType {
   hasLoadedCheckins: boolean;
   isOverlayActive: boolean;
   setOverlayActive: (active: boolean) => void;
+  markAsRead: (messageId: string) => Promise<void>;
+  editMessage: (messageId: string, updates: Partial<MailboxMessage>) => Promise<void>;
+  deleteForMe: (messageId: string) => Promise<void>;
+  unsendCapsule: (messageId: string) => Promise<void>;
 }
 
 const MailboxContext = createContext<MailboxContextType | undefined>(undefined);
@@ -88,12 +113,13 @@ export const MailboxProvider: React.FC<{ children: React.ReactNode }> = ({ child
   const [user, setUser] = useState<User | null>(null);
   const [couple, setCouple] = useState<Couple | null>(null);
   const [partner, setPartner] = useState<User | null>(null);
-  const [messages, setMessages] = useState<MailboxMessage[]>([]);
+  const [rawMessages, setRawMessages] = useState<MailboxMessage[]>([]);
   const [reactions, setReactions] = useState<QuickReact[]>([]);
   const [checkins, setCheckins] = useState<DailyCheckIn[]>([]);
   const [historyCheckins, setHistoryCheckins] = useState<DailyCheckIn[]>([]);
   const [activeSafeSpace, setActiveSafeSpace] = useState<SafeSpaceSession | null>(null);
   const [rawEvents, setRawEvents] = useState<CoupleEvent[]>([]);
+  const [notifications, setNotifications] = useState<AppNotification[]>([]);
   const [hasLoadedCheckins, setHasLoadedCheckins] = useState(false);
   const [isOverlayActive, setOverlayActive] = useState(false);
   const [dataLoading, setDataLoading] = useState(false);
@@ -102,6 +128,11 @@ export const MailboxProvider: React.FC<{ children: React.ReactNode }> = ({ child
   const loading = fbUser === "loading" || (fbUser !== null && user === null);
   const hasOnboarded = !!user?.hasCompletedOnboarding;
   const isPaired = !!user?.coupleId;
+  const notificationsEnabled = user?.settings?.notificationsEnabled ?? true;
+
+  const unreadNotificationsCount = useMemo(() => {
+    return notifications.filter(n => !n.read).length;
+  }, [notifications]);
 
   // Surprise Reveal Logic & Final Events List
   const events = useMemo(() => {
@@ -116,6 +147,12 @@ export const MailboxProvider: React.FC<{ children: React.ReactNode }> = ({ child
         return event.dateId <= todayStr;
     });
   }, [rawEvents, user]);
+
+  // Hidden Messages Filter
+  const messages = useMemo(() => {
+    if (!user) return [];
+    return rawMessages.filter(m => !m.hiddenFor?.includes(user.uid));
+  }, [rawMessages, user]);
 
   // ─── Metrics Derivations ──────────────────────────────────────────────────
   const metrics = useMemo(() => {
@@ -213,7 +250,7 @@ export const MailboxProvider: React.FC<{ children: React.ReactNode }> = ({ child
         reactsCount,
         trend
     };
-  }, [user?.coupleId, user?.uid, historyCheckins, messages]);
+  }, [user?.coupleId, user?.uid, historyCheckins, messages, reactions, partner]);
 
   // ─── 1. Firebase Auth State ────────────────────────────────────────────────
   useEffect(() => {
@@ -224,9 +261,10 @@ export const MailboxProvider: React.FC<{ children: React.ReactNode }> = ({ child
         setUser(null);
         setCouple(null);
         setPartner(null);
-        setMessages([]);
+        setRawMessages([]);
         setReactions([]);
         setCheckins([]);
+        setNotifications([]);
         setActiveSafeSpace(null);
       }
     });
@@ -243,47 +281,62 @@ export const MailboxProvider: React.FC<{ children: React.ReactNode }> = ({ child
       }
       const userData = { ...snap.data(), uid: fbUser.uid } as User;
       setUser(userData);
+
+      // ─── Auto Timezone Sync ───
+      const currentTZ = Intl.DateTimeFormat().resolvedOptions().timeZone;
+      if (userData.timezone !== currentTZ) {
+          updateUserTimezone(fbUser.uid, currentTZ).catch(console.error);
+      }
     });
 
     return () => unsubUser();
   }, [fbUser]);
 
-  // ─── 3. Couple & Partner Listener ──────────────────────────────────────────
+  // ─── 3. Couple Listener ───────────────────────────────────────────────────
   useEffect(() => {
     if (!user?.coupleId || !fbUser || fbUser === "loading") {
         setCouple(null);
+        return;
+    }
+
+    const unsubCouple = onSnapshot(doc(db, "couples", user.coupleId), (snap) => {
+        if (!snap.exists()) {
+            setCouple(null);
+            return;
+        }
+        setCouple(snap.data() as Couple);
+    });
+
+    return () => unsubCouple();
+  }, [user?.coupleId, fbUser]);
+
+  // ─── 4. Partner Listener (Real-time) ───────────────────────────────────────
+  useEffect(() => {
+    if (!couple || !fbUser || fbUser === "loading") {
         setPartner(null);
         return;
     }
 
-    const unsubCouple = onSnapshot(doc(db, "couples", user.coupleId), async (snap) => {
-        if (!snap.exists()) {
-            setCouple(null);
-            setPartner(null);
-            return;
-        }
+    const partnerUid = couple.partnerA_uid === fbUser.uid
+        ? couple.partnerB_uid
+        : couple.partnerA_uid;
 
-        const coupleData = snap.data() as Couple;
-        setCouple(coupleData);
+    if (!partnerUid) {
+        setPartner(null);
+        return;
+    }
 
-        const partnerUid = coupleData.partnerA_uid === fbUser.uid
-            ? coupleData.partnerB_uid
-            : coupleData.partnerA_uid;
-
-        if (partnerUid) {
-            // We can even use onSnapshot for the partner if we want real-time partner name changes,
-            // but for now, getDoc is probably enough as long as we trigger it when the couple doc changes.
-            const partnerSnap = await getDoc(doc(db, "users", partnerUid));
-            if (partnerSnap.exists()) {
-                setPartner({ ...partnerSnap.data(), uid: partnerUid } as User);
-            }
+    // Real-time listener for partner document
+    const unsubPartner = onSnapshot(doc(db, "users", partnerUid), (snap) => {
+        if (snap.exists()) {
+            setPartner({ ...snap.data(), uid: partnerUid } as User);
         } else {
             setPartner(null);
         }
     });
 
-    return () => unsubCouple();
-  }, [user?.coupleId, fbUser]);
+    return () => unsubPartner();
+  }, [couple, fbUser]);
 
   // ─── 3. Real-time Feature Listeners ────────────────────────────────────────
   useEffect(() => {
@@ -291,7 +344,12 @@ export const MailboxProvider: React.FC<{ children: React.ReactNode }> = ({ child
 
     // Mailbox
     const unsubMailbox = subscribeToMailbox(user.coupleId, (msgs) => {
-      setMessages(msgs);
+      setRawMessages(msgs);
+    });
+
+    // Notifications
+    const unsubNotis = subscribeToNotifications(user.uid, (notis) => {
+      setNotifications(notis);
     });
 
     // Checkins (Today's according to 6 AM reset)
@@ -360,8 +418,9 @@ export const MailboxProvider: React.FC<{ children: React.ReactNode }> = ({ child
       unsubHistory();
       unsubSafeSpace();
       unsubEvents();
+      unsubNotis();
     };
-  }, [user?.coupleId]);
+  }, [user?.coupleId, user?.uid]);
 
   // ─── Actions ──────────────────────────────────────────────────────────────
   const logout = async () => {
@@ -383,11 +442,33 @@ export const MailboxProvider: React.FC<{ children: React.ReactNode }> = ({ child
   };
 
   const sendMessage = async (msg: Omit<MailboxMessage, "id" | "senderUid" | "createdAt">) => {
-    if (!user?.coupleId || !fbUser || fbUser === "loading") return;
+    if (!user?.coupleId || !fbUser || fbUser === "loading" || !user.partnerId) return;
     await sendMailboxMessage(user.coupleId, {
       ...msg,
       senderUid: fbUser.uid,
-    });
+    }, user.partnerId);
+  };
+
+  const respondToNote = async (messageId: string, response: { mode: string; text?: string; timerExpiresAt?: string }) => {
+    if (!user?.coupleId || !user?.partnerId) return;
+    await respondToMessage(user.coupleId, messageId, response as any, user.partnerId);
+  };
+
+  const saveDailyCheckIn = async (checkIn: Omit<DailyCheckIn, "id" | "userUid" | "createdAt">) => {
+    if (!user?.coupleId || !user?.uid || !user?.partnerId) return;
+    await saveCheckIn(user.coupleId, {
+        ...checkIn,
+        userUid: user.uid
+    }, user.partnerId);
+  };
+
+  const sendSignal = async (type: ReactionType, note?: string) => {
+    if (!user?.coupleId || !user?.uid || !user?.partnerId) return;
+    await sendQuickReact(user.coupleId, {
+        senderUid: user.uid,
+        type,
+        note
+    }, user.partnerId);
   };
 
   const addEvent = async (event: Omit<CoupleEvent, "id" | "createdAt" | "createdBy">) => {
@@ -415,7 +496,22 @@ export const MailboxProvider: React.FC<{ children: React.ReactNode }> = ({ child
 
   const updateMood = async (mood: string) => {
     if (!user?.uid) return;
-    await updateUserMood(user.uid, mood);
+    await updateUserMood(user.uid, mood, user.partnerId || undefined);
+  };
+
+  const markNotiRead = async (id: string) => {
+    if (!user?.uid) return;
+    await markNotificationAsRead(user.uid, id);
+  };
+
+  const clearAllNotis = async () => {
+    if (!user?.uid) return;
+    await markAllNotificationsAsRead(user.uid);
+  };
+
+  const toggleNotifications = async (enabled: boolean) => {
+    if (!user?.uid) return;
+    await updateUserNotificationSettings(user.uid, enabled);
   };
 
   const requestReset = async () => {
@@ -473,15 +569,40 @@ export const MailboxProvider: React.FC<{ children: React.ReactNode }> = ({ child
     await startSafeSpaceSession(user.coupleId, user.uid);
   };
 
+  const markAsRead = async (messageId: string) => {
+    if (!user?.coupleId) return;
+    await markMessageAsRead(user.coupleId, messageId);
+  };
+
+  const editMessage = async (messageId: string, updates: Partial<MailboxMessage>) => {
+    if (!user?.coupleId) return;
+    await updateMailboxMessage(user.coupleId, messageId, updates);
+  };
+
+  const deleteForMe = async (messageId: string) => {
+    if (!user?.coupleId || !user.uid) return;
+    await hideMessageForUser(user.coupleId, messageId, user.uid);
+  };
+
+  const unsendCapsule = async (messageId: string) => {
+    if (!user?.coupleId) return;
+    await deleteMailboxMessage(user.coupleId, messageId);
+  };
+
   const value = useMemo(() => ({
+    fbUser,
     user,
     couple,
     partner,
     messages,
     reactions,
-    checkins,
     events,
+    notifications,
+    unreadNotificationsCount,
+    notificationsEnabled,
     activeSafeSpace,
+    checkins,
+    historyCheckins,
     metrics,
     loading,
     hasOnboarded,
@@ -490,6 +611,8 @@ export const MailboxProvider: React.FC<{ children: React.ReactNode }> = ({ child
     leavePartner,
     clearPartnerLeftStatus,
     sendMessage,
+    respondToNote,
+    saveDailyCheckIn,
     addEvent,
     removeEvent,
     wipeoutUserAccount,
@@ -501,11 +624,19 @@ export const MailboxProvider: React.FC<{ children: React.ReactNode }> = ({ child
     raiseFlag,
     lowerFlag,
     startSafeSpace,
+    markAsRead,
+    editMessage,
+    deleteForMe,
+    unsendCapsule,
+    sendSignal,
+    markNotiRead,
+    clearAllNotis,
+    toggleNotifications,
     hasLoadedCheckins,
     isOverlayActive,
     setOverlayActive
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }), [user, couple, partner, messages, reactions, checkins, events, activeSafeSpace, metrics, loading, hasOnboarded, isPaired, hasLoadedCheckins, isOverlayActive]);
+  }), [fbUser, user, couple, partner, messages, reactions, checkins, events, notifications, unreadNotificationsCount, notificationsEnabled, activeSafeSpace, metrics, loading, hasOnboarded, isPaired, hasLoadedCheckins, isOverlayActive]);
 
   return (
     <MailboxContext.Provider value={value}>

@@ -3,11 +3,11 @@
 import React, { useState, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { useMailbox } from "@/context/MailboxContext";
-import { saveCheckIn, sendQuickReact } from "@/lib/firestore-helpers";
-import { Sparkles, Heart, Activity, ArrowRight, X, Zap, Send } from "lucide-react";
+import { Activity, ArrowRight, X, Zap, Send, Sparkles, Heart } from "lucide-react";
 import { getCheckInDateId } from "@/lib/utils";
 import { MoodSelector } from "./MoodSelector";
 import { ReactionType } from "@/lib/types";
+import { useSensoryFeedback } from "@/hooks/useSensoryFeedback";
 
 interface DailyCheckInPopupProps {
   onClose: () => void;
@@ -29,7 +29,8 @@ const LABEL_TO_TYPE: Record<string, ReactionType> = {
 };
 
 export const DailyCheckInPopup: React.FC<DailyCheckInPopupProps> = ({ onClose }) => {
-  const { user, partner, checkins, updateMood } = useMailbox();
+  const { user, partner, checkins, updateMood, sendSignal, saveDailyCheckIn } = useMailbox();
+  const { playChime, playTick } = useSensoryFeedback();
   const [step, setStep] = useState<"intro" | "mood" | "connection" | "moodStatus" | "summary">("intro");
   const [mood, setMood] = useState(5);
   const [connection, setConnection] = useState(5);
@@ -51,27 +52,23 @@ export const DailyCheckInPopup: React.FC<DailyCheckInPopupProps> = ({ onClose })
     setSaving(true);
     try {
       // 1. Save standard check-in
-      await saveCheckIn(user.coupleId, {
-        userUid: user.uid,
+      await saveDailyCheckIn({
         mood,
         connection,
         moodStatus,
         dateId: today,
       });
 
-      // 2. Clear previous and Send new Signal (QuickReact) so splash works
+      // 2. Send signal (triggers splash)
       const type = LABEL_TO_TYPE[moodStatus];
       if (type) {
-        await sendQuickReact(user.coupleId, {
-            senderUid: user.uid,
-            type,
-            note: ""
-        });
+        await sendSignal(type);
       }
 
       // 3. Update persistent user mood label
       await updateMood(moodStatus);
 
+      playChime();
       setStep("summary");
     } catch (err) {
       console.error(err);
@@ -136,7 +133,10 @@ export const DailyCheckInPopup: React.FC<DailyCheckInPopupProps> = ({ onClose })
                     </p>
                 </div>
                 <button 
-                  onClick={() => setStep("mood")}
+                  onClick={() => {
+                    playTick();
+                    setStep("mood");
+                  }}
                   className="w-full bg-white text-black font-bebas text-lg py-4 rounded-2xl hover:bg-neutral-200 active:scale-95 transition-all shadow-xl"
                 >
                     Start Sync
@@ -163,7 +163,10 @@ export const DailyCheckInPopup: React.FC<DailyCheckInPopupProps> = ({ onClose })
                     </div>
                     <div className="text-8xl font-bebas text-center text-white select-none">{mood}</div>
                     <button 
-                      onClick={() => setStep("connection")}
+                      onClick={() => {
+                        playTick();
+                        setStep("connection");
+                      }}
                       className="w-full bg-white text-black font-bebas text-xl py-4 rounded-2xl flex items-center justify-center gap-2 hover:bg-neutral-200 transition-colors"
                     >
                         Next <ArrowRight className="w-5 h-5" />
@@ -191,7 +194,10 @@ export const DailyCheckInPopup: React.FC<DailyCheckInPopupProps> = ({ onClose })
                     </div>
                     <div className="text-8xl font-bebas text-center text-white select-none">{connection}</div>
                     <button 
-                      onClick={() => setStep("moodStatus")}
+                      onClick={() => {
+                        playTick();
+                        setStep("moodStatus");
+                      }}
                       className="w-full bg-white text-black font-bebas text-xl py-4 rounded-2xl flex items-center justify-center gap-2 hover:bg-neutral-200 transition-colors"
                     >
                         Final Step <ArrowRight className="w-5 h-5" />

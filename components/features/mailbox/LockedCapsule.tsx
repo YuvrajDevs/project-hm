@@ -3,11 +3,21 @@
 import React, { useState, useEffect } from "react";
 import { MailboxMessage } from "@/lib/types";
 import { motion } from "framer-motion";
-import { Lock } from "lucide-react";
+import { Lock, Trash2, Edit3, MoreVertical, X } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { useMailbox } from "@/context/MailboxContext";
+import { useSensoryFeedback } from "@/hooks/useSensoryFeedback";
+import { EditMessage } from "./EditMessage";
+import { AnimatePresence } from "framer-motion";
 
 export const LockedCapsule = ({ message }: { message: MailboxMessage }) => {
+  const { user, deleteForMe, unsendCapsule } = useMailbox();
+  const { vibrateTick } = useSensoryFeedback();
   const [timeLeft, setTimeLeft] = useState<string>("");
+  const [isEditing, setIsEditing] = useState(false);
+  const [showOptions, setShowOptions] = useState(false);
+  
+  const isSender = message.senderUid === user?.uid;
 
   useEffect(() => {
     if (!message.unlockAt) return;
@@ -41,12 +51,59 @@ export const LockedCapsule = ({ message }: { message: MailboxMessage }) => {
       initial={{ opacity: 0, scale: 0.95 }}
       animate={{ opacity: 1, scale: 1 }}
       className={cn(
-        "w-full rounded-[1.5rem] p-6 md:p-8 relative overflow-hidden flex flex-col items-center justify-center min-h-[140px]",
-        "bg-white/5 border border-white/10 shadow-xl"
+        "w-full rounded-[1.5rem] p-6 md:p-8 relative overflow-hidden flex flex-col items-center justify-center min-h-[160px]",
+        "bg-white/5 border border-white/10 shadow-xl group"
       )}
     >
       {/* Background Decor */}
       <div className="absolute inset-0 opacity-20 pointer-events-none" style={{ backgroundImage: "radial-gradient(circle at center, rgba(236,72,153,0.15), transparent 70%)" }} />
+
+      {/* Management Options */}
+      <div className="absolute top-4 right-4 z-20">
+          <button 
+              onClick={() => { vibrateTick(); setShowOptions(!showOptions); }}
+              className="p-2 rounded-full bg-black/20 text-white/40 hover:text-white transition-all border border-white/5"
+          >
+              <MoreVertical className="w-4 h-4" />
+          </button>
+          
+          <AnimatePresence>
+              {showOptions && (
+                  <motion.div 
+                      initial={{ opacity: 0, scale: 0.9, y: 10 }}
+                      animate={{ opacity: 1, scale: 1, y: 0 }}
+                      exit={{ opacity: 0, scale: 0.9, y: 10 }}
+                      className="absolute right-0 top-full mt-2 w-48 bg-neutral-900 border border-white/10 rounded-2xl shadow-2xl p-2 flex flex-col gap-1 overflow-hidden"
+                  >
+                        {isSender && (
+                            <>
+                                <button 
+                                    onClick={() => { setIsEditing(true); setShowOptions(false); }}
+                                    className="w-full flex items-center gap-3 px-3 py-2.5 hover:bg-white/5 rounded-xl text-left transition-colors"
+                                >
+                                    <Edit3 className="w-4 h-4 text-blue-400" />
+                                    <span className="font-bebas text-sm uppercase tracking-widest text-white">Edit Capsule</span>
+                                </button>
+                                <button 
+                                    onClick={() => { unsendCapsule(message.id); setShowOptions(false); }}
+                                    className="w-full flex items-center gap-3 px-3 py-2.5 hover:bg-red-500/10 rounded-xl text-left transition-colors"
+                                >
+                                    <X className="w-4 h-4 text-red-400" />
+                                    <span className="font-bebas text-sm uppercase tracking-widest text-red-200">Unsend for Both</span>
+                                </button>
+                            </>
+                        )}
+                        <button 
+                            onClick={() => { deleteForMe(message.id); setShowOptions(false); }}
+                            className="w-full flex items-center gap-3 px-3 py-2.5 hover:bg-red-500/10 rounded-xl text-left transition-colors"
+                        >
+                            <Trash2 className="w-4 h-4 text-red-500/60" />
+                            <span className="font-bebas text-sm uppercase tracking-widest text-neutral-400">Hide for Me</span>
+                        </button>
+                  </motion.div>
+              )}
+          </AnimatePresence>
+      </div>
 
       <div className="relative z-10 flex flex-col items-center gap-4 text-center">
         <div className="w-16 h-16 rounded-full bg-black/40 flex items-center justify-center border border-white/10 shadow-[0_0_30px_rgba(236,72,153,0.1)]">
@@ -62,6 +119,11 @@ export const LockedCapsule = ({ message }: { message: MailboxMessage }) => {
             {timeLeft || "Calculating..."}
         </div>
       </div>
+      <EditMessage 
+        isOpen={isEditing} 
+        onClose={() => setIsEditing(false)} 
+        message={message} 
+      />
     </motion.div>
   );
 };

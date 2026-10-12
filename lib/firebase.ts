@@ -19,9 +19,7 @@ const firebaseConfig = {
 
 // Initialize Firebase for Client-side
 const app = getApps().length > 0 ? getApp() : initializeApp(firebaseConfig);
-const db = initializeFirestore(app, {
-  experimentalForceLongPolling: true,
-});
+const db = getFirestore(app);
 const auth = getAuth(app);
 const googleProvider = new GoogleAuthProvider();
 

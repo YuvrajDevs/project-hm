@@ -10,12 +10,11 @@ import { AmbientBackground } from "@/components/ui/AmbientBackground";
 
 export default function SettingsPage() {
   const router = useRouter();
-  const { user, wipeoutUserAccount, logout, couple, leavePartner, requestReset, cancelReset } = useMailbox();
+  const { user, wipeoutUserAccount, logout, couple, leavePartner, requestReset, cancelReset, notificationsEnabled, toggleNotifications } = useMailbox();
   const [showWipeoutConfirm, setShowWipeoutConfirm] = useState(false);
   const [showUnpairConfirm, setShowUnpairConfirm] = useState(false);
   const [showResetConfirm, setShowResetConfirm] = useState(false);
   const [isProcessing, setIsProcessing] = useState(false);
-  const [notificationsEnabled, setNotificationsEnabled] = useState(true);
 
   // If there's no user, we might be actively logging out or wiping out
   if (!user) return null;
@@ -41,7 +40,7 @@ export default function SettingsPage() {
 
   const handleLogout = async () => {
     await logout();
-    router.push("/login");
+    router.push("/");
   };
 
   return (
@@ -101,7 +100,7 @@ export default function SettingsPage() {
                 </div>
               </div>
               <button 
-                onClick={() => setNotificationsEnabled(!notificationsEnabled)}
+                onClick={() => toggleNotifications(!notificationsEnabled)}
                 className={`w-12 h-6 rounded-full transition-colors relative ${notificationsEnabled ? "bg-pink-500" : "bg-neutral-600"}`}
               >
                 <div className={`w-4 h-4 bg-white rounded-full absolute top-1 transition-all ${notificationsEnabled ? "left-7" : "left-1"}`} />

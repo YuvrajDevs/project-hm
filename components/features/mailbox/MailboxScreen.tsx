@@ -7,6 +7,7 @@ import { LockedCapsule } from "./LockedCapsule";
 import { DailyCheckIn } from "../checkin/DailyCheckIn";
 import { MoodStatusHub } from "../checkin/MoodStatusHub";
 import { SafeSpaceEntry } from "../safespace/SafeSpaceEntry";
+import { PartnerNotes } from "../notes/PartnerNotes";
 import { motion, AnimatePresence } from "framer-motion";
 import { Plus, Inbox, History, Heart, Sparkles, MessageSquarePlus } from "lucide-react";
 
@@ -121,11 +122,16 @@ export const MailboxScreen: React.FC<MailboxScreenProps> = ({ onOpenCheckIn, onC
                         </div>
                     )}
                 </div>
+            </section>
 
-                {/* 2. Safe Space */}
+            {/* 2. Safe Space */}
+            <section>
                 <SafeSpaceEntry />
+            </section>
 
-
+            {/* 3. Partner Notes */}
+            <section>
+                <PartnerNotes />
             </section>
         </div>
     </div>

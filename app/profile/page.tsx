@@ -518,7 +518,7 @@ export default function ProfilePage() {
                     <button 
                         onClick={() => {
                             logout();
-                            router.push("/login");
+                            router.push("/");
                         }}
                         className="w-full flex flex-col items-center justify-center p-6 bg-white/5 hover:bg-white/10 border border-white/5 rounded-[2rem] transition-all group"
                     >
