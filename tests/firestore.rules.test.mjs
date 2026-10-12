@@ -1,0 +1,311 @@
+// Security rules tests. Run with: npm run test:rules (needs Java for the Firestore emulator)
+import { test, before, after, beforeEach } from "node:test";
+import { readFileSync } from "node:fs";
+import {
+  initializeTestEnvironment,
+  assertSucceeds,
+  assertFails,
+} from "@firebase/rules-unit-testing";
+import {
+  doc,
+  getDoc,
+  getDocs,
+  setDoc,
+  updateDoc,
+  deleteDoc,
+  addDoc,
+  collection,
+  query,
+  where,
+  orderBy,
+  limit,
+  writeBatch,
+  runTransaction,
+  Timestamp,
+} from "firebase/firestore";
+
+let env;
+const ALICE = "alice";
+const BOB = "bob";
+const MALLORY = "mallory";
+const COUPLE = "couple1";
+
+const db = (uid) => (uid ? env.authenticatedContext(uid) : env.unauthenticatedContext()).firestore();
+
+before(async () => {
+  env = await initializeTestEnvironment({
+    projectId: "demo-honest-mailbox",
+    firestore: { rules: readFileSync("firestore.rules", "utf8") },
+  });
+});
+
+after(async () => {
+  await env.cleanup();
+});
+
+beforeEach(async () => {
+  await env.clearFirestore();
+});
+
+// ─── Fixtures (written with rules disabled) ─────────────────────────────────
+const seed = (fn) => env.withSecurityRulesDisabled((ctx) => fn(ctx.firestore()));
+
+const seedUsers = () =>
+  seed(async (d) => {
+    for (const uid of [ALICE, BOB, MALLORY]) {
+      await setDoc(doc(d, "users", uid), { uid, email: `${uid}@example.com`, displayName: uid, coupleId: null, partnerId: null });
+    }
+  });
+
+const seedCouple = () =>
+  seed(async (d) => {
+    await setDoc(doc(d, "users", ALICE), { uid: ALICE, email: "alice@example.com", displayName: "Alice", coupleId: COUPLE, partnerId: BOB, role: "PARTNER_A" });
+    await setDoc(doc(d, "users", BOB), { uid: BOB, email: "bob@example.com", displayName: "Bob", coupleId: COUPLE, partnerId: ALICE, role: "PARTNER_B" });
+    await setDoc(doc(d, "users", MALLORY), { uid: MALLORY, email: "mallory@example.com", displayName: "Mallory", coupleId: null, partnerId: null });
+    await setDoc(doc(d, "couples", COUPLE), { id: COUPLE, partnerA_uid: ALICE, partnerB_uid: BOB, inviteCode: "USED01" });
+    await setDoc(doc(d, "couples", COUPLE, "mailbox", "m1"), { senderUid: ALICE, status: "HARD_DAY", intent: "LISTEN", note: "hi", createdAt: Timestamp.now() });
+  });
+
+// Same writes the app performs in acceptInvite()
+const acceptInvite = (uid, code, coupleId) => {
+  const d = db(uid);
+  return runTransaction(d, async (tx) => {
+    const invite = (await tx.get(doc(d, "invites", code))).data();
+    await tx.get(doc(d, "users", uid));
+    tx.set(doc(d, "couples", coupleId), { id: coupleId, partnerA_uid: invite.createdBy, partnerB_uid: uid, inviteCode: code, createdAt: Timestamp.now() });
+    tx.update(doc(d, "users", invite.createdBy), { coupleId, role: "PARTNER_A", partnerId: uid, leftByPartner: false });
+    tx.update(doc(d, "users", uid), { coupleId, role: "PARTNER_B", partnerId: invite.createdBy, leftByPartner: false });
+    tx.update(doc(d, "invites", code), { used: true, usedBy: uid });
+  });
+};
+
+const createInvite = (uid, code, ttlMs = 60_000) =>
+  setDoc(doc(db(uid), "invites", code), { createdBy: uid, createdAt: Timestamp.now(), expiresAt: Timestamp.fromMillis(Date.now() + ttlMs), used: false });
+
+// ─── Profiles ───────────────────────────────────────────────────────────────
+test("a user can create and read their own profile", async () => {
+  await assertSucceeds(setDoc(doc(db(ALICE), "users", ALICE), { uid: ALICE, email: "a@example.com", displayName: "", createdAt: "now" }));
+  await assertSucceeds(getDoc(doc(db(ALICE), "users", ALICE)));
+});
+
+test("a user cannot create a profile for someone else", async () => {
+  await assertFails(setDoc(doc(db(MALLORY), "users", ALICE), { uid: ALICE }));
+});
+
+test("signed-out visitors cannot read profiles", async () => {
+  await seedUsers();
+  await assertFails(getDoc(doc(db(null), "users", ALICE)));
+});
+
+test("unpaired strangers cannot read each other's profile", async () => {
+  await seedUsers();
+  await assertFails(getDoc(doc(db(MALLORY), "users", ALICE)));
+});
+
+test("partners can read each other's profile, outsiders cannot", async () => {
+  await seedCouple();
+  await assertSucceeds(getDoc(doc(db(BOB), "users", ALICE)));
+  await assertFails(getDoc(doc(db(MALLORY), "users", ALICE)));
+});
+
+test("a user can edit their own profile fields", async () => {
+  await seedCouple();
+  await assertSucceeds(updateDoc(doc(db(ALICE), "users", ALICE), { displayName: "Ali", "profile.dislikes": ["Loud places"], timezone: "Asia/Kolkata" }));
+});
+
+test("a partner cannot edit the other's profile content", async () => {
+  await seedCouple();
+  await assertFails(updateDoc(doc(db(BOB), "users", ALICE), { displayName: "Hacked" }));
+});
+
+test("a user cannot attach themselves to a couple they are not in", async () => {
+  await seedCouple();
+  await assertFails(updateDoc(doc(db(MALLORY), "users", MALLORY), { coupleId: COUPLE, partnerId: ALICE, role: "PARTNER_B" }));
+});
+
+// ─── Invites and pairing ────────────────────────────────────────────────────
+test("invites can be created and fetched by code, never listed", async () => {
+  await seedUsers();
+  await assertSucceeds(createInvite(ALICE, "ABC234"));
+  await assertSucceeds(getDoc(doc(db(BOB), "invites", "ABC234")));
+  await assertFails(getDocs(collection(db(BOB), "invites")));
+});
+
+test("an invite cannot be created in someone else's name", async () => {
+  await assertFails(setDoc(doc(db(MALLORY), "invites", "FAKE01"), { createdBy: ALICE, used: false }));
+});
+
+test("accepting an invite pairs both people in one transaction", async () => {
+  await seedUsers();
+  await createInvite(ALICE, "ABC234");
+  await assertSucceeds(acceptInvite(BOB, "ABC234", "newcouple"));
+  await assertSucceeds(getDoc(doc(db(ALICE), "couples", "newcouple")));
+  await assertSucceeds(getDoc(doc(db(ALICE), "users", BOB)));
+});
+
+test("an invite works only once", async () => {
+  await seedUsers();
+  await createInvite(ALICE, "ABC234");
+  await acceptInvite(BOB, "ABC234", "newcouple");
+  await assertFails(acceptInvite(MALLORY, "ABC234", "othercouple"));
+});
+
+test("an expired invite cannot be accepted", async () => {
+  await seedUsers();
+  await createInvite(ALICE, "OLD234", -1000);
+  await assertFails(acceptInvite(BOB, "OLD234", "newcouple"));
+});
+
+test("nobody can pair with a person without that person's invite", async () => {
+  await seedUsers();
+  const d = db(MALLORY);
+  const batch = writeBatch(d);
+  batch.set(doc(d, "couples", "forced"), { id: "forced", partnerA_uid: ALICE, partnerB_uid: MALLORY, inviteCode: "NOPE00" });
+  batch.update(doc(d, "users", ALICE), { coupleId: "forced", role: "PARTNER_A", partnerId: MALLORY });
+  batch.update(doc(d, "users", MALLORY), { coupleId: "forced", role: "PARTNER_B", partnerId: ALICE });
+  await assertFails(batch.commit());
+});
+
+test("someone already paired cannot be claimed by a second invite acceptance", async () => {
+  await seedCouple();
+  // Alice (already with Bob) has a stale invite lying around
+  await seed((d) => setDoc(doc(d, "invites", "STALE1"), { createdBy: ALICE, used: false, expiresAt: Timestamp.fromMillis(Date.now() + 60_000) }));
+  await assertFails(acceptInvite(MALLORY, "STALE1", "second"));
+});
+
+// ─── Couple data ────────────────────────────────────────────────────────────
+test("members can read and update their couple, but not change who is in it", async () => {
+  await seedCouple();
+  await assertSucceeds(getDoc(doc(db(ALICE), "couples", COUPLE)));
+  await assertSucceeds(updateDoc(doc(db(BOB), "couples", COUPLE), { anniversaryDate: "2024-02-14", whiteFlagBy: BOB }));
+  await assertFails(updateDoc(doc(db(BOB), "couples", COUPLE), { partnerA_uid: MALLORY }));
+});
+
+test("outsiders cannot read or write anything in a couple", async () => {
+  await seedCouple();
+  await assertFails(getDoc(doc(db(MALLORY), "couples", COUPLE)));
+  await assertFails(getDocs(collection(db(MALLORY), "couples", COUPLE, "mailbox")));
+  await assertFails(addDoc(collection(db(MALLORY), "couples", COUPLE, "mailbox"), { senderUid: MALLORY, status: "LOVE_NOTE", intent: "LISTEN", note: "" }));
+  await assertFails(getDocs(collection(db(MALLORY), "couples", COUPLE, "checkins")));
+});
+
+test("members can read the mailbox with the app's paged query", async () => {
+  await seedCouple();
+  await assertSucceeds(getDocs(query(collection(db(BOB), "couples", COUPLE, "mailbox"), orderBy("createdAt", "desc"), limit(50))));
+});
+
+test("a member can send a note as themselves but not as their partner", async () => {
+  await seedCouple();
+  await assertSucceeds(addDoc(collection(db(BOB), "couples", COUPLE, "mailbox"), { senderUid: BOB, status: "LOVE_NOTE", intent: "SAY_IT", note: "", createdAt: Timestamp.now() }));
+  await assertFails(addDoc(collection(db(BOB), "couples", COUPLE, "mailbox"), { senderUid: ALICE, status: "LOVE_NOTE", intent: "SAY_IT", note: "" }));
+});
+
+test("the receiver can respond to a note and mark it read", async () => {
+  await seedCouple();
+  await assertSucceeds(updateDoc(doc(db(BOB), "couples", COUPLE, "mailbox", "m1"), { readAt: "now", response: { mode: "HERE", text: "here" } }));
+  await assertFails(updateDoc(doc(db(BOB), "couples", COUPLE, "mailbox", "m1"), { senderUid: BOB }));
+});
+
+test("check-ins, signals and events are written as yourself", async () => {
+  await seedCouple();
+  await assertSucceeds(setDoc(doc(db(ALICE), "couples", COUPLE, "checkins", `2026-10-12_${ALICE}`), { userUid: ALICE, mood: 5, connection: 5, moodStatus: "Peace", dateId: "2026-10-12" }));
+  await assertFails(setDoc(doc(db(ALICE), "couples", COUPLE, "checkins", `2026-10-12_${BOB}`), { userUid: BOB, mood: 1, connection: 1, moodStatus: "Gloomy", dateId: "2026-10-12" }));
+  await assertSucceeds(addDoc(collection(db(BOB), "couples", COUPLE, "reactions"), { senderUid: BOB, type: "LOVE", createdAt: Timestamp.now() }));
+  await assertSucceeds(addDoc(collection(db(BOB), "couples", COUPLE, "events"), { title: "Dinner", dateId: "2026-10-20", repeat: "none", isSurprise: false, createdBy: BOB }));
+  await assertSucceeds(getDocs(query(collection(db(ALICE), "couples", COUPLE, "checkins"), where("dateId", "==", "2026-10-12"))));
+});
+
+test("safe space sessions and messages work for members only", async () => {
+  await seedCouple();
+  const session = await assertSucceeds(addDoc(collection(db(ALICE), "couples", COUPLE, "safe_space_sessions"), { active: true, currentTurnUid: ALICE, startedAt: Timestamp.now() }));
+  await assertSucceeds(addDoc(collection(db(ALICE), "couples", COUPLE, "safe_space_sessions", session.id, "messages"), { senderUid: ALICE, text: "hello", createdAt: Timestamp.now() }));
+  await assertSucceeds(getDocs(query(collection(db(BOB), "couples", COUPLE, "safe_space_sessions"), where("active", "==", true))));
+  await assertFails(getDocs(collection(db(MALLORY), "couples", COUPLE, "safe_space_sessions", session.id, "messages")));
+});
+
+// ─── Time capsules ──────────────────────────────────────────────────────────
+test("a sealed capsule is readable by the sender, and by the receiver only after it unlocks", async () => {
+  await seedCouple();
+  const future = Timestamp.fromMillis(Date.now() + 3_600_000);
+  const past = Timestamp.fromMillis(Date.now() - 60_000);
+  await assertSucceeds(setDoc(doc(db(ALICE), "couples", COUPLE, "capsules", "locked"), { senderUid: ALICE, status: "LOVE_NOTE", intent: "SAY_IT", note: "secret", unlockAtTs: future }));
+  await assertSucceeds(setDoc(doc(db(ALICE), "couples", COUPLE, "capsules", "open"), { senderUid: ALICE, status: "LOVE_NOTE", intent: "SAY_IT", note: "now", unlockAtTs: past }));
+
+  await assertSucceeds(getDoc(doc(db(ALICE), "couples", COUPLE, "capsules", "locked")));
+  await assertFails(getDoc(doc(db(BOB), "couples", COUPLE, "capsules", "locked")));
+  await assertSucceeds(getDoc(doc(db(BOB), "couples", COUPLE, "capsules", "open")));
+  await assertFails(getDocs(collection(db(BOB), "couples", COUPLE, "capsules")));
+  await assertFails(getDoc(doc(db(MALLORY), "couples", COUPLE, "capsules", "open")));
+});
+
+test("the receiver cannot rewrite a sealed capsule or bring its unlock time forward", async () => {
+  await seedCouple();
+  const future = Timestamp.fromMillis(Date.now() + 3_600_000);
+  await setDoc(doc(db(ALICE), "couples", COUPLE, "capsules", "locked"), { senderUid: ALICE, status: "LOVE_NOTE", intent: "SAY_IT", note: "secret", unlockAtTs: future });
+  await assertFails(updateDoc(doc(db(BOB), "couples", COUPLE, "capsules", "locked"), { unlockAtTs: Timestamp.fromMillis(0) }));
+  await assertFails(updateDoc(doc(db(ALICE), "couples", COUPLE, "capsules", "locked"), { unlockAtTs: Timestamp.fromMillis(0) }));
+  await assertSucceeds(updateDoc(doc(db(ALICE), "couples", COUPLE, "capsules", "locked"), { note: "edited" }));
+});
+
+test("an unlocked capsule can be opened into the mailbox by the receiver", async () => {
+  await seedCouple();
+  const past = Timestamp.fromMillis(Date.now() - 60_000);
+  await seed(async (d) => {
+    await setDoc(doc(d, "couples", COUPLE, "mailbox", "cap"), { senderUid: ALICE, sealed: true, unlockAt: new Date(Date.now() - 60_000).toISOString() });
+    await setDoc(doc(d, "couples", COUPLE, "capsules", "cap"), { senderUid: ALICE, status: "LOVE_NOTE", intent: "SAY_IT", note: "now", unlockAtTs: past });
+  });
+  const d = db(BOB);
+  const batch = writeBatch(d);
+  batch.update(doc(d, "couples", COUPLE, "mailbox", "cap"), { status: "LOVE_NOTE", intent: "SAY_IT", note: "now", sealed: false });
+  batch.delete(doc(d, "couples", COUPLE, "capsules", "cap"));
+  await assertSucceeds(batch.commit());
+});
+
+// ─── Notifications and private notes ────────────────────────────────────────
+test("a partner can notify you; strangers cannot; only you can read them", async () => {
+  await seedCouple();
+  const payload = { uid: ALICE, type: "MAILBOX", title: "New Note", body: "…", read: false, createdAt: Timestamp.now() };
+  await assertSucceeds(addDoc(collection(db(BOB), "users", ALICE, "notifications"), payload));
+  await assertFails(addDoc(collection(db(MALLORY), "users", ALICE, "notifications"), payload));
+  await assertSucceeds(getDocs(query(collection(db(ALICE), "users", ALICE, "notifications"), orderBy("createdAt", "desc"), limit(50))));
+  await assertFails(getDocs(collection(db(BOB), "users", ALICE, "notifications")));
+});
+
+test("private notes are visible only to their author", async () => {
+  await seedCouple();
+  await assertSucceeds(addDoc(collection(db(ALICE), "users", ALICE, "notes"), { userUid: ALICE, text: "private", createdAt: Timestamp.now() }));
+  await assertFails(getDocs(collection(db(BOB), "users", ALICE, "notes")));
+});
+
+// ─── Leaving and deleting ───────────────────────────────────────────────────
+test("unpairing deletes shared data and frees both people", async () => {
+  await seedCouple();
+  const d = db(ALICE);
+  await assertSucceeds(deleteDoc(doc(d, "couples", COUPLE, "mailbox", "m1")));
+  await assertSucceeds(deleteDoc(doc(d, "couples", COUPLE)));
+  const batch = writeBatch(d);
+  batch.update(doc(d, "users", ALICE), { coupleId: null, partnerId: null, role: null });
+  batch.update(doc(d, "users", BOB), { coupleId: null, partnerId: null, role: null, leftByPartner: true });
+  await assertSucceeds(batch.commit());
+  // No longer partners: profiles are private again
+  await assertFails(getDoc(doc(db(ALICE), "users", BOB)));
+});
+
+test("a stranger cannot unpair a couple", async () => {
+  await seedCouple();
+  await assertFails(updateDoc(doc(db(MALLORY), "users", ALICE), { coupleId: null, partnerId: null, role: null, leftByPartner: true }));
+  await assertFails(deleteDoc(doc(db(MALLORY), "couples", COUPLE)));
+});
+
+test("a user can delete their own profile and nobody else's", async () => {
+  await seedCouple();
+  await assertFails(deleteDoc(doc(db(BOB), "users", ALICE)));
+  await assertSucceeds(deleteDoc(doc(db(MALLORY), "users", MALLORY)));
+});
+
+// ─── Contact form ───────────────────────────────────────────────────────────
+test("the contact form accepts well-formed messages and is not readable", async () => {
+  await assertSucceeds(addDoc(collection(db(null), "contactMessages"), { name: "", email: "a@example.com", purpose: "general", message: "hello", createdAt: Timestamp.now() }));
+  await assertFails(addDoc(collection(db(null), "contactMessages"), { email: "a@example.com", message: "x".repeat(5000) }));
+  await assertFails(getDocs(collection(db(ALICE), "contactMessages")));
+});

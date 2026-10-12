@@ -106,6 +106,8 @@ interface MailboxContextType {
   lowerFlag: () => Promise<void>;
   startSafeSpace: () => Promise<void>;
   hasLoadedCheckins: boolean;
+  hasOlderMessages: boolean;
+  loadOlderMessages: () => void;
   now: number;
   isOverlayActive: boolean;
   setOverlayActive: (active: boolean) => void;
@@ -114,6 +116,8 @@ interface MailboxContextType {
   deleteForMe: (messageId: string) => Promise<void>;
   unsendCapsule: (messageId: string) => Promise<void>;
 }
+
+const MAILBOX_PAGE_SIZE = 30;
 
 const MailboxContext = createContext<MailboxContextType | undefined>(undefined);
 
@@ -130,6 +134,7 @@ export const MailboxProvider: React.FC<{ children: React.ReactNode }> = ({ child
   const [rawEvents, setRawEvents] = useState<CoupleEvent[]>([]);
   const [notifications, setNotifications] = useState<AppNotification[]>([]);
   const [hasLoadedCheckins, setHasLoadedCheckins] = useState(false);
+  const [mailboxPageSize, setMailboxPageSize] = useState(MAILBOX_PAGE_SIZE);
   const [isOverlayActive, setOverlayActive] = useState(false);
   // Re-evaluated every minute so the 6 AM check-in day and capsule unlocks roll over without a reload
   const [now, setNow] = useState(() => Date.now());
@@ -416,11 +421,6 @@ export const MailboxProvider: React.FC<{ children: React.ReactNode }> = ({ child
   useEffect(() => {
     if (!user?.coupleId) return;
 
-    // Mailbox
-    const unsubMailbox = subscribeToMailbox(user.coupleId, (msgs) => {
-      setRawMessages(msgs);
-    });
-
     // Notifications
     const unsubNotis = subscribeToNotifications(user.uid, (notis) => {
       setNotifications(notis);
@@ -475,7 +475,7 @@ export const MailboxProvider: React.FC<{ children: React.ReactNode }> = ({ child
 
     // Reactions (Increased limit for metrics)
     const reactionsRef = collection(db, "couples", user.coupleId, "reactions");
-    const qReactions = query(reactionsRef, orderBy("createdAt", "desc"), limit(50));
+    const qReactions = query(reactionsRef, orderBy("createdAt", "desc"), limit(30));
     const unsubReactions = onSnapshot(qReactions, (snap) => {
       setReactions(snap.docs.map(d => {
         const data = d.data();
@@ -488,7 +488,6 @@ export const MailboxProvider: React.FC<{ children: React.ReactNode }> = ({ child
     });
 
     return () => {
-      unsubMailbox();
       unsubReactions();
       unsubCheckins();
       unsubHistory();
@@ -497,6 +496,15 @@ export const MailboxProvider: React.FC<{ children: React.ReactNode }> = ({ child
       unsubNotis();
     };
   }, [user?.coupleId, user?.uid, todayId]);
+
+  // ─── Mailbox (most recent page, grows on request) ─────────────────────────
+  useEffect(() => {
+    if (!user?.coupleId) return;
+    return subscribeToMailbox(user.coupleId, mailboxPageSize, setRawMessages);
+  }, [user?.coupleId, mailboxPageSize]);
+
+  const hasOlderMessages = rawMessages.length >= mailboxPageSize;
+  const loadOlderMessages = () => setMailboxPageSize(size => size + MAILBOX_PAGE_SIZE);
 
   // ─── Actions ──────────────────────────────────────────────────────────────
   const logout = async () => {
@@ -711,11 +719,13 @@ export const MailboxProvider: React.FC<{ children: React.ReactNode }> = ({ child
     clearAllNotis,
     toggleNotifications,
     hasLoadedCheckins,
+    hasOlderMessages,
+    loadOlderMessages,
     now,
     isOverlayActive,
     setOverlayActive
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }), [fbUser, user, couple, partner, messages, reactions, checkins, events, notifications, unreadNotificationsCount, notificationsEnabled, activeSafeSpace, metrics, loading, hasOnboarded, isPaired, hasLoadedCheckins, isOverlayActive, now]);
+  }), [fbUser, user, couple, partner, messages, reactions, checkins, events, notifications, unreadNotificationsCount, notificationsEnabled, activeSafeSpace, metrics, loading, hasOnboarded, isPaired, hasLoadedCheckins, isOverlayActive, now, hasOlderMessages]);
 
   return (
     <MailboxContext.Provider value={value}>

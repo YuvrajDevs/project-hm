@@ -67,8 +67,9 @@ export const getCoupleCollection = (coupleId: string, subPath: string) => {
 /**
  * Mailbox Helpers
  */
-export const subscribeToMailbox = (coupleId: string, callback: (messages: MailboxMessage[]) => void) => {
-  const q = query(getCoupleCollection(coupleId, "mailbox"), orderBy("createdAt", "desc"));
+export const subscribeToMailbox = (coupleId: string, pageSize: number, callback: (messages: MailboxMessage[]) => void) => {
+  // Only the most recent notes are kept live; older ones load on request, so cost does not grow with history
+  const q = query(getCoupleCollection(coupleId, "mailbox"), orderBy("createdAt", "desc"), limit(pageSize));
   return onSnapshot(q, (snapshot) => {
     callback(snapshot.docs.map(doc => doc.data() as MailboxMessage));
   });
@@ -726,7 +727,7 @@ export const subscribeToNotifications = (uid: string, callback: (notis: AppNotif
   const q = query(
     collection(db, "users", uid, "notifications"),
     orderBy("createdAt", "desc"),
-    limit(50)
+    limit(30)
   ).withConverter(converter<AppNotification>());
   
   return onSnapshot(q, (snapshot) => {
