@@ -145,8 +145,11 @@ export const saveCheckIn = async (coupleId: string, checkIn: Omit<DailyCheckIn, 
  */
 export const sendQuickReact = async (coupleId: string, react: Omit<QuickReact, "id" | "createdAt">, partnerUid: string, notify = true) => {
   const reactionRef = doc(db, "couples", coupleId, "reactions", `latest_${react.senderUid}`);
+  // Firestore rejects undefined, so the optional note is only written when present
+  const { note, ...rest } = react;
   await setDoc(reactionRef, {
-    ...react,
+    ...rest,
+    ...(note ? { note } : {}),
     createdAt: Timestamp.now()
   });
 
