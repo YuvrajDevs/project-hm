@@ -22,6 +22,8 @@ const app = getApps().length > 0 ? getApp() : initializeApp(firebaseConfig);
 const db = getFirestore(app);
 const auth = getAuth(app);
 const googleProvider = new GoogleAuthProvider();
+// Always show the account chooser, so a second Google account can be picked on a shared browser
+googleProvider.setCustomParameters({ prompt: "select_account" });
 
 // Ensure persistence is set for long-lived sessions
 if (typeof window !== "undefined") {
