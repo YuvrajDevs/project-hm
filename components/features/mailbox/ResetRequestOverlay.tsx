@@ -76,7 +76,7 @@ export const ResetRequestOverlay = () => {
                                     onClick={handleConfirm}
                                     className="w-full bg-white text-black font-bebas text-xl py-5 rounded-[2rem] flex items-center justify-center gap-2 hover:bg-neutral-200 active:scale-[0.98] transition-all shadow-[0_0_30px_rgba(255,255,255,0.1)]"
                                 >
-                                    <Sparkles className="w-5 h-5" /> Let's Start Over
+                                    <Sparkles className="w-5 h-5" /> Let&apos;s Start Over
                                 </button>
                                 
                                 <button 
@@ -90,7 +90,7 @@ export const ResetRequestOverlay = () => {
                     </AnimatePresence>
 
                     <p className="text-[10px] font-bebas text-neutral-600 tracking-[0.3em] uppercase pt-4">
-                        You'll stay connected as a couple
+                        You&apos;ll stay connected as a couple
                     </p>
                 </motion.div>
             </div>

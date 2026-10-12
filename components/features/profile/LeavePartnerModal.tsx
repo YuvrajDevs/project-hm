@@ -80,7 +80,7 @@ export const LeavePartnerModal: React.FC<LeavePartnerModalProps> = ({
                   {step === 1 ? (
                     <>
                       Every relationship has its storms. Leaving is a big step. 
-                      Before you go, take a breath. Are you sure you've said everything 
+                      Before you go, take a breath. Are you sure you&apos;ve said everything 
                       you needed to say to <span className="text-white font-medium">{partnerName}</span>?
                     </>
                   ) : (

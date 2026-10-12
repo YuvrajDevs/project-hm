@@ -148,7 +148,7 @@ export default function Home() {
   }, [user, loading, hasOnboarded, isPaired, router, overlayDismissed, checkins, hasLoadedCheckins]);
 
   useEffect(() => {
-    const handlePopup = (e: any) => setIsAnyPopupOpen(e.detail.isOpen);
+    const handlePopup = (e: Event) => setIsAnyPopupOpen((e as CustomEvent<{ isOpen: boolean }>).detail.isOpen);
     const handleOpenSelector = () => setShowReactions(true);
     
     window.addEventListener('popupStateChange', handlePopup);

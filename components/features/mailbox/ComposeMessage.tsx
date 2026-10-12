@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useState, useMemo } from "react";
-import { MailboxStatus, MailboxIntent } from "@/lib/types";
+import { MailboxStatus, MailboxIntent, MailboxMessage } from "@/lib/types";
 import { motion, AnimatePresence } from "framer-motion";
 import { useMailbox } from "@/context/MailboxContext";
 import { X, Send, Hash, Clock, Lock, Unlock } from "lucide-react";
@@ -89,7 +89,7 @@ export const ComposeMessage = ({ onClose }: { onClose: () => void }) => {
     setError("");
     playSend();
     try {
-      const payload: any = { status, intent, note: note.slice(0, 140) };
+      const payload: Omit<MailboxMessage, "id" | "senderUid" | "createdAt"> = { status, intent, note: note.slice(0, 140) };
       
       if (showCapsuleParams && unlockAt) {
           if (timezoneMode === "MINE") {

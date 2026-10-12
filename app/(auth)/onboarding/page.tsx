@@ -147,7 +147,7 @@ export default function Onboarding() {
   };
 
   // Progress dots — total including name step
-  const ProgressDots = () => (
+  const renderProgressDots = () => (
     <div className="flex justify-center gap-1.5">
       {Array.from({ length: TOTAL_STEPS }).map((_, i) => (
         <div
@@ -180,7 +180,7 @@ export default function Onboarding() {
 
       {/* Progress */}
       <div className="flex-none px-8 pb-6 z-10">
-        <ProgressDots />
+        {renderProgressDots()}
       </div>
 
       {/* Content — takes remaining height */}

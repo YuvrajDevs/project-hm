@@ -112,7 +112,9 @@ export const LockedCapsule = ({ message }: { message: MailboxMessage }) => {
         <div>
             <h2 className="text-xl font-bebas tracking-[0.2em] uppercase text-white">Time Capsule</h2>
             <p className="text-sm font-outfit text-neutral-400 font-light mt-1 max-w-xs mx-auto">
-                A message is waiting for you out of time. It will open automatically when the moment is right.
+                {isSender
+                    ? "Your words are sealed. No one can read them until the timer runs out."
+                    : "A note is waiting for you. It opens by itself when the timer runs out."}
             </p>
         </div>
         <div className="mt-2 bg-black/50 border border-white/10 rounded-xl px-6 py-3 font-mono text-xl text-pink-400 font-bold tracking-wider">

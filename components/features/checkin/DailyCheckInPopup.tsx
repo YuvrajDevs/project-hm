@@ -130,7 +130,7 @@ export const DailyCheckInPopup: React.FC<DailyCheckInPopupProps> = ({ onClose })
                 <div className="space-y-3">
                     <h2 className="text-4xl font-bebas text-white tracking-wider uppercase leading-none">Time to Sync Up</h2>
                     <p className="text-neutral-500 font-outfit text-sm leading-relaxed px-4">
-                      Taking 30 seconds to check in helps you stay aligned and deeply connected through the day's noise.
+                      Taking 30 seconds to check in helps you stay aligned and deeply connected through the day&apos;s noise.
                     </p>
                 </div>
                 <button 
@@ -148,7 +148,7 @@ export const DailyCheckInPopup: React.FC<DailyCheckInPopupProps> = ({ onClose })
             {step === "mood" && (
               <motion.div key="mood" initial={{ opacity: 0, x: 20 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: -20 }} className="space-y-8 py-4">
                 <div className="space-y-1">
-                    <h3 className="text-3xl font-bebas text-white tracking-widest uppercase">How's your mood?</h3>
+                    <h3 className="text-3xl font-bebas text-white tracking-widest uppercase">How&apos;s your mood?</h3>
                     <p className="text-neutral-500 font-outfit text-xs uppercase tracking-widest leading-relaxed">Honest feeling right now</p>
                 </div>
                 <div className="space-y-8">

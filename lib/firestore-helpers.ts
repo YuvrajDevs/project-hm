@@ -16,6 +16,7 @@ import {
   writeBatch,
   runTransaction,
   DocumentReference,
+  DocumentData,
   FirestoreDataConverter,
   QueryDocumentSnapshot,
   SnapshotOptions,
@@ -60,7 +61,7 @@ const converter = <T extends object>(): FirestoreDataConverter<T> => ({
  * Get the path to a couple's sub-collection
  */
 export const getCoupleCollection = (coupleId: string, subPath: string) => {
-  return collection(db, "couples", coupleId, subPath).withConverter(converter<any>());
+  return collection(db, "couples", coupleId, subPath).withConverter(converter<DocumentData>());
 };
 
 /**
@@ -74,22 +75,65 @@ export const subscribeToMailbox = (coupleId: string, callback: (messages: Mailbo
 };
 
 export const sendMailboxMessage = async (coupleId: string, message: Omit<MailboxMessage, "id" | "createdAt">, partnerUid: string) => {
-  const docRef = await addDoc(getCoupleCollection(coupleId, "mailbox"), {
-    ...message,
-    createdAt: Timestamp.now()
-  });
+  const docRef = doc(collection(db, "couples", coupleId, "mailbox"));
+
+  if (message.unlockAt) {
+    // Time capsule: the envelope goes in the mailbox, the words are sealed in a separate
+    // document the receiver cannot open until the unlock time (enforced by the security rules).
+    const { status, intent, note, ...envelope } = message;
+    const batch = writeBatch(db);
+    batch.set(docRef, { ...envelope, sealed: true, createdAt: Timestamp.now() });
+    batch.set(doc(db, "couples", coupleId, "capsules", docRef.id), {
+      senderUid: message.senderUid,
+      status,
+      intent,
+      note,
+      unlockAtTs: Timestamp.fromDate(new Date(message.unlockAt))
+    });
+    await batch.commit();
+  } else {
+    await setDoc(docRef, { ...message, createdAt: Timestamp.now() });
+  }
 
   // A secret capsule must not announce itself before it unlocks
   if (!message.isSecretBeforeUnlock) {
     await notifyPartner(partnerUid, {
       uid: partnerUid,
       type: "MAILBOX",
-      title: "New Note",
-      body: "You have a new note in your mailbox.",
+      title: message.unlockAt ? "Time Capsule" : "New Note",
+      body: message.unlockAt ? "Your partner left you a time capsule." : "You have a new note in your mailbox.",
     });
   }
 
   return docRef;
+};
+
+export type CapsuleContent = Pick<MailboxMessage, "status" | "intent" | "note">;
+
+/**
+ * Read a sealed capsule's words. Works for the sender at any time, and for the receiver once it has unlocked.
+ */
+export const getCapsuleContent = async (coupleId: string, messageId: string): Promise<CapsuleContent | null> => {
+  const snap = await getDoc(doc(db, "couples", coupleId, "capsules", messageId));
+  if (!snap.exists()) return null;
+  const { status, intent, note } = snap.data();
+  return { status, intent, note: note || "" };
+};
+
+export const updateCapsuleContent = async (coupleId: string, messageId: string, updates: Partial<CapsuleContent>) => {
+  return updateDoc(doc(db, "couples", coupleId, "capsules", messageId), updates);
+};
+
+/**
+ * Once the unlock time has passed, move the words into the mailbox message. Safe to call from either partner, more than once.
+ */
+export const unsealCapsule = async (coupleId: string, messageId: string) => {
+  const content = await getCapsuleContent(coupleId, messageId);
+  if (!content) return;
+  const batch = writeBatch(db);
+  batch.update(doc(db, "couples", coupleId, "mailbox", messageId), { ...content, sealed: false });
+  batch.delete(doc(db, "couples", coupleId, "capsules", messageId));
+  await batch.commit();
 };
 
 export const markMessageAsRead = async (coupleId: string, messageId: string) => {
@@ -108,8 +152,10 @@ export const updateMailboxMessage = async (coupleId: string, messageId: string, 
 };
 
 export const deleteMailboxMessage = async (coupleId: string, messageId: string) => {
-  const msgRef = doc(db, "couples", coupleId, "mailbox", messageId);
-  return deleteDoc(msgRef);
+  const batch = writeBatch(db);
+  batch.delete(doc(db, "couples", coupleId, "mailbox", messageId));
+  batch.delete(doc(db, "couples", coupleId, "capsules", messageId));
+  await batch.commit();
 };
 
 export const hideMessageForUser = async (coupleId: string, messageId: string, uid: string) => {
@@ -247,13 +293,24 @@ export const handoverMic = async (coupleId: string, sessionId: string, nextUid: 
   });
 };
 
-export const endSafeSpaceSession = async (coupleId: string, sessionId: string, closureMood: 1 | 2 | 3) => {
+export const endSafeSpaceSession = async (coupleId: string, sessionId: string, closureMood: 1 | 2 | 3, endedBy: string, partnerUid?: string) => {
   const sessionRef = doc(db, "couples", coupleId, "safe_space_sessions", sessionId);
-  return updateDoc(sessionRef, {
+  await updateDoc(sessionRef, {
     active: false,
     endedAt: Timestamp.now(),
+    endedBy,
     closureMood
   });
+
+  // Either person can always step out; the other is told rather than left wondering
+  if (partnerUid) {
+    await notifyPartner(partnerUid, {
+      uid: partnerUid,
+      type: "SAFE_SPACE",
+      title: "Safe Space Closed",
+      body: "Your partner closed the safe space. You can open a new one whenever you're both ready.",
+    });
+  }
 };
 
 export const updateUserMood = async (uid: string, mood: string, partnerUid?: string) => {
@@ -352,6 +409,10 @@ export const resetCoupleHistory = async (coupleId: string) => {
       if (colName === "safe_space_sessions") {
         const msgs = await getDocs(collection(d.ref, "messages"));
         msgs.docs.forEach((m) => refs.push(m.ref));
+      }
+      // Sealed capsule contents live beside the mailbox under the same id
+      if (colName === "mailbox" && d.data().sealed) {
+        refs.push(doc(db, "couples", coupleId, "capsules", d.id));
       }
       refs.push(d.ref);
     }

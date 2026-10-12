@@ -54,7 +54,7 @@ export const MessageCard = ({ message }: { message: MailboxMessage }) => {
     if (isSender) return;
     
     playPop();
-    const responseObj: any = { mode };
+    const responseObj: { mode: ResponseMode; text?: string; timerExpiresAt?: string } = { mode };
     if (text) responseObj.text = text;
     
     if (mode === "MINUTE") {
@@ -193,7 +193,7 @@ export const MessageCard = ({ message }: { message: MailboxMessage }) => {
                                 className="flex-1 bg-black/10 hover:bg-black/20 backdrop-blur-md border border-white/20 py-4 rounded-2xl flex flex-col items-center gap-2 transition-all group active:scale-95"
                             >
                                 <Users className="w-6 h-6 group-hover:scale-110 transition-transform" />
-                                <span className="font-bebas text-lg uppercase tracking-widest">I'm Here</span>
+                                <span className="font-bebas text-lg uppercase tracking-widest">I&apos;m Here</span>
                             </button>
                             <button 
                                 onClick={() => handleResponse("MINUTE")}

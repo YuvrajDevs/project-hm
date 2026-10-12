@@ -7,6 +7,7 @@ import { LockedCapsule } from "./LockedCapsule";
 import { DailyCheckIn } from "../checkin/DailyCheckIn";
 import { MoodStatusHub } from "../checkin/MoodStatusHub";
 import { SafeSpaceEntry } from "../safespace/SafeSpaceEntry";
+import { WhiteFlagButton } from "./WhiteFlagButton";
 import { PartnerNotes } from "../notes/PartnerNotes";
 import { motion, AnimatePresence } from "framer-motion";
 import { Plus, Inbox, History, Heart, Sparkles, MessageSquarePlus } from "lucide-react";
@@ -22,7 +23,7 @@ interface MailboxScreenProps {
 export const MailboxScreen: React.FC<MailboxScreenProps> = ({ onOpenCheckIn, onComposeClick }) => {
 
 
-  const { messages, loading, user, metrics } = useMailbox();
+  const { messages, loading, user, metrics, now } = useMailbox();
 
   if (loading) return null;
 
@@ -105,7 +106,7 @@ export const MailboxScreen: React.FC<MailboxScreenProps> = ({ onOpenCheckIn, onC
                     {messages.length > 0 ? (
                         messages.slice(0, 3).map((msg) => {
                             if (msg.unlockAt) {
-                                const isLocked = new Date(msg.unlockAt).getTime() > Date.now();
+                                const isLocked = new Date(msg.unlockAt).getTime() > now;
                                 if (isLocked) {
                                     if (msg.isSecretBeforeUnlock && msg.senderUid !== user?.uid) {
                                         return null; // Don't even show it
@@ -127,6 +128,17 @@ export const MailboxScreen: React.FC<MailboxScreenProps> = ({ onOpenCheckIn, onC
             {/* 2. Safe Space */}
             <section>
                 <SafeSpaceEntry />
+            </section>
+
+            {/* White Flag: a one-tap way to pause an argument */}
+            <section className="bg-white/5 border border-white/5 rounded-[2rem] p-6 flex flex-col md:flex-row md:items-center justify-between gap-4">
+                <div className="space-y-1">
+                    <h2 className="text-2xl font-bebas text-white tracking-widest uppercase leading-none">White Flag</h2>
+                    <p className="text-neutral-500 font-outfit text-xs leading-relaxed">
+                        Mid-argument and want to stop fighting? Raise it. It isn&apos;t an apology, just a signal that you two matter more than winning.
+                    </p>
+                </div>
+                <WhiteFlagButton />
             </section>
 
             {/* 3. Partner Notes */}

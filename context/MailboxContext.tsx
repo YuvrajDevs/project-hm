@@ -1,6 +1,6 @@
 "use client";
 
-import React, { createContext, useContext, useState, useEffect, useMemo } from "react";
+import React, { createContext, useContext, useState, useEffect, useMemo, useRef } from "react";
 import { MailboxMessage, User, Couple, QuickReact, DailyCheckIn, SafeSpaceSession, CoupleEvent, AppNotification, ReactionType } from "@/lib/types";
 import { db, auth, googleProvider } from "@/lib/firebase";
 import { 
@@ -48,7 +48,11 @@ import {
   respondToMessage,
   updateUserTimezone,
   markMessageAsRead,
-  ensureUserDoc
+  ensureUserDoc,
+  getCapsuleContent,
+  updateCapsuleContent,
+  unsealCapsule,
+  CapsuleContent
 } from "@/lib/firestore-helpers";
 import { getCheckInDateId } from "@/lib/utils";
 
@@ -102,6 +106,7 @@ interface MailboxContextType {
   lowerFlag: () => Promise<void>;
   startSafeSpace: () => Promise<void>;
   hasLoadedCheckins: boolean;
+  now: number;
   isOverlayActive: boolean;
   setOverlayActive: (active: boolean) => void;
   markAsRead: (messageId: string) => Promise<void>;
@@ -159,16 +164,49 @@ export const MailboxProvider: React.FC<{ children: React.ReactNode }> = ({ child
     });
   }, [rawEvents, user, todayId]);
 
+  // ─── Sealed time capsules ─────────────────────────────────────────────────
+  // The sender keeps seeing their own words; once the unlock time passes, whoever is online opens the capsule.
+  const [sealedContent, setSealedContent] = useState<Record<string, CapsuleContent>>({});
+  const capsuleWork = useRef<Set<string>>(new Set());
+
+  useEffect(() => {
+    const coupleId = user?.coupleId;
+    const uid = user?.uid;
+    if (!coupleId || !uid) return;
+
+    rawMessages.filter(m => m.sealed).forEach(m => {
+        const unlocked = !!m.unlockAt && new Date(m.unlockAt).getTime() <= now;
+        const key = `${m.id}:${unlocked ? "open" : "peek"}`;
+        if (capsuleWork.current.has(key)) return;
+
+        if (unlocked) {
+            capsuleWork.current.add(key);
+            // If the server clock says "not yet", this fails quietly and is retried on the next tick
+            unsealCapsule(coupleId, m.id).catch(() => capsuleWork.current.delete(key));
+        } else if (m.senderUid === uid && !sealedContent[m.id]) {
+            capsuleWork.current.add(key);
+            getCapsuleContent(coupleId, m.id)
+                .then(content => { if (content) setSealedContent(prev => ({ ...prev, [m.id]: content })); })
+                .catch(() => capsuleWork.current.delete(key));
+        }
+    });
+  }, [rawMessages, user?.coupleId, user?.uid, now, sealedContent]);
+
   // Hidden Messages Filter
   const messages = useMemo(() => {
     if (!user) return [];
-    return rawMessages.filter(m => {
-        if (m.hiddenFor?.includes(user.uid)) return false;
-        // A secret capsule does not exist for the receiver until it unlocks
-        const isLocked = !!m.unlockAt && new Date(m.unlockAt).getTime() > now;
-        return !(isLocked && m.isSecretBeforeUnlock && m.senderUid !== user.uid);
-    });
-  }, [rawMessages, user, now]);
+    return rawMessages
+        .filter(m => {
+            if (m.hiddenFor?.includes(user.uid)) return false;
+            const isLocked = !!m.unlockAt && new Date(m.unlockAt).getTime() > now;
+            // A secret capsule does not exist for the receiver until it unlocks
+            if (isLocked && m.isSecretBeforeUnlock && m.senderUid !== user.uid) return false;
+            // Unlocked but not opened yet: appears as soon as its words arrive
+            if (m.sealed && !isLocked) return false;
+            return true;
+        })
+        .map(m => m.sealed && sealedContent[m.id] ? { ...m, ...sealedContent[m.id] } : m);
+  }, [rawMessages, user, now, sealedContent]);
 
   // ─── Metrics Derivations ──────────────────────────────────────────────────
   const metrics = useMemo(() => {
@@ -288,6 +326,8 @@ export const MailboxProvider: React.FC<{ children: React.ReactNode }> = ({ child
         setCheckins([]);
         setNotifications([]);
         setActiveSafeSpace(null);
+        setSealedContent({});
+        capsuleWork.current.clear();
       }
     });
   }, []);
@@ -606,6 +646,14 @@ export const MailboxProvider: React.FC<{ children: React.ReactNode }> = ({ child
 
   const editMessage = async (messageId: string, updates: Partial<MailboxMessage>) => {
     if (!user?.coupleId) return;
+    if (rawMessages.find(m => m.id === messageId)?.sealed) {
+        // A locked capsule's words live in its sealed document
+        const { status, intent, note } = updates;
+        const content = Object.fromEntries(Object.entries({ status, intent, note }).filter(([, v]) => v !== undefined)) as Partial<CapsuleContent>;
+        await updateCapsuleContent(user.coupleId, messageId, content);
+        setSealedContent(prev => prev[messageId] ? { ...prev, [messageId]: { ...prev[messageId], ...content } } : prev);
+        return;
+    }
     await updateMailboxMessage(user.coupleId, messageId, updates);
   };
 
@@ -663,10 +711,11 @@ export const MailboxProvider: React.FC<{ children: React.ReactNode }> = ({ child
     clearAllNotis,
     toggleNotifications,
     hasLoadedCheckins,
+    now,
     isOverlayActive,
     setOverlayActive
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }), [fbUser, user, couple, partner, messages, reactions, checkins, events, notifications, unreadNotificationsCount, notificationsEnabled, activeSafeSpace, metrics, loading, hasOnboarded, isPaired, hasLoadedCheckins, isOverlayActive]);
+  }), [fbUser, user, couple, partner, messages, reactions, checkins, events, notifications, unreadNotificationsCount, notificationsEnabled, activeSafeSpace, metrics, loading, hasOnboarded, isPaired, hasLoadedCheckins, isOverlayActive, now]);
 
   return (
     <MailboxContext.Provider value={value}>

@@ -8,7 +8,7 @@ export const useSensoryFeedback = () => {
   useEffect(() => {
     // Only init if window exists
     if (typeof window !== "undefined") {
-      const AudioCtx = window.AudioContext || (window as any).webkitAudioContext;
+      const AudioCtx = window.AudioContext || (window as unknown as { webkitAudioContext?: typeof AudioContext }).webkitAudioContext;
       if (AudioCtx) {
         audioCtxRef.current = new AudioCtx();
       }

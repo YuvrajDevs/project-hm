@@ -91,6 +91,7 @@ export interface MailboxMessage {
   };
   unlockAt?: string; // ISO date for time capsule
   isSecretBeforeUnlock?: boolean;
+  sealed?: boolean; // time capsule whose words are still locked away (see capsules collection)
   readAt?: string; // Track when receiver first viewed
   hiddenFor?: string[]; // UIDs of users who 'deleted' for themselves
 }

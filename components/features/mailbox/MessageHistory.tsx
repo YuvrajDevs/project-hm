@@ -15,7 +15,7 @@ interface MessageHistoryProps {
 type FilterType = "all" | "received" | "sent";
 
 export const MessageHistory: React.FC<MessageHistoryProps> = ({ onComposeClick }) => {
-    const { messages, user, loading } = useMailbox();
+    const { messages, user, loading, now } = useMailbox();
     const [filter, setFilter] = useState<FilterType>("all");
 
     const filteredMessages = useMemo(() => {
@@ -97,7 +97,7 @@ export const MessageHistory: React.FC<MessageHistoryProps> = ({ onComposeClick }
                                     transition={{ duration: 0.3, delay: index * 0.05 }}
                                     layout
                                 >
-                                    {msg.unlockAt && new Date(msg.unlockAt).getTime() > Date.now() ? (
+                                    {msg.unlockAt && new Date(msg.unlockAt).getTime() > now ? (
                                         (msg.isSecretBeforeUnlock && msg.senderUid !== user?.uid) ? null : (
                                             <LockedCapsule message={msg} />
                                         )

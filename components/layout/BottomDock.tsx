@@ -33,7 +33,7 @@ export const BottomDock: React.FC<BottomDockProps> = ({
   };
 
   React.useEffect(() => {
-    const handlePopup = (e: any) => setInternalHidden(e.detail.isOpen);
+    const handlePopup = (e: Event) => setInternalHidden((e as CustomEvent<{ isOpen: boolean }>).detail.isOpen);
     window.addEventListener('popupStateChange', handlePopup);
     return () => window.removeEventListener('popupStateChange', handlePopup);
   }, []);

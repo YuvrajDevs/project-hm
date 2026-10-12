@@ -212,7 +212,7 @@ function Pair() {
                 >
                   <div>
                     <h3 className="text-xl font-bebas text-white tracking-widest uppercase mb-1">Enter Code</h3>
-                    <p className="text-neutral-500 font-outfit text-xs">Join your partner's space</p>
+                    <p className="text-neutral-500 font-outfit text-xs">Join your partner&apos;s space</p>
                   </div>
                   <div className="p-3 rounded-2xl bg-white/5 group-hover:bg-blue-500/20 group-hover:text-blue-400 transition-all text-neutral-500">
                     <LinkIcon className="w-5 h-5" />
@@ -274,7 +274,7 @@ function Pair() {
               >
                 <div>
                   <h1 className="text-4xl font-bebas text-white tracking-[0.15em] uppercase leading-none mb-2">Enter Code</h1>
-                  <p className="text-neutral-500 font-outfit text-xs uppercase tracking-[0.3em]">Your partner's 6-character code</p>
+                  <p className="text-neutral-500 font-outfit text-xs uppercase tracking-[0.3em]">Your partner&apos;s 6-character code</p>
                 </div>
 
                 <input

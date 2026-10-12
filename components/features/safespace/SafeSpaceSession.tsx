@@ -79,7 +79,7 @@ export const SafeSpaceSession = () => {
 
   const handleEndSession = async (mood: 1 | 2 | 3) => {
     if (!user?.coupleId || !activeSafeSpace?.id) return;
-    await endSafeSpaceSession(user.coupleId, activeSafeSpace.id, mood);
+    await endSafeSpaceSession(user.coupleId, activeSafeSpace.id, mood, user.uid, partner?.uid);
   };
 
   if (!activeSafeSpace) return null;

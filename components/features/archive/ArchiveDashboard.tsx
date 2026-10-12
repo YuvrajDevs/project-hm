@@ -23,9 +23,8 @@ interface ArchiveDashboardProps {
 
 export const ArchiveDashboard: React.FC<ArchiveDashboardProps> = ({ onOpenInbox, onOpenCheckIn, onOpenSignals }) => {
   const { metrics, user, partner, checkins } = useMailbox();
-  const calendarRef = React.useRef<HTMLElement>(null);
 
-  const scrollToCalendar = () => calendarRef.current?.scrollIntoView({ behavior: "smooth", block: "start" });
+  const scrollToCalendar = () => document.getElementById("archive-calendar")?.scrollIntoView({ behavior: "smooth", block: "start" });
 
   if (!metrics) return null;
 
@@ -179,7 +178,7 @@ export const ArchiveDashboard: React.FC<ArchiveDashboardProps> = ({ onOpenInbox,
       </section>
 
       {/* 3. Streak Grid (The focal point) */}
-      <section ref={calendarRef} className="px-6 relative z-10 scroll-mt-28">
+      <section id="archive-calendar" className="px-6 relative z-10 scroll-mt-28">
         <StreakGrid history={metrics.historyCheckins} />
       </section>
 

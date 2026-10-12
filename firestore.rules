@@ -139,6 +139,20 @@ service cloud.firestore {
         allow update: if isPartOfCouple(coupleId) && request.resource.data.senderUid == resource.data.senderUid;
       }
 
+      // Time capsule contents: only the sender can read them before the unlock time.
+      // Never listable, so a partner cannot browse what is waiting for them.
+      match /capsules/{messageId} {
+        allow get: if isPartOfCouple(coupleId)
+          && (resource.data.senderUid == request.auth.uid || resource.data.unlockAtTs <= request.time);
+        allow list: if false;
+        allow create: if isPartOfCouple(coupleId) && request.resource.data.senderUid == request.auth.uid;
+        allow update: if isPartOfCouple(coupleId)
+          && resource.data.senderUid == request.auth.uid
+          && request.resource.data.senderUid == resource.data.senderUid
+          && request.resource.data.unlockAtTs == resource.data.unlockAtTs;
+        allow delete: if isPartOfCouple(coupleId);
+      }
+
       match /checkins/{checkinId} {
         allow read, delete: if isPartOfCouple(coupleId);
         allow create, update: if isPartOfCouple(coupleId) && request.resource.data.userUid == request.auth.uid;
