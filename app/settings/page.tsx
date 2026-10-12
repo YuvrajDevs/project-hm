@@ -4,14 +4,15 @@ import React, { useState } from "react";
 import { useRouter } from "next/navigation";
 import { useMailbox } from "@/context/MailboxContext";
 import { motion, AnimatePresence } from "framer-motion";
-import { ArrowLeft, Bell, BellOff, Lock, UserX, AlertTriangle, User, LogOut } from "lucide-react";
+import { ArrowLeft, Bell, BellOff, UserX, AlertTriangle, User, LogOut, RotateCcw, Heart, ChevronRight, EyeOff, Users, ShieldCheck } from "lucide-react";
 import Link from "next/link";
 import { AmbientBackground } from "@/components/ui/AmbientBackground";
 import { useAuthGuard } from "@/hooks/useAuthGuard";
+import { LeavePartnerModal } from "@/components/features/profile/LeavePartnerModal";
 
 export default function SettingsPage() {
   const router = useRouter();
-  const { user, wipeoutUserAccount, logout, couple, leavePartner, requestReset, cancelReset, notificationsEnabled, toggleNotifications } = useMailbox();
+  const { user, partner, wipeoutUserAccount, logout, couple, leavePartner, requestReset, cancelReset, notificationsEnabled, toggleNotifications } = useMailbox();
   const [showWipeoutConfirm, setShowWipeoutConfirm] = useState(false);
   const [showUnpairConfirm, setShowUnpairConfirm] = useState(false);
   const [showResetConfirm, setShowResetConfirm] = useState(false);
@@ -36,17 +37,11 @@ export default function SettingsPage() {
   };
 
   const handleUnpair = async () => {
-    setIsProcessing(true);
-    setError("");
-    try {
-      await leavePartner();
-      router.push("/");
-    } catch (err) {
-      console.error(err);
-      setError("Couldn't disconnect. Check your connection and try again.");
-      setIsProcessing(false);
-    }
+    await leavePartner();
+    router.push("/");
   };
+
+  const partnerName = partner?.displayName?.split(" ")[0] || "your partner";
 
   const handleResetHistory = async () => {
     setIsProcessing(true);
@@ -89,7 +84,7 @@ export default function SettingsPage() {
               </div>
               <div>
                 <p className="font-bebas text-xl tracking-widest uppercase">{user.displayName}</p>
-                <p className="text-xs text-neutral-500 font-outfit tracking-wider">Signed in securely</p>
+                <p className="text-xs text-neutral-500 font-outfit tracking-wider break-all">{user.email || "Signed in with Google"}</p>
               </div>
             </div>
             <button 
@@ -99,6 +94,43 @@ export default function SettingsPage() {
               <LogOut className="w-3 h-3" />
               Sign Out
             </button>
+          </div>
+        </section>
+
+        {/* You & your partner */}
+        <section className="space-y-4">
+          <h2 className="text-sm font-bebas text-neutral-500 tracking-[0.2em] uppercase">You & Your Partner</h2>
+          <div className="space-y-2">
+            <Link href="/profile" className="bg-white/5 border border-white/10 rounded-2xl p-5 flex items-center justify-between hover:bg-white/10 transition-all">
+              <div className="flex items-center gap-4">
+                <div className="p-3 bg-white/5 rounded-xl"><User className="w-5 h-5 text-white" /></div>
+                <div>
+                  <p className="font-bebas tracking-widest uppercase text-lg">Your Profile</p>
+                  <p className="text-xs text-neutral-400">What you like, what you need, how to show up for you</p>
+                </div>
+              </div>
+              <ChevronRight className="w-4 h-4 text-neutral-500" />
+            </Link>
+            {couple ? (
+              <div className="bg-white/5 border border-white/10 rounded-2xl p-5 flex items-center gap-4">
+                <div className="p-3 bg-white/5 rounded-xl"><Heart className="w-5 h-5 text-pink-400" /></div>
+                <div>
+                  <p className="font-bebas tracking-widest uppercase text-lg">Connected with {partnerName}</p>
+                  <p className="text-xs text-neutral-400">Only the two of you can see this space</p>
+                </div>
+              </div>
+            ) : (
+              <Link href="/pair" className="bg-white/5 border border-white/10 rounded-2xl p-5 flex items-center justify-between hover:bg-white/10 transition-all">
+                <div className="flex items-center gap-4">
+                  <div className="p-3 bg-white/5 rounded-xl"><Heart className="w-5 h-5 text-pink-400" /></div>
+                  <div>
+                    <p className="font-bebas tracking-widest uppercase text-lg">Connect With Your Partner</p>
+                    <p className="text-xs text-neutral-400">Send an invite link or enter their code</p>
+                  </div>
+                </div>
+                <ChevronRight className="w-4 h-4 text-neutral-500" />
+              </Link>
+            )}
           </div>
         </section>
 
@@ -113,15 +145,37 @@ export default function SettingsPage() {
                 </div>
                 <div>
                   <p className="font-bebas tracking-widest uppercase text-lg">Notifications</p>
-                  <p className="text-xs text-neutral-400">Receive alerts from your partner</p>
+                  <p className="text-xs text-neutral-400">{notificationsEnabled ? "In-app alerts when your partner writes, responds or checks in" : "Alerts are off. New notes still wait in your mailbox"}</p>
                 </div>
               </div>
               <button 
                 onClick={() => toggleNotifications(!notificationsEnabled)}
-                className={`w-12 h-6 rounded-full transition-colors relative ${notificationsEnabled ? "bg-pink-500" : "bg-neutral-600"}`}
+                role="switch"
+                aria-checked={notificationsEnabled}
+                aria-label="Notifications"
+                className={`w-12 h-6 rounded-full transition-colors relative shrink-0 ml-4 ${notificationsEnabled ? "bg-pink-500" : "bg-neutral-600"}`}
               >
                 <div className={`w-4 h-4 bg-white rounded-full absolute top-1 transition-all ${notificationsEnabled ? "left-7" : "left-1"}`} />
               </button>
+            </div>
+          </div>
+        </section>
+
+        {/* Privacy, in plain words */}
+        <section className="space-y-4">
+          <h2 className="text-sm font-bebas text-neutral-500 tracking-[0.2em] uppercase">Who Sees What</h2>
+          <div className="bg-white/5 border border-white/10 rounded-2xl p-6 space-y-5">
+            <div className="flex items-start gap-4">
+              <Users className="w-5 h-5 text-neutral-400 shrink-0 mt-0.5" />
+              <p className="text-xs text-neutral-300 leading-relaxed"><span className="text-white">You and your partner</span> both see notes, responses, check-ins, signals, special days and each other&apos;s profile.</p>
+            </div>
+            <div className="flex items-start gap-4">
+              <EyeOff className="w-5 h-5 text-neutral-400 shrink-0 mt-0.5" />
+              <p className="text-xs text-neutral-300 leading-relaxed"><span className="text-white">Only you</span> see your private notes about your partner and the nickname you give them.</p>
+            </div>
+            <div className="flex items-start gap-4">
+              <ShieldCheck className="w-5 h-5 text-neutral-400 shrink-0 mt-0.5" />
+              <p className="text-xs text-neutral-300 leading-relaxed"><span className="text-white">No one else.</span> Nothing you write is shown to other users or used to train AI.</p>
             </div>
           </div>
         </section>
@@ -152,6 +206,7 @@ export default function SettingsPage() {
         {/* Danger Zone */}
         <section className="space-y-4 pt-10">
           <h2 className="text-sm font-bebas text-red-500/80 tracking-[0.2em] uppercase">Danger Zone</h2>
+          <p className="text-xs text-neutral-500 leading-relaxed">These can&apos;t be undone. Each one asks you to confirm first.</p>
           {error && (
             <p className="text-rose-500 text-xs font-outfit leading-relaxed">{error}</p>
           )}
@@ -162,13 +217,13 @@ export default function SettingsPage() {
                 <div className="border border-white/10 bg-white/5 rounded-2xl p-6">
                     <div className="flex items-start gap-4 mb-6">
                         <div className="p-3 bg-white/5 rounded-xl">
-                            <ArrowLeft className="w-5 h-5 text-neutral-400 rotate-180" />
+                            <RotateCcw className="w-5 h-5 text-neutral-400" />
                         </div>
                         <div>
                             <p className="font-bebas tracking-widest uppercase text-lg text-white">Reset Shared History</p>
                             <p className="text-xs text-neutral-400 mt-1 leading-relaxed">
-                                Stay connected but <span className="text-white">permanently wipe</span> all messages and check-ins. 
-                                You both start fresh together as if day one.
+                                Stay connected but <span className="text-white">permanently wipe</span> all notes, check-ins, signals and special days. 
+                                {" "}{partnerName} has to agree before anything is deleted.
                             </p>
                         </div>
                     </div>
@@ -181,7 +236,7 @@ export default function SettingsPage() {
                         >
                             {couple.resetStatus === "pending" && couple.resetBy === user.uid 
                                 ? "Waiting for Partner..." 
-                                : "Reset History Together"}
+                                : `Ask ${partnerName} to Reset`}
                         </button>
                     ) : (
                         <div className="space-y-3">
@@ -190,7 +245,7 @@ export default function SettingsPage() {
                                 disabled={isProcessing}
                                 className="w-full py-4 bg-white text-black rounded-xl font-bebas tracking-widest uppercase hover:bg-neutral-200 transition-all flex items-center justify-center gap-2"
                             >
-                                {isProcessing ? "Sending..." : "Request Fresh Start"}
+                                {isProcessing ? "Sending..." : "Send Request"}
                             </button>
                             <button
                                 onClick={() => setShowResetConfirm(false)}
@@ -231,36 +286,18 @@ export default function SettingsPage() {
                         <div>
                             <p className="font-bebas tracking-widest uppercase text-lg text-orange-400">Unpair Partner</p>
                             <p className="text-xs text-neutral-400 mt-1 leading-relaxed">
-                                Sever the link and <span className="text-white">destroy all shared data</span>. Your individual profile stays, but you 
-                                will no longer be connected to each other.
+                                End the connection and <span className="text-white">delete everything you shared</span>, for both of you. 
+                                Your own profile stays. {partnerName} will be told you left.
                             </p>
                         </div>
                     </div>
                     
-                    {!showUnpairConfirm ? (
-                        <button
-                            onClick={() => setShowUnpairConfirm(true)}
-                            className="w-full py-4 border border-orange-500/30 text-orange-400 rounded-xl font-bebas tracking-widest uppercase hover:bg-orange-500/10 transition-all"
-                        >
-                            Disconnect Partner
-                        </button>
-                    ) : (
-                        <div className="space-y-3">
-                            <button
-                                onClick={handleUnpair}
-                                disabled={isProcessing}
-                                className="w-full py-4 bg-orange-500 text-white rounded-xl font-bebas tracking-widest uppercase hover:bg-orange-600 transition-all"
-                            >
-                                {isProcessing ? "Disconnecting..." : "Confirm Disconnect"}
-                            </button>
-                            <button
-                                onClick={() => setShowUnpairConfirm(false)}
-                                className="w-full py-2 text-neutral-500 font-bebas text-xs tracking-widest uppercase"
-                            >
-                                Stay Connected
-                            </button>
-                        </div>
-                    )}
+                    <button
+                        onClick={() => setShowUnpairConfirm(true)}
+                        className="w-full py-4 border border-orange-500/30 text-orange-400 rounded-xl font-bebas tracking-widest uppercase hover:bg-orange-500/10 transition-all"
+                    >
+                        Disconnect From {partnerName}
+                    </button>
                 </div>
             )}
 
@@ -314,6 +351,12 @@ export default function SettingsPage() {
           </div>
         </section>
       </div>
+      <LeavePartnerModal
+        isOpen={showUnpairConfirm}
+        onClose={() => setShowUnpairConfirm(false)}
+        onConfirm={handleUnpair}
+        partnerName={partner?.displayName || "your partner"}
+      />
     </div>
   );
 }

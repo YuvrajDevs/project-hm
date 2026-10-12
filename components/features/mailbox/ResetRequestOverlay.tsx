@@ -29,7 +29,7 @@ export const ResetRequestOverlay = () => {
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
-            className="fixed inset-0 z-[200] flex items-center justify-center p-6 bg-black/90 backdrop-blur-2xl"
+            className="fixed inset-0 z-[200] flex items-center justify-center p-6 overlay-backdrop"
         >
             <div className="max-w-md w-full space-y-8 text-center">
                 <motion.div 

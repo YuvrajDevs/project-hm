@@ -20,7 +20,7 @@ interface StreakGridProps {
 const DAYS_OF_WEEK = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
 
 export const StreakGrid: React.FC<StreakGridProps> = ({ history }) => {
-  const { events, addEvent, removeEvent, user } = useMailbox();
+  const { events, addEvent, removeEvent, user, partner } = useMailbox();
   const [selectedDate, setSelectedDate] = useState<string | null>(null);
   const [viewDate, setViewDate] = useState(new Date());
   const [isAddingEvent, setIsAddingEvent] = useState(false);
@@ -68,8 +68,19 @@ export const StreakGrid: React.FC<StreakGridProps> = ({ history }) => {
     return formatDateId(d);
   });
 
+  // Date ids are local calendar days; parsing them as plain ISO would shift a day in some timezones
+  const parseDateId = (dateId: string) => {
+    const [y, m, d] = dateId.split("-").map(Number);
+    return new Date(y, m - 1, d);
+  };
+
+  const nameFor = (uid: string) => uid === user?.uid ? "You" : (partner?.displayName?.split(" ")[0] || "Partner");
+
   const getDaySyncInfo = (dateId: string) => {
-    const dayCheckins = history.filter(c => c.dateId === dateId);
+    // One entry per person (history is newest first)
+    const dayCheckins = history
+        .filter(c => c.dateId === dateId)
+        .filter((c, i, all) => all.findIndex(o => o.userUid === c.userUid) === i);
     if (dayCheckins.length === 0) return null;
 
     const partnerA = dayCheckins[0];
@@ -91,18 +102,18 @@ export const StreakGrid: React.FC<StreakGridProps> = ({ history }) => {
   };
 
   const getDayEvents = (dateId: string) => {
-    const d = new Date(dateId);
+    const d = parseDateId(dateId);
     const dayNum = d.getDate();
     const monthNum = d.getMonth();
 
     return events.filter(e => {
         if (e.dateId === dateId) return true;
         if (e.repeat === "monthly") {
-            const eventDate = new Date(e.dateId);
+            const eventDate = parseDateId(e.dateId);
             return eventDate.getDate() === dayNum && dateId >= e.dateId;
         }
         if (e.repeat === "yearly") {
-            const eventDate = new Date(e.dateId);
+            const eventDate = parseDateId(e.dateId);
             return eventDate.getDate() === dayNum && eventDate.getMonth() === monthNum && dateId >= e.dateId;
         }
         return false;
@@ -126,10 +137,10 @@ export const StreakGrid: React.FC<StreakGridProps> = ({ history }) => {
     setIsAddingEvent(false);
   };
 
-  const getStatusColor = (status: string | undefined, count: number, isCurrentMonth: boolean) => {
+  const getStatusColor = (status: string | undefined, count: number, isCurrentMonth: boolean, isToday: boolean) => {
     if (!isCurrentMonth && count === 0) return "bg-white/[0.01] border border-white/[0.02]";
     if (count === 0) return "bg-white/[0.02] border border-white/5";
-    if (count === 1) return "bg-white/10 border border-white/10 animate-pulse";
+    if (count === 1) return cn("bg-white/10 border border-white/10", isToday && "animate-pulse");
     
     switch (status) {
       case "aligned": return "bg-yellow-400 shadow-[0_0_15px_rgba(250,204,21,0.4)] border-transparent";
@@ -180,7 +191,7 @@ export const StreakGrid: React.FC<StreakGridProps> = ({ history }) => {
             {days.map((date, idx) => {
                 const info = getDaySyncInfo(date);
                 const dayEvents = getDayEvents(date);
-                const d = new Date(date);
+                const d = parseDateId(date);
                 const isCurrentMonth = d.getMonth() === viewDate.getMonth();
                 const isToday = date === todayStr;
 
@@ -202,7 +213,7 @@ export const StreakGrid: React.FC<StreakGridProps> = ({ history }) => {
                         <div 
                             className={cn(
                                 "w-10 h-10 md:w-16 md:h-16 rounded-full transition-all duration-500 flex items-center justify-center relative overflow-hidden",
-                                getStatusColor(info?.status, info?.count || 0, isCurrentMonth),
+                                getStatusColor(info?.status, info?.count || 0, isCurrentMonth, isToday),
                                 isToday ? "border-2 border-white shadow-sm" : (info?.count || dayEvents.length ? "hover:scale-110 active:scale-95 shadow-lg border-2 border-white/10" : "border border-white/5")
                             )} 
                         >
@@ -223,6 +234,15 @@ export const StreakGrid: React.FC<StreakGridProps> = ({ history }) => {
         </div>
       </div>
 
+      {/* Legend */}
+      <div className="flex flex-wrap items-center justify-center gap-x-5 gap-y-2 px-2 text-[10px] font-bebas tracking-widest uppercase text-neutral-500">
+        <span className="flex items-center gap-2"><span className="w-2.5 h-2.5 rounded-full bg-yellow-400" /> Close</span>
+        <span className="flex items-center gap-2"><span className="w-2.5 h-2.5 rounded-full bg-orange-500" /> In between</span>
+        <span className="flex items-center gap-2"><span className="w-2.5 h-2.5 rounded-full bg-red-500" /> Distant</span>
+        <span className="flex items-center gap-2"><span className="w-2.5 h-2.5 rounded-full bg-white/20" /> One check-in</span>
+        <span className="text-neutral-600">Tap a day for details or to add a special day</span>
+      </div>
+
       {/* Detail Modal Layer */}
       <AnimatePresence>
         {selectedDate && (
@@ -230,7 +250,7 @@ export const StreakGrid: React.FC<StreakGridProps> = ({ history }) => {
                 initial={{ opacity: 0 }}
                 animate={{ opacity: 1 }}
                 exit={{ opacity: 0 }}
-                className="fixed inset-0 z-[100] flex items-center justify-center p-6 bg-black/80 backdrop-blur-xl"
+                className="fixed inset-0 z-[100] flex items-center justify-center p-6 overlay-backdrop"
                 onClick={() => {
                     setSelectedDate(null);
                     setIsAddingEvent(false);
@@ -257,10 +277,10 @@ export const StreakGrid: React.FC<StreakGridProps> = ({ history }) => {
                         <div className="space-y-1">
                             <div className="flex items-center gap-2 text-neutral-500 font-bebas text-xs tracking-widest uppercase">
                                 <CalendarIcon className="w-3 h-3" />
-                                {new Date(selectedDate).toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' })}
+                                {parseDateId(selectedDate).toLocaleDateString(undefined, { month: 'long', day: 'numeric', year: 'numeric' })}
                             </div>
                             <h2 className="text-4xl font-bebas text-white tracking-wider uppercase pt-2">
-                                {isAddingEvent ? "Add Special Day" : "Daily Planner"}
+                                {isAddingEvent ? "Add Special Day" : (selectedDate === todayStr ? "Today" : "This Day")}
                             </h2>
                         </div>
                     </div>
@@ -295,7 +315,7 @@ export const StreakGrid: React.FC<StreakGridProps> = ({ history }) => {
                                             <label className="text-[10px] font-bebas tracking-widest text-neutral-600 uppercase ml-1">Repeat</label>
                                             <select 
                                                 value={eventRepeat}
-                                                onChange={e => setEventRepeat(e.target.value as any)}
+                                                onChange={e => setEventRepeat(e.target.value as "none" | "monthly" | "yearly")}
                                                 className="w-full bg-white/5 border border-white/10 rounded-xl px-3 py-3 text-xs text-white focus:outline-none focus:border-white/30 appearance-none font-bebas tracking-wider"
                                             >
                                                 <option value="none">Once</option>
@@ -344,7 +364,7 @@ export const StreakGrid: React.FC<StreakGridProps> = ({ history }) => {
                                         {/* Sync Score Row */}
                                         <div className="flex justify-between items-center bg-white/5 p-6 border-b border-white/5">
                                             <div className="space-y-1">
-                                                <span className="font-bebas text-[10px] tracking-widest text-neutral-500 uppercase">Connection Level</span>
+                                                <span className="font-bebas text-[10px] tracking-widest text-neutral-500 uppercase">{selectedData.count >= 2 ? "Connection (average)" : "Connection (one check-in)"}</span>
                                                 <div className="text-5xl font-bebas text-white">{selectedData.syncScore.toFixed(1)}/10</div>
                                             </div>
                                             <div className="w-12 h-12 rounded-full flex items-center justify-center bg-white/5">
@@ -362,9 +382,9 @@ export const StreakGrid: React.FC<StreakGridProps> = ({ history }) => {
                                                     <div className="flex justify-between items-center">
                                                         <div className="flex items-center gap-2">
                                                             <div className="w-6 h-6 rounded-full bg-white/10 flex items-center justify-center text-[10px] font-bebas">
-                                                                {i === 0 ? "A" : "B"}
+                                                                {nameFor(checkin.userUid)[0]}
                                                             </div>
-                                                            <span className="font-bebas text-[10px] tracking-widest text-neutral-400 uppercase">Partner {i === 0 ? "A" : "B"}</span>
+                                                            <span className="font-bebas text-[10px] tracking-widest text-neutral-400 uppercase">{nameFor(checkin.userUid)}</span>
                                                         </div>
                                                         <div className="flex gap-4">
                                                             <div className="flex flex-col items-end">
@@ -373,7 +393,7 @@ export const StreakGrid: React.FC<StreakGridProps> = ({ history }) => {
                                                             </div>
                                                             <div className="flex flex-col items-end">
                                                                 <span className="text-[8px] uppercase tracking-widest text-neutral-600 font-bebas">Status</span>
-                                                                <span className="text-xs font-bebas text-pink-500">{checkin.moodStatus || (checkin as any).word}</span>
+                                                                <span className="text-xs font-bebas text-pink-500">{checkin.moodStatus}</span>
                                                             </div>
                                                         </div>
                                                     </div>
@@ -448,7 +468,7 @@ export const StreakGrid: React.FC<StreakGridProps> = ({ history }) => {
                                 onClick={() => setSelectedDate(null)}
                                 className="text-[10px] font-bebas tracking-widest text-neutral-600 uppercase hover:text-white transition-colors"
                             >
-                                Close report
+                                Close
                             </button>
                         </div>
                     )}

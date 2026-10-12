@@ -12,7 +12,7 @@ import { EditMessage } from "./EditMessage";
 import { PREMIUM_ICONS, INTENT_LABELS } from "@/lib/constants";
 
 export const MessageCard = ({ message }: { message: MailboxMessage }) => {
-  const { user, markAsRead, deleteForMe, respondToNote } = useMailbox();
+  const { user, partner, markAsRead, deleteForMe, respondToNote } = useMailbox();
   const { playPop, vibrateTick } = useSensoryFeedback();
   const isSender = message.senderUid === user?.uid;
   const config = PREMIUM_ICONS[message.status] || { label: message.status, url: "", color: "bg-neutral-800" };
@@ -89,7 +89,7 @@ export const MessageCard = ({ message }: { message: MailboxMessage }) => {
       <div className="flex justify-between items-start relative z-10">
         <div className="flex flex-col gap-1">
           <span className="font-bebas text-[10px] tracking-[0.3em] uppercase opacity-60">
-              {isSender ? "You Sent" : "Partner Received"}
+              {isSender ? "You Sent" : `From ${partner?.displayName?.split(" ")[0] || "Your Partner"}`}
           </span>
           <div className="flex items-center gap-3">
               <div className="relative group">

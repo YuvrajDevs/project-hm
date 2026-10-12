@@ -22,6 +22,11 @@ export const LeavePartnerModal: React.FC<LeavePartnerModalProps> = ({
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
 
+  // Always start from the first step
+  React.useEffect(() => {
+    if (isOpen) { setStep(1); setError(""); }
+  }, [isOpen]);
+
   const handleConfirm = async () => {
     setLoading(true);
     setError("");
@@ -45,7 +50,7 @@ export const LeavePartnerModal: React.FC<LeavePartnerModalProps> = ({
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
             onClick={onClose}
-            className="absolute inset-0 bg-black/80 backdrop-blur-md"
+            className="absolute inset-0 overlay-backdrop"
           />
           
           <motion.div

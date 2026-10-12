@@ -96,7 +96,7 @@ export const DailyCheckInPopup: React.FC<DailyCheckInPopupProps> = ({ onClose })
   };
 
   return (
-    <div className="fixed inset-0 z-[100] flex items-center justify-center p-6 bg-black/90 backdrop-blur-xl">
+    <div className="fixed inset-0 z-[100] flex items-center justify-center p-6 overlay-backdrop">
       <motion.div 
         initial={{ opacity: 0, scale: 0.9, y: 20 }}
         animate={{ opacity: 1, scale: 1, y: 0 }}
@@ -113,11 +113,9 @@ export const DailyCheckInPopup: React.FC<DailyCheckInPopupProps> = ({ onClose })
             <div className="w-2 h-2 rounded-full bg-pink-500 animate-pulse" />
             <span className="font-bebas text-[10px] tracking-[0.4em] text-neutral-500 uppercase">Daily Heart-Sync</span>
           </div>
-          {step === "summary" && (
-            <button onClick={onClose} className="p-2 rounded-full bg-white/5 hover:bg-white/10 transition-colors">
-              <X className="w-4 h-4 text-neutral-400" />
-            </button>
-          )}
+          <button onClick={onClose} aria-label="Close" className="p-2 rounded-full bg-white/5 hover:bg-white/10 transition-colors">
+            <X className="w-4 h-4 text-neutral-400" />
+          </button>
         </div>
 
         <div className="p-6 pt-6">

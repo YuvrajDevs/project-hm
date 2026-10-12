@@ -52,6 +52,11 @@ export interface EmotionalProfile {
   offSignals?: string[];    // ⚡
   personality?: string[];   // 🎯
   interests?: string[];     // 🎮
+  dislikes?: string[];      // 🚫
+  defaultIntent?: MailboxIntent; // what I usually need when I'm upset
+  facts?: {                 // short free-text answers
+    [key: string]: string;
+  };
   memes?: string[];         // 😂
   customTags?: {
     [key: string]: string[];

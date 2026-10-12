@@ -46,8 +46,8 @@ export const MoodStatusHub = () => {
                     </div>
                 )}
                 
-                <span className="font-bebas text-[10px] tracking-[0.4em] text-neutral-600 uppercase">You are feeling</span>
-                <div className="mt-3 flex items-center gap-4">
+                <span className="font-bebas text-[10px] tracking-[0.4em] text-neutral-500 uppercase">You are feeling</span>
+                <div className="mt-3 flex flex-col items-start gap-2 sm:flex-row sm:items-center sm:gap-4">
                     <div className="w-12 h-12 flex items-center justify-center relative">
                         <div className="absolute inset-0 bg-white/10 blur-xl rounded-full" />
                         {user?.currentMood ? (
@@ -60,7 +60,7 @@ export const MoodStatusHub = () => {
                             <img src={REACTION_ICONS.APPRECIATIVE.url} alt="Set Mood" className="w-full h-full object-contain relative z-10 opacity-20 grayscale" />
                         )}
                     </div>
-                    <div className="text-2xl font-bebas text-white tracking-widest uppercase truncate pb-1">
+                    <div className="text-xl sm:text-2xl font-bebas text-white tracking-widest uppercase leading-tight break-words">
                         {user?.currentMood || "Set Mood"}
                     </div>
                 </div>
@@ -79,10 +79,10 @@ export const MoodStatusHub = () => {
                 onClick={replayPartnerSignal}
                 className="w-full bg-white/5 border border-white/5 rounded-[2rem] p-6 text-left relative overflow-hidden flex flex-col justify-center min-h-[140px] hover:border-white/10 transition-all group/partner"
             >
-                <span className="font-bebas text-[10px] tracking-[0.4em] text-neutral-600 uppercase">
+                <span className="font-bebas text-[10px] tracking-[0.4em] text-neutral-500 uppercase">
                     {partner?.displayName?.split(' ')[0] || "Partner"} is feeling
                 </span>
-                <div className="mt-3 flex items-center gap-4 group-hover/partner:scale-105 transition-transform origin-left">
+                <div className="mt-3 flex flex-col items-start gap-2 sm:flex-row sm:items-center sm:gap-4 group-hover/partner:scale-105 transition-transform origin-left">
                     <div className="w-12 h-12 flex items-center justify-center relative">
                          <div className="absolute inset-0 bg-blue-500/10 blur-xl rounded-full" />
                          {partner?.currentMood ? (
@@ -97,8 +97,8 @@ export const MoodStatusHub = () => {
                             </div>
                         )}
                     </div>
-                    <div className="text-2xl font-bebas text-blue-400 tracking-widest uppercase truncate pb-1">
-                        {partner?.currentMood || "Offline"}
+                    <div className="text-xl sm:text-2xl font-bebas text-blue-400 tracking-widest uppercase leading-tight break-words">
+                        {partner?.currentMood || "Not Shared Yet"}
                     </div>
                 </div>
                 {partner?.currentMood && (

@@ -126,7 +126,12 @@ export default function Home() {
          // Auto-trigger daily sync if not done
          const userCheckIn = checkins.find(c => c.userUid === user?.uid);
          if (!userCheckIn) {
-            setShowCheckInPopup(true);
+            // Invite once a day; after that the check-in stays one tap away on the home screen
+            const promptKey = `checkin_prompted_${getCheckInDateId()}`;
+            if (!localStorage.getItem(promptKey)) {
+               localStorage.setItem(promptKey, 'true');
+               setShowCheckInPopup(true);
+            }
          } else {
             // Both check-ins done?
             const partnerCheckIn = checkins.find(c => c.userUid !== user?.uid);
@@ -345,7 +350,11 @@ export default function Home() {
                     exit={{ opacity: 0, x: -20 }}
                     transition={{ duration: 0.2 }}
                 >
-                    <ArchiveDashboard />
+                    <ArchiveDashboard 
+                        onOpenInbox={() => setActiveView("inbox")}
+                        onOpenCheckIn={() => setShowCheckInPopup(true)}
+                        onOpenSignals={() => setShowReactions(true)}
+                    />
                 </motion.div>
             )}
         </AnimatePresence>

@@ -44,7 +44,7 @@ export const Modal: React.FC<ModalProps> = ({ isOpen, onClose, title, children, 
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
             onClick={onClose}
-            className="fixed inset-0 bg-black/80 backdrop-blur-md z-[100] cursor-zoom-out"
+            className="fixed inset-0 overlay-backdrop z-[100] cursor-zoom-out"
           />
           <motion.div
             initial={{ opacity: 0, scale: 0.95, y: 20 }}

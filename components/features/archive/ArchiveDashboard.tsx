@@ -8,69 +8,119 @@ import {
   Thermometer, 
   Mail, 
   Zap, 
-  TrendingUp, 
   Wind,
-  Plus,
   ArrowRight
 } from "lucide-react";
 import { StreakGrid } from "./StreakGrid";
 import { useMailbox } from "@/context/MailboxContext";
-import { cn } from "@/lib/utils";
-import { AmbientBackground } from "../../ui/AmbientBackground";
+import { cn, formatRelativeTime } from "@/lib/utils";
 
-export const ArchiveDashboard = () => {
-  const { metrics, user } = useMailbox();
+interface ArchiveDashboardProps {
+  onOpenInbox: () => void;
+  onOpenCheckIn: () => void;
+  onOpenSignals: () => void;
+}
+
+export const ArchiveDashboard: React.FC<ArchiveDashboardProps> = ({ onOpenInbox, onOpenCheckIn, onOpenSignals }) => {
+  const { metrics, user, partner, checkins } = useMailbox();
+  const calendarRef = React.useRef<HTMLElement>(null);
+
+  const scrollToCalendar = () => calendarRef.current?.scrollIntoView({ behavior: "smooth", block: "start" });
 
   if (!metrics) return null;
+
+  const partnerName = partner?.displayName?.split(" ")[0] || "your partner";
+  const myCheckIn = checkins.find(c => c.userUid === user?.uid);
+  const partnerCheckIn = checkins.find(c => c.userUid !== user?.uid);
+  const bothCheckedIn = !!myCheckIn && !!partnerCheckIn;
+
+  const streakSubtext = bothCheckedIn
+    ? "Today is counted"
+    : metrics.streak > 0
+      ? (myCheckIn ? `Waiting on ${partnerName} today` : "Check in today to keep it")
+      : "Starts when you both check in";
+
+  const connectionValue = !myCheckIn && !partnerCheckIn ? "—" : `${metrics.connectionAvgToday.toFixed(1)}/10`;
+  const connectionSubtext = !myCheckIn
+    ? "Tap to check in"
+    : !partnerCheckIn
+      ? `Only you so far. Waiting on ${partnerName}`
+      : metrics.connectionAvgToday >= 7 ? "Feeling close" : (metrics.connectionAvgToday >= 4 ? "Somewhere in between" : "A gentle day might help");
+
+  const activity = metrics.lastActivity;
+  const activityWho = activity ? (activity.initiator === "you" ? "You" : partnerName) : "";
+  const activityWhat = activity?.type === "message" ? "sent a note" : "sent a signal";
+
+  const STATE_HELP: Record<string, string> = {
+    "In Conflict": "One of you signalled conflict today",
+    "Gloominess": "One of you is feeling low today",
+    "High Anxiety": "One of you is feeling anxious today",
+    "Deep Peace": "Both of your latest signals are warm",
+    "Harmonious": "Today's check-ins are closely matched",
+    "Drifting": "Today's check-ins are far apart",
+    "Connected": "Nothing needs attention right now",
+  };
 
   const cards = [
     {
       id: "streak",
       icon: <Flame className="w-5 h-5 text-orange-500" />,
-      label: "Connection Streak",
-      value: `${metrics.streak} Days`,
-      subtext: metrics.streak === 0 ? "Missed yesterday" : "Going strong today",
-      color: metrics.streak > 0 ? "text-orange-400" : "text-neutral-600"
-    },
-    {
-      id: "activity",
-      icon: <Activity className="w-5 h-5 text-blue-500" />,
-      label: "Recent Activity",
-      value: metrics.lastActivity ? (metrics.lastActivity.time.split('T')[1].substring(0, 5)) : "No data",
-      subtext: metrics.lastActivity ? `${metrics.lastActivity.type} by ${metrics.lastActivity.initiator}` : "Silence is okay too",
-      color: "text-blue-400"
+      label: "Check-in Streak",
+      value: `${metrics.streak} ${metrics.streak === 1 ? "Day" : "Days"}`,
+      subtext: streakSubtext,
+      color: metrics.streak > 0 ? "text-orange-400" : "text-neutral-600",
+      hint: "See calendar",
+      onClick: scrollToCalendar
     },
     {
       id: "sync",
       icon: <Thermometer className="w-5 h-5 text-yellow-500" />,
       label: "Today's Connection",
-      value: `${metrics.connectionAvgToday.toFixed(1)}/10`,
-      subtext: metrics.connectionAvgToday >= 7 ? "Balanced & Deep" : (metrics.connectionAvgToday >= 4 ? "Nurturing stage" : "Handle with care"),
-      color: metrics.connectionAvgToday >= 7 ? "text-yellow-400" : (metrics.connectionAvgToday >= 4 ? "text-orange-400" : "text-red-400")
+      value: connectionValue,
+      subtext: connectionSubtext,
+      color: !myCheckIn && !partnerCheckIn ? "text-neutral-600" : (metrics.connectionAvgToday >= 7 ? "text-yellow-400" : "text-orange-400"),
+      hint: myCheckIn ? "View today" : "Check in",
+      onClick: onOpenCheckIn
     },
     {
       id: "pulse",
       icon: <Mail className="w-5 h-5 text-pink-500" />,
-      label: "Mailbox Pulse",
-      value: `${metrics.unreadCount} Pending`,
-      subtext: metrics.unreadCount > 0 ? "Waiting on you" : "All caught up",
-      color: metrics.unreadCount > 0 ? "text-pink-400" : "text-neutral-600"
+      label: "Waiting On You",
+      value: `${metrics.unreadCount} ${metrics.unreadCount === 1 ? "Note" : "Notes"}`,
+      subtext: metrics.unreadCount > 0 ? `From ${partnerName}, not answered yet` : "All caught up",
+      color: metrics.unreadCount > 0 ? "text-pink-400" : "text-neutral-600",
+      hint: "Open inbox",
+      onClick: onOpenInbox
     },
     {
-        id: "touch",
-        icon: <Zap className="w-5 h-5 text-cyan-500" />,
-        label: "Light Touches",
-        value: metrics.reactsCount,
-        subtext: "Recent expressions of love",
-        color: "text-cyan-400"
+      id: "activity",
+      icon: <Activity className="w-5 h-5 text-blue-500" />,
+      label: "Last Activity",
+      value: activity ? formatRelativeTime(activity.time) : "Nothing yet",
+      subtext: activity ? `${activityWho} ${activityWhat}` : "Send the first note",
+      color: activity ? "text-blue-400" : "text-neutral-600",
+      hint: "Open inbox",
+      onClick: onOpenInbox
     },
     {
-        id: "state",
-        icon: <Wind className="w-5 h-5 text-emerald-500" />,
-        label: "Current State",
-        value: metrics.state,
-        subtext: "Live headspace sync",
-        color: metrics.state === "In Conflict" ? "text-red-500" : (metrics.state === "Deep Peace" ? "text-emerald-400" : "text-neutral-400")
+      id: "touch",
+      icon: <Zap className="w-5 h-5 text-cyan-500" />,
+      label: "Signals This Week",
+      value: `${metrics.reactsCount}`,
+      subtext: metrics.reactsCount > 0 ? "Small signals between you two" : "Send one in a tap",
+      color: metrics.reactsCount > 0 ? "text-cyan-400" : "text-neutral-600",
+      hint: "Send a signal",
+      onClick: onOpenSignals
+    },
+    {
+      id: "state",
+      icon: <Wind className="w-5 h-5 text-emerald-500" />,
+      label: "Right Now",
+      value: metrics.state,
+      subtext: STATE_HELP[metrics.state] || "Based on today's signals and check-ins",
+      color: metrics.state === "In Conflict" ? "text-red-500" : (["Deep Peace", "Harmonious"].includes(metrics.state) ? "text-emerald-400" : "text-neutral-400"),
+      hint: "Update your mood",
+      onClick: onOpenSignals
     }
   ];
 
@@ -93,19 +143,21 @@ export const ArchiveDashboard = () => {
             <h1 className="text-6xl font-bebas tracking-wider uppercase leading-none">
               The <span className="text-transparent bg-clip-text bg-gradient-to-r from-yellow-400 to-red-500">Archive</span>
             </h1>
-            <p className="text-neutral-500 text-[10px] tracking-[0.4em] uppercase font-bebas mt-4">Consistency is the soul of connection</p>
+            <p className="text-neutral-500 text-[10px] tracking-[0.4em] uppercase font-bebas mt-4">How the two of you are doing, at a glance</p>
         </motion.div>
       </section>
 
       {/* 2. Metrics Cards (Moved above the calendar) */}
       <section className="px-6 grid grid-cols-2 md:grid-cols-3 gap-6 relative z-10">
         {cards.map((card, idx) => (
-          <motion.div
+          <motion.button
+            type="button"
+            onClick={card.onClick}
             key={card.id}
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ delay: 0.3 + idx * 0.05 }}
-            className="bg-white/5 border border-white/10 rounded-[2.5rem] p-6 md:p-10 space-y-4 md:space-y-6 backdrop-blur-3xl hover:bg-white/10 transition-all cursor-pointer group"
+            className="bg-white/5 border border-white/10 rounded-[2.5rem] p-6 md:p-10 space-y-4 md:space-y-6 backdrop-blur-3xl hover:bg-white/10 active:scale-[0.98] transition-all cursor-pointer group text-left flex flex-col"
           >
             <div className="flex justify-between items-start">
               <div className="p-2.5 rounded-2xl bg-white/5 group-hover:scale-110 transition-transform">
@@ -115,15 +167,19 @@ export const ArchiveDashboard = () => {
             
             <div className="space-y-1">
               <div className="text-[10px] md:text-xs font-bebas tracking-widest text-neutral-500 uppercase">{card.label}</div>
-              <div className={cn("text-2xl md:text-5xl font-bebas tracking-widest uppercase", card.color)}>{card.value}</div>
-              <div className="text-[9px] md:text-[11px] font-outfit text-neutral-600 uppercase tracking-wider">{card.subtext}</div>
+              <div className={cn("text-2xl md:text-4xl font-bebas tracking-widest uppercase break-words", card.color)}>{card.value}</div>
+              <div className="text-[10px] md:text-[11px] font-outfit text-neutral-500 leading-relaxed">{card.subtext}</div>
             </div>
-          </motion.div>
+
+            <div className="flex items-center gap-1 text-[10px] font-bebas tracking-widest uppercase text-neutral-600 group-hover:text-white transition-colors mt-auto">
+              {card.hint} <ArrowRight className="w-3 h-3" />
+            </div>
+          </motion.button>
         ))}
       </section>
 
       {/* 3. Streak Grid (The focal point) */}
-      <section className="px-6 relative z-10">
+      <section ref={calendarRef} className="px-6 relative z-10 scroll-mt-28">
         <StreakGrid history={metrics.historyCheckins} />
       </section>
 

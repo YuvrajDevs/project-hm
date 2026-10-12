@@ -223,7 +223,7 @@ export const SafeSpaceSession = () => {
                     initial={{ opacity: 0 }}
                     animate={{ opacity: 1 }}
                     exit={{ opacity: 0 }}
-                    className="fixed inset-0 z-[60] bg-black/90 backdrop-blur-xl flex items-center justify-center p-6"
+                    className="fixed inset-0 z-[60] overlay-backdrop flex items-center justify-center p-6"
                 >
                     <div className="max-w-md w-full bg-[#0a0a0a] border border-white/10 rounded-[3rem] p-10 text-center space-y-10">
                         <div className="space-y-4">

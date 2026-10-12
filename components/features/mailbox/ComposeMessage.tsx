@@ -21,7 +21,7 @@ const intents = (Object.keys(INTENT_ICONS) as MailboxIntent[]).map(id => ({
 export const ComposeMessage = ({ onClose }: { onClose: () => void }) => {
   const { sendMessage, partner, user } = useMailbox();
   const [status, setStatus] = useState<MailboxStatus | null>(null);
-  const [intent, setIntent] = useState<MailboxIntent | null>(null);
+  const [intent, setIntent] = useState<MailboxIntent | null>(user?.profile?.defaultIntent ?? null);
   const [note, setNote] = useState("");
   const [sending, setSending] = useState(false);
   const [error, setError] = useState("");
@@ -122,7 +122,7 @@ export const ComposeMessage = ({ onClose }: { onClose: () => void }) => {
       initial={{ opacity: 0 }} 
       animate={{ opacity: 1 }} 
       exit={{ opacity: 0 }}
-      className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-sm"
+      className="fixed inset-0 z-50 flex items-center justify-center p-4 overlay-backdrop"
     >
       <div className="w-full max-w-md bg-[#0f0f0f] border border-white/10 rounded-[2rem] overflow-hidden flex flex-col max-h-[90vh] shadow-2xl">
         <header className="p-4 border-b border-white/5 flex justify-between items-center">

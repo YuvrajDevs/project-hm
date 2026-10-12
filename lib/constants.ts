@@ -54,11 +54,11 @@ export const PREMIUM_ICONS: Record<MailboxStatus, { label: string; url: string; 
 };
 
 export const INTENT_ICONS: Record<MailboxIntent, { label: string; url: string }> = {
-  LISTEN: { label: "Just Listen", url: `${FLUENT_BASE}Ear/Default/3D/ear_3d.png` },
+  LISTEN: { label: "Just Listen", url: `${FLUENT_BASE}Ear/Default/3D/ear_3d_default.png` },
   REASSURE: { label: "Reassure Me", url: `${FLUENT_BASE}Hugging%20face/3D/hugging_face_3d.png` },
   ADVICE: { label: "Give Me Advice", url: `${FLUENT_BASE}Light%20bulb/3D/light_bulb_3d.png` },
   TALK: { label: "Let's Talk", url: `${FLUENT_BASE}Handshake/3D/handshake_3d.png` },
-  SAY_IT: { label: "Just Needed to Say It", url: `${FLUENT_BASE}Folded%20hands/Default/3D/folded_hands_3d.png` },
+  SAY_IT: { label: "Just Needed to Say It", url: `${FLUENT_BASE}Folded%20hands/Default/3D/folded_hands_3d_default.png` },
 };
 
 export const REACTION_ICONS: Record<ReactionType, { label: string; url: string; color: string; description: string; bgColor: string }> = {

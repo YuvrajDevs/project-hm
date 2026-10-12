@@ -3,86 +3,120 @@
 import React, { useState, useEffect } from "react";
 import { useMailbox } from "@/context/MailboxContext";
 import { updateProfile, updatePartnerNickname, updateCoupleAnniversary } from "@/lib/firestore-helpers";
-import { motion, AnimatePresence } from "framer-motion";
+import { motion } from "framer-motion";
 import { useRouter } from "next/navigation";
-import { 
-  Users, 
-  ArrowLeft, 
-  Pencil, 
+import {
+  ArrowLeft,
+  Pencil,
   Plus,
-  Check, 
+  Check,
   X,
-  LogOut, 
-  Camera,
+  Settings,
   Smile,
   Ghost,
   Cat,
-  ChevronRight,
-  HeartOff,
-  User as UserIcon
+  Eye,
+  CalendarHeart
 } from "lucide-react";
-import { LeavePartnerModal } from "@/components/features/profile/LeavePartnerModal";
 import { AmbientBackground } from "@/components/ui/AmbientBackground";
 import { cn } from "@/lib/utils";
 import { useAuthGuard } from "@/hooks/useAuthGuard";
 import { doc, updateDoc } from "firebase/firestore";
 import { db } from "@/lib/firebase";
+import { EmotionalProfile, MailboxIntent, User } from "@/lib/types";
+import { INTENT_ICONS, REACTION_ICONS } from "@/lib/constants";
 
-const CATEGORIES = [
-  { 
-    id: "howToShowUp", 
-    label: "How to Show Up for Me", 
+type TagCategoryId = "howToShowUp" | "loveLanguages" | "offSignals" | "interests" | "dislikes" | "personality";
+
+const CATEGORIES: { id: TagCategoryId; label: string; partnerLabel: string; icon: string; defaultTags: string[] }[] = [
+  {
+    id: "howToShowUp",
+    label: "How to Show Up for Me",
+    partnerLabel: "How to Show Up for {name}",
     icon: "🧠",
     defaultTags: ["Reassure me", "Give me space", "Just listen", "Distract me", "Be direct"]
   },
-  { 
-    id: "loveLanguages", 
-    label: "What Makes Me Feel Loved", 
+  {
+    id: "loveLanguages",
+    label: "What Makes Me Feel Loved",
+    partnerLabel: "What Makes {name} Feel Loved",
     icon: "❤️",
     defaultTags: ["Words", "Time", "Touch", "Acts", "Gifts"]
   },
-  { 
-    id: "offSignals", 
-    label: "When I’m Off, I Usually...", 
+  {
+    id: "offSignals",
+    label: "When I’m Off, I Usually...",
+    partnerLabel: "When {name} Is Off, They Usually...",
     icon: "⚡",
     defaultTags: ["Withdraw", "Overthink", "Get quiet", "Get reactive", "Need reassurance"]
   },
-  { 
-    id: "personality", 
-    label: "About Me (Personality)", 
+  {
+    id: "interests",
+    label: "Things I Like",
+    partnerLabel: "Things {name} Likes",
+    icon: "🎮",
+    defaultTags: ["Movies", "Gaming", "Gym", "Music", "Travel", "Cooking", "Reading"]
+  },
+  {
+    id: "dislikes",
+    label: "Things I Don’t Like",
+    partnerLabel: "Things {name} Doesn’t Like",
+    icon: "🚫",
+    defaultTags: ["Being interrupted", "Last-minute plans", "Silent treatment", "Loud places", "Being rushed"]
+  },
+  {
+    id: "personality",
+    label: "About Me",
+    partnerLabel: "About {name}",
     icon: "🎯",
     defaultTags: ["Introvert", "Extrovert", "Funny", "Sarcastic", "Chill", "Intense", "Planner", "Spontaneous"]
-  },
-  { 
-    id: "interests", 
-    label: "Things I Like", 
-    icon: "🎮",
-    defaultTags: ["Movies", "Gaming", "Gym", "Music", "Travel"]
   }
 ];
 
-const CHARACTERS = [
-  { id: "Male", icon: <Cat className="w-12 h-12" />, label: "Boy" },
-  { id: "Female", icon: <Smile className="w-12 h-12" />, label: "Girl" },
-  { id: "Non-binary", icon: <Ghost className="w-12 h-12" />, label: "Neutral" },
+const FACTS: { id: string; label: string; placeholder: string; type?: "date" }[] = [
+  { id: "birthday", label: "Birthday", placeholder: "", type: "date" },
+  { id: "favoriteFood", label: "Favourite food", placeholder: "E.g. Butter chicken, anything spicy" },
+  { id: "comfort", label: "What comforts me on a bad day", placeholder: "E.g. Tea, a walk, my playlist" },
+  { id: "idealDate", label: "My kind of date", placeholder: "E.g. Street food and a long drive" },
+  { id: "giftIdea", label: "A small thing I’d love", placeholder: "E.g. Flowers for no reason" },
 ];
 
+const AVATARS = [
+  { id: "Male", label: "Cat" },
+  { id: "Female", label: "Smile" },
+  { id: "Non-binary", label: "Ghost" },
+];
+
+const INTENTS = (Object.keys(INTENT_ICONS) as MailboxIntent[]).map(id => ({ id, ...INTENT_ICONS[id] }));
+
+const MAX_TAGS = 10;
+
+const getAvatar = (u: User | null) => {
+  if (u?.gender === "Male") return <Cat className="w-16 h-16 text-blue-400" />;
+  if (u?.gender === "Female") return <Smile className="w-16 h-16 text-pink-400" />;
+  return <Ghost className="w-16 h-16 text-neutral-500" />;
+};
+
+const formatDate = (dateId?: string) => {
+  if (!dateId) return "";
+  const [y, m, d] = dateId.split("-").map(Number);
+  if (!y || !m || !d) return dateId;
+  return new Date(y, m - 1, d).toLocaleDateString(undefined, { month: "long", day: "numeric", year: "numeric" });
+};
+
 export default function ProfilePage() {
-  const { user, partner, couple, logout, leavePartner, clearPartnerLeftStatus, isPaired, loading } = useMailbox();
+  const { user, partner, couple, isPaired, loading } = useMailbox();
   const router = useRouter();
   useAuthGuard();
-  
+
   const [view, setView] = useState<"me" | "partner">("me");
   const [editingSection, setEditingSection] = useState<string | null>(null);
-  const [isLeaveModalOpen, setIsLeaveModalOpen] = useState(false);
-  
+  const [error, setError] = useState("");
+
   const [localName, setLocalName] = useState("");
   const [localNickname, setLocalNickname] = useState("");
   const [customTagInput, setCustomTagInput] = useState("");
-  const [editingGender, setEditingGender] = useState(false);
-  const [editingAnniversary, setEditingAnniversary] = useState(false);
-  
-  const carouselRef = React.useRef<HTMLDivElement>(null);
+  const [localFacts, setLocalFacts] = useState<Record<string, string>>({});
 
   useEffect(() => {
     if (user) {
@@ -91,293 +125,404 @@ export default function ProfilePage() {
     }
   }, [user]);
 
-  useEffect(() => {
-    if (editingSection === "meme" || isLeaveModalOpen) {
-      document.body.style.overflow = "hidden";
-    } else {
-      document.body.style.overflow = "";
-    }
-    return () => { document.body.style.overflow = ""; }
-  }, [editingSection, isLeaveModalOpen]);
-
-  // Auto-scroll the meme carousel every 5 seconds
-  useEffect(() => {
-    const interval = setInterval(() => {
-      if (carouselRef.current) {
-        const { scrollLeft, scrollWidth, clientWidth } = carouselRef.current;
-        let nextScroll = scrollLeft + clientWidth;
-        // If we reached the end, loop back to the first slide
-        if (Math.ceil(nextScroll) >= scrollWidth) {
-          nextScroll = 0;
-        }
-        carouselRef.current.scrollTo({ left: nextScroll, behavior: 'smooth' });
-      }
-    }, 5000);
-    return () => clearInterval(interval);
-  }, []);
-
   if (loading || !user) return null;
 
-  const handleLeavePartner = async () => {
-    await leavePartner();
-    router.push("/");
+  // The partner tab only exists while connected
+  const isMe = view === "me" || !isPaired;
+  const displayedUser = isMe ? user : partner;
+  const profile: EmotionalProfile = displayedUser?.profile || {};
+  const firstName = (displayedUser?.displayName || "").trim().split(" ")[0] || (isMe ? "You" : "Your partner");
+  const mainName = (displayedUser?.displayName || "").trim() || (isMe ? "You" : "Partner");
+  const nickname = (user.partnerNickname || "").trim();
+
+  const saveProfile = async (next: EmotionalProfile) => {
+    setError("");
+    try {
+      await updateProfile(user.uid, next);
+    } catch (err) {
+      console.error(err);
+      setError("Couldn't save. Check your connection and try again.");
+    }
+  };
+
+  const openSection = (section: string | null) => {
+    setCustomTagInput("");
+    setError("");
+    if (section === "facts") setLocalFacts(user.profile?.facts || {});
+    setEditingSection(section);
   };
 
   const handleSaveName = async () => {
     const trimmedName = localName.trim();
-    const trimmedNickname = localNickname.trim();
+    setError("");
     try {
-      if (view === "me") {
+      if (isMe) {
+        // An empty name would leave the partner looking at a blank profile
+        if (!trimmedName) {
+          setLocalName(user.displayName);
+          setEditingSection(null);
+          return;
+        }
         await updateDoc(doc(db, "users", user.uid), { displayName: trimmedName });
       } else {
-        await updatePartnerNickname(user.uid, trimmedNickname);
+        await updatePartnerNickname(user.uid, localNickname.trim());
       }
       setEditingSection(null);
     } catch (err) {
       console.error(err);
+      setError("Couldn't save. Check your connection and try again.");
     }
   };
 
   const handleAnniversaryUpdate = async (date: string) => {
-    if (!user?.coupleId) return;
+    if (!user.coupleId || !date) return;
+    setError("");
     try {
         await updateCoupleAnniversary(user.coupleId, date);
-        setEditingAnniversary(false);
+        setEditingSection(null);
     } catch (err) {
-        console.error("Failed to update anniversary:", err);
+        console.error(err);
+        setError("Couldn't save the date. Try again.");
     }
   };
 
-  const toggleTag = async (categoryId: string, tag: string) => {
-    if (view !== "me") return;
-    const currentProfile = user.profile || {};
-    const categoryTags = (currentProfile as any)[categoryId] || [];
-    
+  const updateAvatar = async (avatar: string) => {
+    setError("");
+    try {
+      await updateDoc(doc(db, "users", user.uid), { gender: avatar });
+      setEditingSection(null);
+    } catch (err) {
+      console.error(err);
+      setError("Couldn't save. Check your connection and try again.");
+    }
+  };
+
+  const toggleTag = async (categoryId: TagCategoryId, tag: string) => {
+    const current = user.profile || {};
+    const categoryTags = current[categoryId] || [];
+
     let newTags;
     if (categoryTags.includes(tag)) {
-      newTags = categoryTags.filter((t: string) => t !== tag);
+      newTags = categoryTags.filter(t => t !== tag);
     } else {
-      if (categoryTags.length >= 10) return;
+      if (categoryTags.length >= MAX_TAGS) {
+        setError(`Up to ${MAX_TAGS} per section. Remove one to add another.`);
+        return;
+      }
       newTags = [...categoryTags, tag];
     }
-
-    try {
-      await updateProfile(user.uid, {
-        ...currentProfile,
-        [categoryId]: newTags
-      });
-    } catch (err) {
-      console.error(err);
-    }
+    await saveProfile({ ...current, [categoryId]: newTags });
   };
 
-  const removeCustomTag = async (categoryId: string, tag: string) => {
-    if (view !== "me") return;
-    const currentProfile = user.profile || {};
-    const customTags = currentProfile.customTags || {};
-    const categoryCustom = customTags[categoryId] || [];
-    const categoryActive = (currentProfile as any)[categoryId] || [];
-
-    try {
-      await updateProfile(user.uid, {
-        ...currentProfile,
-        customTags: {
-          ...customTags,
-          [categoryId]: categoryCustom.filter((t: string) => t !== tag)
-        },
-        [categoryId]: categoryActive.filter((t: string) => t !== tag)
-      });
-    } catch (err) {
-      console.error(err);
-    }
+  const removeCustomTag = async (categoryId: TagCategoryId, tag: string) => {
+    const current = user.profile || {};
+    const customTags = current.customTags || {};
+    await saveProfile({
+      ...current,
+      customTags: {
+        ...customTags,
+        [categoryId]: (customTags[categoryId] || []).filter(t => t !== tag)
+      },
+      [categoryId]: (current[categoryId] || []).filter(t => t !== tag)
+    });
   };
 
-  const addCustomTag = async (categoryId: string) => {
-    if (!customTagInput.trim() || view !== "me") return;
-    const currentProfile = user.profile || {};
-    const customTags = currentProfile.customTags || {};
-    const categoryCustom = customTags[categoryId] || [];
-    const categoryActive = (currentProfile as any)[categoryId] || [];
+  const addCustomTag = async (categoryId: TagCategoryId) => {
+    const tag = customTagInput.trim();
+    if (!tag) return;
+    const current = user.profile || {};
+    const customTags = current.customTags || {};
+    const categoryActive = current[categoryId] || [];
 
-    if (categoryActive.length >= 10) return;
-
-    try {
-      await updateProfile(user.uid, {
-        ...currentProfile,
-        customTags: {
-          ...customTags,
-          [categoryId]: Array.from(new Set([...categoryCustom, customTagInput.trim()]))
-        },
-        [categoryId]: [...categoryActive, customTagInput.trim()]
-      });
+    if (categoryActive.includes(tag)) {
       setCustomTagInput("");
-    } catch (err) {
-      console.error(err);
+      return;
     }
+    if (categoryActive.length >= MAX_TAGS) {
+      setError(`Up to ${MAX_TAGS} per section. Remove one to add another.`);
+      return;
+    }
+
+    await saveProfile({
+      ...current,
+      customTags: {
+        ...customTags,
+        [categoryId]: Array.from(new Set([...(customTags[categoryId] || []), tag]))
+      },
+      [categoryId]: [...categoryActive, tag]
+    });
+    setCustomTagInput("");
   };
 
-  const updateGender = async (g: string) => {
-    await updateDoc(doc(db, "users", user.uid), { gender: g });
-    setEditingGender(false);
+  const setDefaultIntent = async (intent: MailboxIntent) => {
+    const current = user.profile || {};
+    const next = { ...current };
+    // Tapping the selected one again clears it
+    if (current.defaultIntent === intent) delete next.defaultIntent;
+    else next.defaultIntent = intent;
+    await saveProfile(next);
   };
 
-  const isMe = view === "me";
-  const displayedUser = isMe ? user : partner;
-  
-  const displayNameRaw = (displayedUser?.displayName || "").trim();
-  const nicknameRaw = (isMe ? "" : user.partnerNickname || "").trim();
-
-  const mainName = displayNameRaw || (isMe ? "You" : "Partner");
-  const subText = isMe 
-    ? "Your Profile" 
-    : (nicknameRaw ? nicknameRaw : "Give them a sweet nickname");
-
-  const getAvatar = (u: any) => {
-    if (u?.gender === "Male") return <Cat className="w-16 h-16 text-blue-400" />;
-    if (u?.gender === "Female") return <Smile className="w-16 h-16 text-pink-400" />;
-    return <Ghost className="w-16 h-16 text-neutral-700" />;
+  const saveFacts = async () => {
+    const cleaned: Record<string, string> = {};
+    for (const fact of FACTS) {
+      const value = (localFacts[fact.id] || "").trim().slice(0, 80);
+      if (value) cleaned[fact.id] = value;
+    }
+    await saveProfile({ ...(user.profile || {}), facts: cleaned });
+    setEditingSection(null);
   };
+
+  const filledSections = [
+    !!user.profile?.defaultIntent,
+    ...CATEGORIES.map(cat => (user.profile?.[cat.id] || []).length > 0),
+    Object.keys(user.profile?.facts || {}).length > 0
+  ];
+  const filledCount = filledSections.filter(Boolean).length;
+
+  const moodIcon = partner?.currentMood
+    ? Object.values(REACTION_ICONS).find(icon => icon.label === partner.currentMood)?.url
+    : undefined;
+
+  const cardClass = "bg-white/5 border border-white/5 rounded-[2.5rem] p-8 space-y-6 relative";
+  const emptyText = isMe ? "Nothing here yet. Tap the pencil to add." : `${firstName} hasn’t added this yet.`;
 
   return (
     <div className="min-h-screen bg-[#050505] text-white font-outfit pb-32 relative">
         <AmbientBackground variant="standard" gender={displayedUser?.gender} />
-        
+
         <header className="flex justify-between items-center w-full fixed top-0 left-0 p-8 z-50 bg-gradient-to-b from-[#050505]/80 to-transparent backdrop-blur-sm pointer-events-none">
-            <button onClick={() => router.push("/")} className="w-10 h-10 flex items-center justify-center rounded-full bg-white/5 border border-white/5 hover:bg-white/10 transition-all text-white pointer-events-auto backdrop-blur-md">
+            <button onClick={() => router.push("/")} aria-label="Back to home" className="w-10 h-10 flex items-center justify-center rounded-full bg-white/5 border border-white/5 hover:bg-white/10 transition-all text-neutral-400 hover:text-white pointer-events-auto">
                 <ArrowLeft className="w-5 h-5" />
             </button>
-            <div className="relative flex bg-black/40 p-1.5 rounded-full border border-white/10 pointer-events-auto backdrop-blur-xl">
-                {(["me", "partner"] as const).map((v) => {
-                    if (!isPaired && v === "partner") return null;
-                    const isActive = view === v;
-                    return (
-                        <button
-                            key={v}
-                            onClick={() => setView(v)}
-                            className={cn(
-                                "px-6 py-2 rounded-full font-bebas text-[11px] tracking-widest uppercase relative z-10 transition-colors duration-300", 
-                                isActive ? "text-black" : "text-neutral-500 hover:text-white"
-                            )}
-                        >
-                            {isActive && (
-                                <motion.div
-                                    layoutId="profileTabActive"
-                                    className="absolute inset-0 bg-white rounded-full z-[-1]"
-                                    transition={{ type: "spring", stiffness: 400, damping: 30 }}
-                                />
-                            )}
-                            {v === "me" ? "You" : "Partner"}
-                        </button>
-                    );
-                })}
-            </div>
-            <div className="w-10 h-10" />
+            {isPaired ? (
+                <div className="relative flex bg-black/40 p-1.5 rounded-full border border-white/10 pointer-events-auto backdrop-blur-xl">
+                    {(["me", "partner"] as const).map((v) => {
+                        const isActive = view === v;
+                        return (
+                            <button
+                                key={v}
+                                onClick={() => { setView(v); openSection(null); }}
+                                className={cn(
+                                    "px-6 py-2 rounded-full font-bebas text-[11px] tracking-widest uppercase relative z-10 transition-colors duration-300",
+                                    isActive ? "text-black" : "text-neutral-500 hover:text-white"
+                                )}
+                            >
+                                {isActive && (
+                                    <motion.div
+                                        layoutId="profileTabActive"
+                                        className="absolute inset-0 bg-white rounded-full z-[-1]"
+                                    />
+                                )}
+                                {v === "me" ? "You" : (partner?.displayName?.split(" ")[0] || "Partner")}
+                            </button>
+                        );
+                    })}
+                </div>
+            ) : (
+                <span className="font-bebas text-xl tracking-[0.2em] uppercase">Profile</span>
+            )}
+            <button onClick={() => router.push("/settings")} aria-label="Settings" className="w-10 h-10 flex items-center justify-center rounded-full bg-white/5 border border-white/5 hover:bg-white/10 transition-all text-neutral-400 hover:text-white pointer-events-auto">
+                <Settings className="w-5 h-5" />
+            </button>
         </header>
 
-        <div className="max-w-4xl mx-auto px-6 pt-32 space-y-12 relative z-10">
+        <div className="max-w-4xl mx-auto px-6 pt-32 space-y-8 relative z-10">
+            {/* ─── Who ─── */}
             <section className="flex flex-col items-center text-center space-y-4">
-                <div className="w-32 h-32 rounded-[3.5rem] bg-white/5 border border-white/5 flex items-center justify-center shadow-2xl">
+                <button
+                    onClick={() => isMe && openSection(editingSection === "avatar" ? null : "avatar")}
+                    disabled={!isMe}
+                    aria-label={isMe ? "Change avatar" : undefined}
+                    className="w-32 h-32 rounded-[3.5rem] bg-white/5 border border-white/5 flex items-center justify-center shadow-2xl relative"
+                >
                     {getAvatar(displayedUser)}
-                </div>
+                    {isMe && (
+                        <span className="absolute -bottom-1 -right-1 w-8 h-8 rounded-full bg-white text-black flex items-center justify-center shadow-lg">
+                            <Pencil className="w-3.5 h-3.5" />
+                        </span>
+                    )}
+                </button>
 
-                <div className="space-y-2 relative group w-full flex flex-col items-center">
+                {isMe && editingSection === "avatar" && (
+                    <div className="flex gap-2">
+                        {AVATARS.map(a => (
+                            <button
+                                key={a.id}
+                                onClick={() => updateAvatar(a.id)}
+                                className={cn(
+                                    "px-4 py-2 rounded-xl text-xs font-outfit border transition-all",
+                                    user.gender === a.id ? "bg-white text-black border-white" : "border-white/10 text-neutral-500 hover:border-white/25"
+                                )}
+                            >
+                                {a.label}
+                            </button>
+                        ))}
+                    </div>
+                )}
+
+                <div className="space-y-2 w-full flex flex-col items-center">
                     {editingSection === "name" ? (
                         <div className="flex flex-col items-center gap-2">
-                            <input 
+                            <input
                                 value={isMe ? localName : localNickname}
                                 onChange={(e) => isMe ? setLocalName(e.target.value) : setLocalNickname(e.target.value)}
-                                className="bg-white/5 border border-white/20 rounded-xl px-4 py-2 text-3xl text-center font-bebas tracking-wider uppercase focus:outline-none focus:border-white w-full max-w-xs"
+                                maxLength={30}
+                                placeholder={isMe ? "Your name" : "A sweet nickname"}
+                                className="bg-white/5 border border-white/10 rounded-2xl px-5 py-3 text-center text-2xl font-bebas tracking-wider uppercase focus:outline-none focus:border-white/30 placeholder:text-neutral-700"
                                 autoFocus
                                 onBlur={handleSaveName}
                                 onKeyDown={(e) => e.key === 'Enter' && handleSaveName()}
                             />
                             <p className="text-[10px] text-neutral-500 uppercase tracking-widest font-bebas">
-                                {isMe ? "Updating your name" : `Nickname for ${displayNameRaw}`}
+                                {isMe ? "The name your partner sees" : `Only you see this nickname for ${firstName}`}
                             </p>
                         </div>
                     ) : (
-                        <div className="flex flex-col items-center w-full">
-                            <div className="relative inline-flex items-center justify-center w-full">
-                                <h1 className="text-5xl font-bebas tracking-wider uppercase leading-none">{mainName}</h1>
-                                <button 
-                                    onClick={() => setEditingSection("name")} 
-                                    className="absolute left-[calc(50%+110px)] p-2 text-neutral-800 hover:text-white transition-all transform -translate-y-1/2 top-1/2"
-                                >
-                                    <Pencil className="w-4 h-4" />
-                                </button>
+                        <>
+                            <div className="flex items-center justify-center gap-2">
+                                <h1 className="text-5xl font-bebas tracking-wider uppercase leading-none break-words">{mainName}</h1>
+                                {isMe && (
+                                    <button onClick={() => openSection("name")} aria-label="Edit name" className="p-2 text-neutral-600 hover:text-white transition-all">
+                                        <Pencil className="w-4 h-4" />
+                                    </button>
+                                )}
                             </div>
-                            <p className={cn(
-                                "font-bebas text-sm tracking-[0.3em] uppercase mt-2 text-center",
-                                nicknameRaw || isMe ? "text-neutral-500" : "text-neutral-700 italic"
-                            )}>
-                                {subText}
-                            </p>
-                        </div>
+                            {isMe ? (
+                                <p className="font-bebas text-sm tracking-[0.3em] uppercase text-neutral-500">Your Profile</p>
+                            ) : (
+                                <button onClick={() => openSection("name")} className="font-bebas text-sm tracking-[0.3em] uppercase text-neutral-500 hover:text-white transition-colors flex items-center gap-2">
+                                    {nickname ? `“${nickname}”` : "Give them a sweet nickname"}
+                                    <Pencil className="w-3 h-3" />
+                                </button>
+                            )}
+                        </>
                     )}
                 </div>
 
-                {isMe && (
-                    <div className="flex flex-col items-center gap-2">
-                        <div className="px-4 py-1.5 rounded-full bg-white/5 border border-white/5 text-[10px] uppercase tracking-widest text-neutral-500 flex items-center gap-2">
-                            Gender: <span className="text-white">{user.gender || "Not set"}</span>
-                            <button onClick={() => setEditingGender(!editingGender)} className="hover:text-white">
-                                <Pencil className="w-3 h-3" />
-                            </button>
-                        </div>
-                        {editingGender && (
-                            <div className="flex gap-2">
-                                {["Male", "Female", "Non-binary", "Skip"].map(g => (
-                                    <button key={g} onClick={() => updateGender(g)} className="px-3 py-1 rounded-lg bg-white/10 text-[10px] uppercase font-bebas hover:bg-white hover:text-black transition-all">{g}</button>
-                                ))}
-                            </div>
-                        )}
+                {/* Partner's mood right now */}
+                {!isMe && partner?.currentMood && (
+                    <div className="flex items-center gap-2 px-4 py-2 rounded-full bg-white/5 border border-white/10">
+                        {moodIcon && <img src={moodIcon} alt="" className="w-5 h-5" />}
+                        <span className="font-bebas text-xs tracking-widest uppercase text-neutral-300">Feeling {partner.currentMood}</span>
                     </div>
                 )}
 
-                {/* Anniversary Section */}
-                <div className="flex flex-col items-center gap-2 pt-2">
-                    <div className="px-4 py-1.5 rounded-full bg-white/5 border border-white/5 text-[10px] uppercase tracking-widest text-neutral-500 flex items-center gap-2">
-                        Meeting Date: <span className="text-white">{couple?.anniversaryDate || "Not set"}</span>
-                        <button onClick={() => setEditingAnniversary(!editingAnniversary)} className="hover:text-white">
+                {/* Shared date */}
+                {isPaired && (
+                    <div className="flex flex-col items-center gap-2">
+                        <button
+                            onClick={() => openSection(editingSection === "anniversary" ? null : "anniversary")}
+                            className="flex items-center gap-2 text-[11px] font-bebas tracking-widest uppercase text-neutral-500 hover:text-white transition-colors"
+                        >
+                            <CalendarHeart className="w-3.5 h-3.5" />
+                            {couple?.anniversaryDate ? <>Together since <span className="text-white">{formatDate(couple.anniversaryDate)}</span></> : "Add the day you met"}
                             <Pencil className="w-3 h-3" />
                         </button>
-                    </div>
-                    {editingAnniversary && (
-                        <div className="flex items-center gap-2">
-                            <input 
-                                type="date" 
-                                className="bg-white/5 border border-white/20 rounded-lg px-3 py-1 text-xs text-white focus:outline-none focus:border-white font-bebas"
+                        {editingSection === "anniversary" && (
+                            <input
+                                type="date"
+                                max={new Date().toISOString().split("T")[0]}
+                                className="bg-white/5 border border-white/10 rounded-xl px-4 py-2 text-sm text-white focus:outline-none focus:border-white/30 [color-scheme:dark]"
                                 defaultValue={couple?.anniversaryDate}
                                 onChange={(e) => handleAnniversaryUpdate(e.target.value)}
                             />
-                        </div>
-                    )}
-                </div>
+                        )}
+                    </div>
+                )}
             </section>
 
+            {/* Who sees this */}
+            {isMe && (
+                <div className="flex items-start gap-3 bg-white/5 border border-white/5 rounded-2xl p-5">
+                    <Eye className="w-4 h-4 text-neutral-500 shrink-0 mt-0.5" />
+                    <div className="space-y-1">
+                        <p className="text-xs text-neutral-300 font-outfit leading-relaxed">
+                            {isPaired
+                                ? `${partner?.displayName?.split(" ")[0] || "Your partner"} can see everything on this page. It’s how they learn what helps you.`
+                                : "Once you connect, your partner sees this page. It’s how they learn what helps you."}
+                        </p>
+                        <p className="text-[10px] font-bebas tracking-widest uppercase text-neutral-600">
+                            {filledCount} of {filledSections.length} sections filled
+                        </p>
+                    </div>
+                </div>
+            )}
+
+            {error && (
+                <p className="text-rose-500 text-xs font-outfit text-center">{error}</p>
+            )}
+
+            {/* ─── What I need when I'm upset ─── */}
+            <section className={cardClass}>
+                <div className="flex items-center gap-3">
+                    <span className="text-2xl">🫶</span>
+                    <div>
+                        <h3 className="font-bebas text-xl tracking-widest text-white uppercase">
+                            {isMe ? "When I’m Upset, I Usually Need" : `When ${firstName} Is Upset, They Usually Need`}
+                        </h3>
+                        {isMe && (
+                            <p className="text-[10px] font-bebas tracking-widest uppercase text-neutral-600 mt-1">
+                                Pre-selected when you write a note. You can change it each time.
+                            </p>
+                        )}
+                    </div>
+                </div>
+
+                {isMe ? (
+                    <div className="flex flex-wrap gap-2">
+                        {INTENTS.map(i => (
+                            <button
+                                key={i.id}
+                                onClick={() => setDefaultIntent(i.id)}
+                                className={cn(
+                                    "px-4 py-2.5 rounded-full border text-xs font-outfit transition-all flex items-center gap-2",
+                                    profile.defaultIntent === i.id ? "bg-white text-black border-white" : "bg-white/5 border-white/5 text-neutral-400 hover:border-white/20"
+                                )}
+                            >
+                                <img src={i.url} alt="" className="w-5 h-5 object-contain" /> {i.label}
+                            </button>
+                        ))}
+                    </div>
+                ) : profile.defaultIntent ? (
+                    <div className="flex items-center gap-4">
+                        <img src={INTENT_ICONS[profile.defaultIntent].url} alt="" className="w-12 h-12 object-contain" />
+                        <div className="text-3xl font-bebas tracking-widest uppercase">{INTENT_ICONS[profile.defaultIntent].label}</div>
+                    </div>
+                ) : (
+                    <p className="text-neutral-600 font-outfit text-sm italic">{emptyText}</p>
+                )}
+            </section>
+
+            {/* ─── Tag sections ─── */}
             <div className="grid gap-6 md:grid-cols-2">
                 {CATEGORIES.map((cat, index) => {
-                    const profileData = isMe ? user.profile : partner?.profile;
-                    const activeTags = (profileData as any)?.[cat.id] || [];
-                    const customOptions = (profileData as any)?.customTags?.[cat.id] || [];
-                    const allOptions = Array.from(new Set([...cat.defaultTags, ...customOptions]));
-                    const isEditing = editingSection === cat.id;
+                    const activeTags = profile[cat.id] || [];
+                    const customOptions = profile.customTags?.[cat.id] || [];
+                    const allOptions = Array.from(new Set([...cat.defaultTags, ...customOptions, ...activeTags]));
+                    const isEditing = isMe && editingSection === cat.id;
 
                     return (
-                        <motion.div 
-                            key={cat.id} 
+                        <motion.div
+                            key={cat.id}
                             initial={{ opacity: 0, y: 20 }}
                             animate={{ opacity: 1, y: 0 }}
-                            transition={{ delay: index * 0.1 }}
-                            className="bg-white/5 border border-white/5 rounded-[2.5rem] p-8 space-y-6 relative group"
+                            transition={{ delay: index * 0.05 }}
+                            className={cardClass}
                         >
-                            <div className="flex justify-between items-center">
+                            <div className="flex justify-between items-center gap-3">
                                 <div className="flex items-center gap-3">
                                     <span className="text-2xl">{cat.icon}</span>
-                                    <h3 className="font-bebas text-xl tracking-widest text-white uppercase">{cat.label}</h3>
+                                    <h3 className="font-bebas text-xl tracking-widest text-white uppercase">
+                                        {isMe ? cat.label : cat.partnerLabel.replace("{name}", firstName)}
+                                    </h3>
                                 </div>
                                 {isMe && (
-                                    <button onClick={() => setEditingSection(isEditing ? null : cat.id)} className={cn("p-2 rounded-full transition-all", isEditing ? "bg-white text-black" : "text-neutral-700 hover:text-white")}>
+                                    <button
+                                        onClick={() => openSection(isEditing ? null : cat.id)}
+                                        aria-label={isEditing ? "Done" : `Edit ${cat.label}`}
+                                        className={cn("p-2 rounded-full transition-all shrink-0", isEditing ? "bg-white text-black" : "text-neutral-600 hover:text-white")}
+                                    >
                                         {isEditing ? <Check className="w-4 h-4" /> : <Pencil className="w-4 h-4" />}
                                     </button>
                                 )}
@@ -387,20 +532,25 @@ export default function ProfilePage() {
                                 {isEditing ? (
                                     <>
                                         {allOptions.map(tag => (
-                                            <div key={tag} className="relative group/tag">
-                                                <button 
+                                            <div key={tag} className="relative">
+                                                <button
                                                     onClick={() => toggleTag(cat.id, tag)}
                                                     className={cn(
-                                                        "px-4 py-2 rounded-xl text-xs font-outfit border transition-all", 
-                                                        activeTags.includes(tag) ? "bg-white text-black border-white" : "border-white/10 text-neutral-500 hover:border-white/25"
+                                                        "px-4 py-2 rounded-xl text-xs font-outfit border transition-all",
+                                                        activeTags.includes(tag) ? "bg-white text-black border-white" : "border-white/10 text-neutral-500 hover:border-white/25",
+                                                        customOptions.includes(tag) && "pr-8"
                                                     )}
                                                 >
                                                     {tag}
                                                 </button>
                                                 {customOptions.includes(tag) && (
-                                                    <button 
+                                                    <button
                                                         onClick={() => removeCustomTag(cat.id, tag)}
-                                                        className="absolute -top-2 -right-2 w-5 h-5 bg-red-500 text-white rounded-full flex items-center justify-center opacity-0 group-hover/tag:opacity-100 transition-opacity shadow-lg"
+                                                        aria-label={`Delete ${tag}`}
+                                                        className={cn(
+                                                            "absolute right-1.5 top-1/2 -translate-y-1/2 w-5 h-5 rounded-full flex items-center justify-center",
+                                                            activeTags.includes(tag) ? "text-black/50 hover:text-black" : "text-neutral-600 hover:text-white"
+                                                        )}
                                                     >
                                                         <X className="w-3 h-3" />
                                                     </button>
@@ -408,25 +558,26 @@ export default function ProfilePage() {
                                             </div>
                                         ))}
                                         <div className="flex items-center gap-2 w-full mt-2">
-                                            <input 
+                                            <input
                                                 value={customTagInput}
                                                 onChange={(e) => setCustomTagInput(e.target.value)}
-                                                placeholder="Add custom..."
+                                                placeholder="Add your own..."
+                                                maxLength={30}
                                                 className="flex-1 bg-white/5 border border-white/10 rounded-xl px-4 py-2 text-xs focus:outline-none focus:border-white/30"
                                                 onKeyDown={(e) => e.key === 'Enter' && addCustomTag(cat.id)}
                                             />
-                                            <button onClick={() => addCustomTag(cat.id)} className="p-2 bg-white text-black rounded-xl">
+                                            <button onClick={() => addCustomTag(cat.id)} aria-label="Add" className="p-2 bg-white text-black rounded-xl">
                                                 <Plus className="w-4 h-4" />
                                             </button>
                                         </div>
                                     </>
                                 ) : (
                                     activeTags.length > 0 ? (
-                                        activeTags.map((tag: string) => (
+                                        activeTags.map(tag => (
                                             <span key={tag} className="px-5 py-2.5 rounded-2xl bg-white/10 border border-white/5 text-white text-sm shadow-sm">{tag}</span>
                                         ))
                                     ) : (
-                                        <p className="text-neutral-800 font-outfit text-sm italic">No preferences shared yet.</p>
+                                        <p className="text-neutral-600 font-outfit text-sm italic">{emptyText}</p>
                                     )
                                 )}
                             </div>
@@ -435,108 +586,73 @@ export default function ProfilePage() {
                 })}
             </div>
 
-            <section className="bg-white/5 border border-white/5 rounded-[2.5rem] p-8 space-y-6">
-                <div className="flex justify-between items-center">
+            {/* ─── Good to know ─── */}
+            <section className={cardClass}>
+                <div className="flex justify-between items-center gap-3">
                     <div className="flex items-center gap-3">
-                        <span className="text-2xl">😂</span>
-                        <h3 className="font-bebas text-xl tracking-widest text-white uppercase">Me as a Meme</h3>
+                        <span className="text-2xl">📌</span>
+                        <h3 className="font-bebas text-xl tracking-widest text-white uppercase">
+                            {isMe ? "Good to Know About Me" : `Good to Know About ${firstName}`}
+                        </h3>
                     </div>
                     {isMe && (
-                        <button onClick={() => setEditingSection("meme")} className="p-2 rounded-full text-neutral-700 hover:text-white transition-all">
-                            <Pencil className="w-4 h-4" />
+                        <button
+                            onClick={() => editingSection === "facts" ? saveFacts() : openSection("facts")}
+                            aria-label={editingSection === "facts" ? "Save" : "Edit good to know"}
+                            className={cn("p-2 rounded-full transition-all shrink-0", editingSection === "facts" ? "bg-white text-black" : "text-neutral-600 hover:text-white")}
+                        >
+                            {editingSection === "facts" ? <Check className="w-4 h-4" /> : <Pencil className="w-4 h-4" />}
                         </button>
                     )}
                 </div>
-                <div className="relative w-full max-w-sm mx-auto overflow-hidden rounded-[2.5rem] border border-white/10 group">
-                    <div 
-                        ref={carouselRef}
-                        className="flex w-full overflow-x-auto snap-x snap-mandatory no-scrollbar"
-                    >
-                        {[1, 2, 3].map(i => (
-                            <div key={i} className="snap-center shrink-0 w-full aspect-square bg-white/5 flex flex-col items-center justify-center text-neutral-700 space-y-4">
-                                <span className="text-6xl opacity-30 drop-shadow-2xl">🖼️</span>
-                                <span className="text-xs font-bebas tracking-widest uppercase opacity-50">Image {i} of 3</span>
+
+                {isMe && editingSection === "facts" ? (
+                    <div className="grid gap-4 md:grid-cols-2">
+                        {FACTS.map(fact => (
+                            <div key={fact.id} className="space-y-1">
+                                <label className="text-[10px] font-bebas text-neutral-500 uppercase tracking-widest ml-1">{fact.label}</label>
+                                <input
+                                    type={fact.type || "text"}
+                                    value={localFacts[fact.id] || ""}
+                                    onChange={(e) => setLocalFacts({ ...localFacts, [fact.id]: e.target.value })}
+                                    placeholder={fact.placeholder}
+                                    maxLength={80}
+                                    className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-3 text-sm text-white focus:outline-none focus:border-white/30 placeholder:text-neutral-700 [color-scheme:dark]"
+                                />
                             </div>
                         ))}
                     </div>
-                </div>
+                ) : Object.keys(profile.facts || {}).length > 0 ? (
+                    <div className="grid gap-4 md:grid-cols-2">
+                        {FACTS.filter(fact => profile.facts?.[fact.id]).map(fact => (
+                            <div key={fact.id} className="space-y-1">
+                                <div className="text-[10px] font-bebas text-neutral-500 uppercase tracking-widest">{fact.label}</div>
+                                <div className="text-sm text-white font-outfit break-words">
+                                    {fact.type === "date" ? formatDate(profile.facts?.[fact.id]) : profile.facts?.[fact.id]}
+                                </div>
+                            </div>
+                        ))}
+                    </div>
+                ) : (
+                    <p className="text-neutral-600 font-outfit text-sm italic">{emptyText}</p>
+                )}
             </section>
 
-            <AnimatePresence>
-                {editingSection === "meme" && (
-                    <div className="fixed inset-0 z-[100] flex items-center justify-center p-6 bg-black/80 backdrop-blur-sm" onClick={() => setEditingSection(null)}>
-                        <motion.div 
-                            initial={{ scale: 0.9, y: 20, opacity: 0 }}
-                            animate={{ scale: 1, y: 0, opacity: 1 }}
-                            exit={{ scale: 0.9, y: 20, opacity: 0 }}
-                            className="w-full max-w-sm bg-neutral-900 border border-white/10 rounded-[2.5rem] p-8 text-center space-y-6 shadow-2xl relative"
-                            onClick={e => e.stopPropagation()}
-                        >
-                            <div className="w-16 h-16 bg-white/5 border border-white/10 rounded-2xl flex items-center justify-center mx-auto text-3xl">
-                                🚧
-                            </div>
-                            <div className="space-y-2">
-                                <h3 className="text-2xl font-bebas tracking-widest uppercase text-white">Under Construction</h3>
-                                <p className="text-xs font-outfit text-neutral-400 leading-relaxed">The meme upload service is currently being provisioned. Soon you&apos;ll be able to upload up to 3 hilarious images here!</p>
-                            </div>
-                            <button 
-                                onClick={() => setEditingSection(null)}
-                                className="w-full bg-white text-black py-4 rounded-2xl font-bebas tracking-widest uppercase mt-4 active:scale-95 transition-all"
-                            >
-                                I&apos;ll Wait
-                            </button>
-                        </motion.div>
-                    </div>
-                )}
-            </AnimatePresence>
-
-            {isMe && (
-                <div className="grid grid-cols-2 gap-4 mt-12 pb-12">
-                    {isPaired ? (
-                        <button 
-                            onClick={() => setIsLeaveModalOpen(true)}
-                            className="w-full flex flex-col items-center justify-center p-6 bg-red-500/5 hover:bg-red-500/10 border border-red-500/10 rounded-[2rem] transition-all group"
-                        >
-                            <div className="p-4 bg-red-500/10 rounded-2xl text-red-500 mb-4 group-hover:scale-110 transition-transform"><HeartOff className="w-6 h-6" /></div>
-                            <div className="font-bebas tracking-widest uppercase text-white leading-none text-center">Leave Partner</div>
-                            <div className="text-[9px] text-neutral-600 uppercase tracking-widest mt-2 px-2 text-center">End shared safe space</div>
-                        </button>
-                    ) : (
-                        <button 
-                            onClick={async () => {
-                                if (user.leftByPartner) {
-                                    await clearPartnerLeftStatus();
-                                }
-                                router.push("/pair");
-                            }}
-                            className="w-full flex flex-col items-center justify-center p-6 bg-white text-black border border-white rounded-[2rem] transition-all group shadow-xl"
-                        >
-                            <div className="p-4 bg-black/5 rounded-2xl text-black mb-4 group-hover:scale-110 transition-transform"><Plus className="w-6 h-6" /></div>
-                            <div className="font-bebas tracking-widest uppercase text-black leading-none text-center">Connect Partner</div>
-                            <div className="text-[9px] text-neutral-500 uppercase tracking-widest mt-2 px-2 text-center">Start a new safe space</div>
-                        </button>
-                    )}
-
-                    <button 
-                        onClick={() => {
-                            logout();
-                            router.push("/");
-                        }}
-                        className="w-full flex flex-col items-center justify-center p-6 bg-white/5 hover:bg-white/10 border border-white/5 rounded-[2rem] transition-all group"
-                    >
-                        <div className="p-4 bg-white/5 rounded-2xl text-neutral-400 group-hover:text-white mb-4 group-hover:scale-110 transition-all"><LogOut className="w-6 h-6" /></div>
-                        <div className="font-bebas tracking-widest uppercase text-white leading-none text-center">Logout</div>
-                        <div className="text-[9px] text-neutral-600 uppercase tracking-widest mt-2 px-2 text-center">Sign out of device</div>
-                    </button>
-                </div>
+            {/* ─── Not connected yet ─── */}
+            {!isPaired && (
+                <button
+                    onClick={() => router.push("/pair")}
+                    className="w-full py-4 bg-white text-black rounded-2xl font-bebas tracking-[0.2em] uppercase text-base hover:bg-neutral-200 active:scale-[0.98] transition-all flex items-center justify-center gap-3"
+                >
+                    <Plus className="w-5 h-5" />
+                    Connect With Your Partner
+                </button>
             )}
 
-            <LeavePartnerModal 
-                isOpen={isLeaveModalOpen}
-                onClose={() => setIsLeaveModalOpen(false)}
-                onConfirm={handleLeavePartner}
-                partnerName={partner?.displayName || "your partner"}
-            />
+            <p className="text-center text-[10px] font-bebas tracking-widest uppercase text-neutral-700 pb-12">
+                Sign out, notifications and account options are in{" "}
+                <button onClick={() => router.push("/settings")} className="text-neutral-400 hover:text-white underline underline-offset-4">Settings</button>
+            </p>
         </div>
     </div>
   );

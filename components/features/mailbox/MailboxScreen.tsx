@@ -48,16 +48,16 @@ export const MailboxScreen: React.FC<MailboxScreenProps> = ({ onOpenCheckIn, onC
                         <div className="space-y-4">
                             <div className="flex items-center gap-2">
                                 <Sparkles className="w-4 h-4 text-yellow-400" />
-                                <span className="text-[10px] font-bebas tracking-[0.4em] text-neutral-500 uppercase">Current Rhythm</span>
+                                <span className="text-[10px] font-bebas tracking-[0.4em] text-neutral-500 uppercase">Check-in Streak</span>
                             </div>
                             <div className="space-y-1">
                                 <h2 className="text-7xl font-bebas text-white leading-none tracking-tight">
-                                    {metrics.streak} <span className="text-2xl text-neutral-600">Days</span>
+                                    {metrics.streak} <span className="text-2xl text-neutral-600">{metrics.streak === 1 ? "Day" : "Days"}</span>
                                 </h2>
                                 <p className="text-neutral-500 font-outfit text-xs uppercase tracking-widest leading-relaxed">
                                     {metrics.streak > 0 
-                                        ? "Your heartbeat is in perfect synchronization." 
-                                        : "Start your streak today with a sync."}
+                                        ? "Days in a row you both checked in." 
+                                        : "Check in together today to start a streak."}
                                 </p>
                             </div>
                         </div>
