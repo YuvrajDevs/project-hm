@@ -24,6 +24,7 @@ export const ComposeMessage = ({ onClose }: { onClose: () => void }) => {
   const [intent, setIntent] = useState<MailboxIntent | null>(null);
   const [note, setNote] = useState("");
   const [sending, setSending] = useState(false);
+  const [error, setError] = useState("");
   const { playPop, playSend, vibrateTick } = useSensoryFeedback();
 
   // Time Capsule States
@@ -80,7 +81,12 @@ export const ComposeMessage = ({ onClose }: { onClose: () => void }) => {
 
   const handleSend = async () => {
     if (!status || !intent) return;
+    if (showCapsuleParams && unlockAt && new Date(unlockAt).getTime() <= Date.now()) {
+      setError("Pick an unlock time in the future.");
+      return;
+    }
     setSending(true);
+    setError("");
     playSend();
     try {
       const payload: any = { status, intent, note: note.slice(0, 140) };
@@ -105,6 +111,7 @@ export const ComposeMessage = ({ onClose }: { onClose: () => void }) => {
       onClose();
     } catch (err) {
       console.error(err);
+      setError("Couldn't send. Check your connection and try again.");
     } finally {
       setSending(false);
     }
@@ -297,7 +304,10 @@ export const ComposeMessage = ({ onClose }: { onClose: () => void }) => {
             </AnimatePresence>
         </div>
 
-        <footer className="p-4 border-t border-white/5">
+        <footer className="p-4 border-t border-white/5 space-y-3">
+          {error && (
+            <p className="text-rose-500 text-[10px] uppercase font-bebas tracking-widest text-center">{error}</p>
+          )}
           <button
             disabled={!status || !intent || sending}
             onClick={handleSend}

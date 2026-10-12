@@ -16,6 +16,9 @@ export interface User {
   currentMood?: string;
   moodUpdatedAt?: string;
   timezone?: string;
+  settings?: {
+    notificationsEnabled?: boolean;
+  };
   createdAt: string;
 }
 

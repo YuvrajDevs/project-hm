@@ -1,5 +1,8 @@
 import { MailboxStatus, MailboxIntent, ReactionType } from "./types";
 
+// Invite code carried from an invite link through sign-up (localStorage)
+export const PENDING_INVITE_KEY = "hm_pending_invite";
+
 const FLUENT_BASE = "https://raw.githubusercontent.com/microsoft/fluentui-emoji/main/assets/";
 
 export const PREMIUM_ICONS: Record<MailboxStatus, { label: string; url: string; color: string }> = {

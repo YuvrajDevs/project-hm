@@ -11,7 +11,7 @@ export const MoodStatusHub = () => {
   const { user, partner } = useMailbox();
 
   const todayId = getCheckInDateId();
-  const needsUpdate = !user?.moodUpdatedAt || user.moodUpdatedAt.split('T')[0] !== todayId;
+  const needsUpdate = !user?.moodUpdatedAt || getCheckInDateId(new Date(user.moodUpdatedAt)) !== todayId;
 
   const openSignalSelector = () => {
     window.dispatchEvent(new CustomEvent('openSignalSelector'));

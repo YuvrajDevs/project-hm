@@ -5,6 +5,7 @@ import Link from 'next/link';
 import { ArrowLeft, Mail, Send, CheckCircle2, MessageSquareHeart, ShieldCheck } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { AmbientBackground } from '@/components/ui/AmbientBackground';
+import { sendContactMessage } from '@/lib/firestore-helpers';
 
 export default function ContactPage() {
   const [formData, setFormData] = useState({
@@ -13,17 +14,20 @@ export default function ContactPage() {
     purpose: 'general',
     message: ''
   });
-  const [status, setStatus] = useState<'idle' | 'sending' | 'sent'>('idle');
+  const [status, setStatus] = useState<'idle' | 'sending' | 'sent' | 'error'>('idle');
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!formData.email || !formData.message) return;
     
     setStatus('sending');
-    // Simulate API delay
-    setTimeout(() => {
+    try {
+      await sendContactMessage(formData);
       setStatus('sent');
-    }, 1500);
+    } catch (err) {
+      console.error(err);
+      setStatus('error');
+    }
   };
 
   return (
@@ -64,7 +68,7 @@ export default function ContactPage() {
                 <CheckCircle2 className="w-10 h-10" />
               </div>
               <div className="space-y-2">
-                <h2 className="text-3xl font-bebas tracking-widest uppercase text-white">Message Set!</h2>
+                <h2 className="text-3xl font-bebas tracking-widest uppercase text-white">Message Sent</h2>
                 <p className="text-sm text-neutral-400 font-outfit leading-relaxed">
                   We have received your inquiry. We aim to respond within a reasonable timeframe.
                 </p>
@@ -146,6 +150,9 @@ export default function ContactPage() {
                   <><Send className="w-5 h-5" /> Send Message</>
                 )}
               </button>
+              {status === 'error' && (
+                <p className="text-rose-500 text-xs font-inter text-center mt-3">Your message was not sent. Check your connection and try again.</p>
+              )}
             </div>
 
               {/* Compliance Badges */}
@@ -174,7 +181,7 @@ export default function ContactPage() {
             <span className="text-white font-mono text-base mt-2 block">support@honestmailbox.com</span>
           </p>
           <div className="text-[10px] text-neutral-700 font-inter font-bold tracking-[0.3em] uppercase">
-            Private • Encrypted • Secure
+            Private • Just You Two
           </div>
         </div>
 

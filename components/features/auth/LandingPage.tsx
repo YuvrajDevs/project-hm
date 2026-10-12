@@ -1,11 +1,10 @@
 "use client";
 
 import React, { useState } from "react";
-import { auth, db, googleProvider } from "@/lib/firebase";
+import { auth, googleProvider } from "@/lib/firebase";
 import { signInWithPopup } from "firebase/auth";
-import { doc, getDoc, setDoc } from "firebase/firestore";
+import { ensureUserDoc } from "@/lib/firestore-helpers";
 import { motion, useScroll, useTransform } from "framer-motion";
-import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { Heart, Sparkles, MessageCircle, Zap, Shield, ArrowDown } from "lucide-react";
 import { AmbientBackground } from "@/components/ui/AmbientBackground";
@@ -13,8 +12,8 @@ import { AmbientBackground } from "@/components/ui/AmbientBackground";
 const FEATURE_CARDS = [
   {
     icon: <MessageCircle className="w-6 h-6 text-blue-400" />,
-    title: "Ephemeral Connection",
-    description: "Messages that live in the moment and vanish into the heart. No archive of arguments, just pure, real-time presence.",
+    title: "Say What You Need",
+    description: "Share how you feel and tell your partner what would help: just listen, reassure me, or give me advice.",
     color: "from-blue-500/10 to-transparent"
   },
   {
@@ -34,7 +33,6 @@ const FEATURE_CARDS = [
 export const LandingPage = () => {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
-  const router = useRouter();
   const { scrollYProgress } = useScroll();
   const opacity = useTransform(scrollYProgress, [0, 0.2], [1, 0]);
   const scale = useTransform(scrollYProgress, [0, 0.2], [1, 0.95]);
@@ -44,31 +42,11 @@ export const LandingPage = () => {
     setError("");
     try {
       const result = await signInWithPopup(auth, googleProvider);
-      const user = result.user;
-
-      const userRef = doc(db, "users", user.uid);
-      const snap = await getDoc(userRef);
-
-      if (!snap.exists()) {
-        await setDoc(userRef, {
-          uid: user.uid,
-          email: user.email,
-          displayName: user.displayName || "",
-          photoURL: user.photoURL || "",
-          createdAt: new Date().toISOString(),
-          settings: { notificationsEnabled: true }
-        });
-        router.push("/onboarding");
-      } else {
-        const data = snap.data();
-        if (!data.hasCompletedOnboarding) {
-          router.push("/onboarding");
-        } else {
-          // If already onboarded, the parent home component will automatically switch views
-        }
-      }
-    } catch (err: any) {
-      if (err.code !== "auth/popup-closed-by-user") {
+      // The home page routes to onboarding or the app once the profile is loaded
+      await ensureUserDoc(result.user);
+    } catch (err) {
+      const code = (err as { code?: string }).code;
+      if (code !== "auth/popup-closed-by-user" && code !== "auth/cancelled-popup-request") {
         setError("Something went wrong. Please try again.");
       }
     } finally {
@@ -167,7 +145,7 @@ export const LandingPage = () => {
           <div className="space-y-4 text-center">
             <h2 className="text-4xl md:text-5xl font-bebas tracking-widest text-white uppercase">A Digital Oasis for Love</h2>
             <p className="text-neutral-400 font-outfit text-sm md:text-base leading-relaxed max-w-lg mx-auto italic">
-              &quot;Love is not about history, it's about presence. We built a space where you can be your most honest self, without the baggage.&quot;
+              A quiet, judgment-free space for the things left unsaid. Only the two of you can see what you share here.
             </p>
           </div>
 

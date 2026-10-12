@@ -54,7 +54,12 @@ export const SafeSpaceSession = () => {
   
   // Cooldown logic (5 mins)
   const lastRequest = activeSafeSpace?.lastMicRequestAt ? new Date(activeSafeSpace.lastMicRequestAt).getTime() : 0;
-  const cooldownActive = Date.now() - lastRequest < 5 * 60 * 1000;
+  const [clock, setClock] = useState(() => Date.now());
+  useEffect(() => {
+    const interval = setInterval(() => setClock(Date.now()), 15000);
+    return () => clearInterval(interval);
+  }, []);
+  const cooldownActive = clock - lastRequest < 5 * 60 * 1000;
 
   const handleSendMessage = async () => {
     if (!inputText.trim() || !user?.coupleId || !activeSafeSpace?.id) return;

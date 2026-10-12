@@ -36,6 +36,7 @@ export const DailyCheckInPopup: React.FC<DailyCheckInPopupProps> = ({ onClose })
   const [connection, setConnection] = useState(5);
   const [moodStatus, setMoodStatus] = useState("");
   const [saving, setSaving] = useState(false);
+  const [error, setError] = useState("");
 
   useEffect(() => {
     const userCheckIn = checkins.find(c => c.userUid === user?.uid);
@@ -50,8 +51,9 @@ export const DailyCheckInPopup: React.FC<DailyCheckInPopupProps> = ({ onClose })
   const handleSubmit = async () => {
     if (!user?.coupleId || !moodStatus) return;
     setSaving(true);
+    setError("");
     try {
-      // 1. Save standard check-in
+      // 1. Save standard check-in (the partner gets one notification for the whole sync)
       await saveDailyCheckIn({
         mood,
         connection,
@@ -62,16 +64,17 @@ export const DailyCheckInPopup: React.FC<DailyCheckInPopupProps> = ({ onClose })
       // 2. Send signal (triggers splash)
       const type = LABEL_TO_TYPE[moodStatus];
       if (type) {
-        await sendSignal(type);
+        await sendSignal(type, undefined, false);
       }
 
       // 3. Update persistent user mood label
-      await updateMood(moodStatus);
+      await updateMood(moodStatus, false);
 
       playChime();
       setStep("summary");
     } catch (err) {
       console.error(err);
+      setError("Couldn't save your check-in. Try again.");
     } finally {
       setSaving(false);
     }
@@ -224,7 +227,7 @@ export const DailyCheckInPopup: React.FC<DailyCheckInPopupProps> = ({ onClose })
                             onClick={handleSubmit}
                             className="w-full bg-white text-black font-bebas text-xl py-5 rounded-2xl flex items-center justify-center gap-2 disabled:opacity-30 transition-all shadow-[0_0_15px_rgba(255,255,255,0.1)]"
                         >
-                            {saving ? "Saving..." : <><Send className="w-5 h-5" /> Finish Sync</>}
+                            {saving ? "Saving..." : error ? "Try Again" : <><Send className="w-5 h-5" /> Finish Sync</>}
                         </button>
                     </div>
                 </motion.div>

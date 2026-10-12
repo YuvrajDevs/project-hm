@@ -7,6 +7,7 @@ import { motion, AnimatePresence } from "framer-motion";
 import { ArrowLeft, Bell, BellOff, Lock, UserX, AlertTriangle, User, LogOut } from "lucide-react";
 import Link from "next/link";
 import { AmbientBackground } from "@/components/ui/AmbientBackground";
+import { useAuthGuard } from "@/hooks/useAuthGuard";
 
 export default function SettingsPage() {
   const router = useRouter();
@@ -15,20 +16,36 @@ export default function SettingsPage() {
   const [showUnpairConfirm, setShowUnpairConfirm] = useState(false);
   const [showResetConfirm, setShowResetConfirm] = useState(false);
   const [isProcessing, setIsProcessing] = useState(false);
+  const [error, setError] = useState("");
+  useAuthGuard();
 
   // If there's no user, we might be actively logging out or wiping out
   if (!user) return null;
 
   const handleWipeout = async () => {
     setIsProcessing(true);
-    await wipeoutUserAccount();
-    router.push("/");
+    setError("");
+    try {
+      await wipeoutUserAccount();
+      router.push("/");
+    } catch (err) {
+      console.error(err);
+      setError("Your account was not deleted. Confirm with Google when asked, then try again.");
+      setIsProcessing(false);
+    }
   };
 
   const handleUnpair = async () => {
     setIsProcessing(true);
-    await leavePartner();
-    router.push("/");
+    setError("");
+    try {
+      await leavePartner();
+      router.push("/");
+    } catch (err) {
+      console.error(err);
+      setError("Couldn't disconnect. Check your connection and try again.");
+      setIsProcessing(false);
+    }
   };
 
   const handleResetHistory = async () => {
@@ -50,7 +67,7 @@ export default function SettingsPage() {
       {/* Header */}
       <header className="sticky top-0 left-0 right-0 p-6 z-50 flex items-center justify-between bg-gradient-to-b from-black to-transparent">
         <button 
-          onClick={() => router.push(couple ? "/" : "/")}
+          onClick={() => router.push("/")}
           className="flex items-center gap-2 text-neutral-400 hover:text-white transition-colors uppercase tracking-[0.2em] font-bebas text-sm group"
         >
           <ArrowLeft className="w-4 h-4 group-hover:-translate-x-1 transition-transform" />
@@ -135,6 +152,9 @@ export default function SettingsPage() {
         {/* Danger Zone */}
         <section className="space-y-4 pt-10">
           <h2 className="text-sm font-bebas text-red-500/80 tracking-[0.2em] uppercase">Danger Zone</h2>
+          {error && (
+            <p className="text-rose-500 text-xs font-outfit leading-relaxed">{error}</p>
+          )}
           
           <div className="space-y-4">
             {/* 1. Reset Shared History */}
@@ -147,7 +167,7 @@ export default function SettingsPage() {
                         <div>
                             <p className="font-bebas tracking-widest uppercase text-lg text-white">Reset Shared History</p>
                             <p className="text-xs text-neutral-400 mt-1 leading-relaxed">
-                                Stay connected but **permanently wipe** all messages and check-ins. 
+                                Stay connected but <span className="text-white">permanently wipe</span> all messages and check-ins. 
                                 You both start fresh together as if day one.
                             </p>
                         </div>
@@ -156,10 +176,10 @@ export default function SettingsPage() {
                     {!showResetConfirm ? (
                         <button
                             onClick={() => setShowResetConfirm(true)}
-                            disabled={(couple as any).resetStatus === "pending" && (couple as any).resetBy === user.uid}
+                            disabled={couple.resetStatus === "pending" && couple.resetBy === user.uid}
                             className="w-full py-4 border border-white/10 text-white rounded-xl font-bebas tracking-widest uppercase hover:bg-white/10 transition-all font-bold disabled:opacity-50"
                         >
-                            {(couple as any).resetStatus === "pending" && (couple as any).resetBy === user.uid 
+                            {couple.resetStatus === "pending" && couple.resetBy === user.uid 
                                 ? "Waiting for Partner..." 
                                 : "Reset History Together"}
                         </button>
@@ -183,18 +203,18 @@ export default function SettingsPage() {
 
                     {/* Pending Request / Rejection Messages */}
                     <AnimatePresence>
-                        {(couple as any).resetStatus === "pending" && (couple as any).resetBy === user.uid && (
+                        {couple.resetStatus === "pending" && couple.resetBy === user.uid && (
                             <motion.div initial={{ opacity: 0, height: 0 }} animate={{ opacity: 1, height: "auto" }} className="mt-4 p-4 bg-white/5 border border-white/10 rounded-xl text-center">
                                 <p className="text-xs text-neutral-400 font-outfit uppercase tracking-wider">Awaiting your partner&apos;s agreement...</p>
                                 <button onClick={cancelReset} className="mt-2 text-[10px] text-pink-500 font-bebas uppercase tracking-widest hover:underline">Cancel Request</button>
                             </motion.div>
                         )}
-                        {(couple as any).resetStatus === "declined" && (
-                             <motion.div initial={{ opacity: 0, height: 0 }} animate={{ opacity: 1, height: "auto" }} className="mt-4 p-4 bg-red-500/10 border border-red-500/20 rounded-xl text-center">
-                                <p className="text-xs text-red-500 font-outfit leading-relaxed">
-                                    Your partner refused. <br/>
-                                    Maybe you should talk about your connection.
+                        {couple.resetStatus === "declined" && couple.resetBy === user.uid && (
+                             <motion.div initial={{ opacity: 0, height: 0 }} animate={{ opacity: 1, height: "auto" }} className="mt-4 p-4 bg-white/5 border border-white/10 rounded-xl text-center">
+                                <p className="text-xs text-neutral-300 font-outfit leading-relaxed">
+                                    Your partner would rather keep your history for now.
                                 </p>
+                                <button onClick={cancelReset} className="mt-2 text-[10px] text-pink-500 font-bebas uppercase tracking-widest hover:underline">Okay</button>
                              </motion.div>
                         )}
                     </AnimatePresence>
@@ -211,7 +231,7 @@ export default function SettingsPage() {
                         <div>
                             <p className="font-bebas tracking-widest uppercase text-lg text-orange-400">Unpair Partner</p>
                             <p className="text-xs text-neutral-400 mt-1 leading-relaxed">
-                                Sever the link and **destroy all shared data**. Your individual profile stays, but you 
+                                Sever the link and <span className="text-white">destroy all shared data</span>. Your individual profile stays, but you 
                                 will no longer be connected to each other.
                             </p>
                         </div>
@@ -253,8 +273,8 @@ export default function SettingsPage() {
                   <div>
                     <p className="font-bebas tracking-widest uppercase text-lg text-red-500">Delete My Account</p>
                     <p className="text-xs text-neutral-400 mt-1 leading-relaxed">
-                      Permanently delete **your profile** and all data. This is irreversible. 
-                      You will be signed out and all records will be destroyed.
+                      Permanently delete <span className="text-white">your profile, your sign-in and everything you two shared</span>. This is irreversible. 
+                      You&apos;ll be asked to confirm with Google first.
                     </p>
                   </div>
                 </div>

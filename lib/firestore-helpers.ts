@@ -13,6 +13,9 @@ import {
   getDocs,
   arrayUnion,
   Timestamp,
+  writeBatch,
+  runTransaction,
+  DocumentReference,
   FirestoreDataConverter,
   QueryDocumentSnapshot,
   SnapshotOptions,
@@ -30,6 +33,7 @@ import {
   PartnerNote,
   AppNotification
 } from "./types";
+import type { User as FirebaseUser } from "firebase/auth";
 
 /**
  * Generic converter for Firestore to maintain type safety
@@ -75,13 +79,15 @@ export const sendMailboxMessage = async (coupleId: string, message: Omit<Mailbox
     createdAt: Timestamp.now()
   });
 
-  // Notify partner
-  await sendNotification(partnerUid, {
-    uid: partnerUid,
-    type: "MAILBOX",
-    title: "New Note",
-    body: "You have a new note in your mailbox.",
-  });
+  // A secret capsule must not announce itself before it unlocks
+  if (!message.isSecretBeforeUnlock) {
+    await notifyPartner(partnerUid, {
+      uid: partnerUid,
+      type: "MAILBOX",
+      title: "New Note",
+      body: "You have a new note in your mailbox.",
+    });
+  }
 
   return docRef;
 };
@@ -117,14 +123,14 @@ export const hideMessageForUser = async (coupleId: string, messageId: string, ui
  * Daily Check-In Helpers
  */
 export const saveCheckIn = async (coupleId: string, checkIn: Omit<DailyCheckIn, "id" | "createdAt">, partnerUid: string) => {
-  // Check-ins are stored per couple but identified by user UID
-  const docRef = await addDoc(getCoupleCollection(coupleId, "checkins"), {
+  // One document per user per day, so a double submit or a second device overwrites instead of duplicating
+  const docRef = doc(db, "couples", coupleId, "checkins", `${checkIn.dateId}_${checkIn.userUid}`);
+  await setDoc(docRef, {
     ...checkIn,
     createdAt: Timestamp.now()
   });
 
-  // Notify partner
-  await sendNotification(partnerUid, {
+  await notifyPartner(partnerUid, {
     uid: partnerUid,
     type: "CHECK_IN",
     title: "Daily Check-In",
@@ -137,15 +143,15 @@ export const saveCheckIn = async (coupleId: string, checkIn: Omit<DailyCheckIn, 
 /**
  * Quick React Helpers
  */
-export const sendQuickReact = async (coupleId: string, react: Omit<QuickReact, "id" | "createdAt">, partnerUid: string) => {
+export const sendQuickReact = async (coupleId: string, react: Omit<QuickReact, "id" | "createdAt">, partnerUid: string, notify = true) => {
   const reactionRef = doc(db, "couples", coupleId, "reactions", `latest_${react.senderUid}`);
   await setDoc(reactionRef, {
     ...react,
     createdAt: Timestamp.now()
   });
 
-  // Notify partner
-  await sendNotification(partnerUid, {
+  if (!notify) return;
+  await notifyPartner(partnerUid, {
     uid: partnerUid,
     type: "REACTION",
     title: "New Signal",
@@ -157,7 +163,11 @@ export const sendQuickReact = async (coupleId: string, react: Omit<QuickReact, "
  * Safe Space Helpers
  */
 export const startSafeSpaceSession = async (coupleId: string, currentTurnUid: string) => {
-  return addDoc(collection(db, "couples", coupleId, "safe_space_sessions"), {
+  const sessionsRef = collection(db, "couples", coupleId, "safe_space_sessions");
+  const active = await getDocs(query(sessionsRef, where("active", "==", true)));
+  if (!active.empty) return active.docs[0].ref;
+
+  return addDoc(sessionsRef, {
     active: true,
     participants: [], // Will be populated by joiners if needed, or derived
     currentTurnUid,
@@ -252,7 +262,7 @@ export const updateUserMood = async (uid: string, mood: string, partnerUid?: str
   });
 
   if (partnerUid) {
-    await sendNotification(partnerUid, {
+    await notifyPartner(partnerUid, {
       uid: partnerUid,
       type: "CHECK_IN",
       title: "Mood Updated",
@@ -301,8 +311,7 @@ export const respondToMessage = async (coupleId: string, messageId: string, resp
     }
   });
 
-  // Notify partner
-  await sendNotification(partnerUid, {
+  await notifyPartner(partnerUid, {
     uid: partnerUid,
     type: "MAILBOX",
     title: "New Response",
@@ -318,31 +327,40 @@ export const updateSafeSpaceTurn = async (coupleId: string, sessionId: string, n
   });
 };
 
-export const destroyCoupleData = async (coupleId: string) => {
-  const collections = ["mailbox", "checkins", "reactions", "safe_space_sessions", "events"];
-  
-  for (const colName of collections) {
-    const colRef = collection(db, "couples", coupleId, colName);
-    const snap = await getDocs(colRef);
-    for (const d of snap.docs) {
-      await deleteDoc(d.ref);
-    }
+const COUPLE_SUBCOLLECTIONS = ["mailbox", "checkins", "reactions", "safe_space_sessions", "events"];
+
+/**
+ * Delete documents in chunks that fit inside a single batch
+ */
+const deleteRefs = async (refs: DocumentReference[]) => {
+  for (let i = 0; i < refs.length; i += 400) {
+    const batch = writeBatch(db);
+    refs.slice(i, i + 400).forEach((ref) => batch.delete(ref));
+    await batch.commit();
   }
-  
-  // Finally delete the couple document itself
-  await deleteDoc(doc(db, "couples", coupleId));
 };
 
 export const resetCoupleHistory = async (coupleId: string) => {
-  const collections = ["mailbox", "checkins", "reactions", "safe_space_sessions", "events"];
-  
-  for (const colName of collections) {
-    const colRef = collection(db, "couples", coupleId, colName);
-    const snap = await getDocs(colRef);
+  const refs: DocumentReference[] = [];
+
+  for (const colName of COUPLE_SUBCOLLECTIONS) {
+    const snap = await getDocs(collection(db, "couples", coupleId, colName));
     for (const d of snap.docs) {
-      await deleteDoc(d.ref);
+      // Firestore does not cascade, so session messages have to be removed explicitly
+      if (colName === "safe_space_sessions") {
+        const msgs = await getDocs(collection(d.ref, "messages"));
+        msgs.docs.forEach((m) => refs.push(m.ref));
+      }
+      refs.push(d.ref);
     }
   }
+
+  await deleteRefs(refs);
+};
+
+export const destroyCoupleData = async (coupleId: string) => {
+  await resetCoupleHistory(coupleId);
+  await deleteDoc(doc(db, "couples", coupleId));
 };
 
 export const raiseWhiteFlag = async (coupleId: string, uid: string) => {
@@ -367,43 +385,18 @@ export const requestCoupleReset = async (coupleId: string, uid: string) => {
 };
 
 export const rejectCoupleReset = async (coupleId: string) => {
+  // Stays "declined" until the requester dismisses it (cancelCoupleReset)
   await updateDoc(doc(db, "couples", coupleId), {
     resetStatus: "declined"
   });
-  // Auto-clear decline status after 5 seconds? 
-  // Better done in the UI or a background effect, but let's clear it here for now if needed.
-  setTimeout(async () => {
-    await updateDoc(doc(db, "couples", coupleId), {
-      resetStatus: null,
-      resetBy: null
-    });
-  }, 5000);
 };
 
 export const acceptCoupleReset = async (coupleId: string) => {
-  // 1. Fetch couple to find partners
-  const coupleRef = doc(db, "couples", coupleId);
-  const snap = await getDoc(coupleRef);
-  if (!snap.exists()) return;
-  const data = snap.data();
-
-  // 2. Wipe shared identity on user documents
-  const partners = [data.partnerA_uid, data.partnerB_uid];
-  for (const uid of partners) {
-    if (!uid) continue;
-    const userRef = doc(db, "users", uid);
-    await updateDoc(userRef, {
-      currentMood: null,
-      moodUpdatedAt: null,
-      partnerNickname: null,
-    });
-  }
-
-  // 3. Destroy mutual history sub-collections
+  // 1. Destroy mutual history sub-collections
   await resetCoupleHistory(coupleId);
 
-  // 4. Clear couple-level flags and anniversary
-  await updateDoc(coupleRef, {
+  // 2. Clear couple-level flags and anniversary
+  await updateDoc(doc(db, "couples", coupleId), {
     resetStatus: null,
     resetBy: null,
     anniversaryDate: null,
@@ -424,25 +417,30 @@ export const unpairPartner = async (uid: string, partnerUid: string) => {
   const userSnap = await getDoc(userRef);
   const coupleId = userSnap.data()?.coupleId;
 
-  // Clear initiator
-  await updateDoc(userRef, {
+  // Shared data goes first, while both of us still count as members of the couple
+  if (coupleId) {
+    await destroyCoupleData(coupleId);
+  }
+
+  // Then both links are cleared together, and the partner is told
+  const batch = writeBatch(db);
+  batch.update(userRef, {
     coupleId: null,
     partnerId: null,
     role: null
   });
-  
-  // Clear partner and set notification flag
-  const partnerRef = doc(db, "users", partnerUid);
-  await updateDoc(partnerRef, {
+  batch.update(doc(db, "users", partnerUid), {
     coupleId: null,
     partnerId: null,
     role: null,
     leftByPartner: true 
   });
-
-  // DESTROY SHARED DATA
-  if (coupleId) {
-    await destroyCoupleData(coupleId);
+  try {
+    await batch.commit();
+  } catch (err) {
+    // Partner's profile is already gone (deleted account): still free ourselves
+    console.error("Could not update partner while unpairing:", err);
+    await updateDoc(userRef, { coupleId: null, partnerId: null, role: null });
   }
 };
 
@@ -458,17 +456,102 @@ export const clearLeftStatus = async (uid: string) => {
 
 export const deleteUserAccount = async (uid: string, partnerUid: string | null) => {
   if (partnerUid) {
-    const partnerRef = doc(db, "users", partnerUid);
-    await updateDoc(partnerRef, {
-      coupleId: null,
-      partnerId: null,
-      role: null,
-      leftByPartner: true 
-    });
+    await unpairPartner(uid, partnerUid);
   }
 
+  // Private sub-collections are not removed with the parent document
+  const refs: DocumentReference[] = [];
+  for (const colName of ["notes", "notifications"]) {
+    const snap = await getDocs(collection(db, "users", uid, colName));
+    snap.docs.forEach((d) => refs.push(d.ref));
+  }
+  await deleteRefs(refs);
+
+  await deleteDoc(doc(db, "users", uid));
+};
+
+/**
+ * Account + Pairing Helpers
+ */
+export const ensureUserDoc = async (fbUser: FirebaseUser) => {
+  const userRef = doc(db, "users", fbUser.uid);
+  const snap = await getDoc(userRef);
+  if (snap.exists()) return;
+
+  await setDoc(userRef, {
+    uid: fbUser.uid,
+    email: fbUser.email,
+    displayName: fbUser.displayName || "",
+    photoURL: fbUser.photoURL || "",
+    createdAt: new Date().toISOString(),
+    settings: { notificationsEnabled: true }
+  });
+};
+
+const INVITE_TTL_MS = 7 * 24 * 60 * 60 * 1000;
+
+const randomString = (length: number, chars: string) => {
+  const bytes = crypto.getRandomValues(new Uint32Array(length));
+  return Array.from(bytes, (b) => chars[b % chars.length]).join("");
+};
+
+export const createInvite = async (uid: string) => {
+  const code = randomString(6, "ABCDEFGHJKLMNPQRSTUVWXYZ23456789");
+  await setDoc(doc(db, "invites", code), {
+    createdBy: uid,
+    createdAt: Timestamp.now(),
+    expiresAt: Timestamp.fromMillis(Date.now() + INVITE_TTL_MS),
+    used: false
+  });
+  return code;
+};
+
+export type InviteError = "invalid" | "expired" | "self" | "already-paired";
+
+/**
+ * Join a partner's invite. Everything happens in one transaction, so a code can only ever pair two people.
+ */
+export const acceptInvite = async (uid: string, rawCode: string) => {
+  const code = rawCode.trim().toUpperCase();
+  const inviteRef = doc(db, "invites", code);
   const userRef = doc(db, "users", uid);
-  await deleteDoc(userRef);
+  const coupleId = randomString(20, "abcdefghijklmnopqrstuvwxyz0123456789");
+
+  await runTransaction(db, async (tx) => {
+    const inviteSnap = await tx.get(inviteRef);
+    const userSnap = await tx.get(userRef);
+    const invite = inviteSnap.data();
+
+    if (!inviteSnap.exists() || !invite || invite.used) throw new Error("invalid" satisfies InviteError);
+    if (invite.expiresAt instanceof Timestamp && invite.expiresAt.toMillis() < Date.now()) throw new Error("expired" satisfies InviteError);
+    if (invite.createdBy === uid) throw new Error("self" satisfies InviteError);
+    if (userSnap.data()?.coupleId) throw new Error("already-paired" satisfies InviteError);
+
+    const partnerUid = invite.createdBy as string;
+
+    tx.set(doc(db, "couples", coupleId), {
+      id: coupleId,
+      partnerA_uid: partnerUid,
+      partnerB_uid: uid,
+      inviteCode: code,
+      createdAt: Timestamp.now(),
+      settings: {
+        notifications: {
+          checkInReminderTime: "20:00",
+          doNotDisturb: { enabled: false, start: "22:00", end: "08:00" }
+        }
+      }
+    });
+    tx.update(doc(db, "users", partnerUid), {
+      coupleId, role: "PARTNER_A", partnerId: uid, leftByPartner: false
+    });
+    tx.update(userRef, {
+      coupleId, role: "PARTNER_B", partnerId: partnerUid, leftByPartner: false
+    });
+    tx.update(inviteRef, { used: true, usedBy: uid });
+  });
+
+  return coupleId;
 };
 
 /**
@@ -544,6 +627,17 @@ export const sendNotification = async (toUid: string, notification: Omit<AppNoti
   });
 };
 
+/**
+ * A notification is a courtesy. It must never make the action that triggered it look like it failed.
+ */
+const notifyPartner = async (toUid: string, notification: Omit<AppNotification, "id" | "createdAt" | "read">) => {
+  try {
+    await sendNotification(toUid, notification);
+  } catch (err) {
+    console.error("Notification not delivered:", err);
+  }
+};
+
 export const markNotificationAsRead = async (uid: string, notiId: string) => {
   const notiRef = doc(db, "users", uid, "notifications", notiId);
   return updateDoc(notiRef, { read: true });
@@ -553,9 +647,9 @@ export const markAllNotificationsAsRead = async (uid: string) => {
   const notisRef = collection(db, "users", uid, "notifications");
   const q = query(notisRef, where("read", "==", false));
   const snap = await getDocs(q);
-  for (const d of snap.docs) {
-    await updateDoc(d.ref, { read: true });
-  }
+  const batch = writeBatch(db);
+  snap.docs.forEach((d) => batch.update(d.ref, { read: true }));
+  await batch.commit();
 };
 
 export const updateUserNotificationSettings = async (uid: string, enabled: boolean) => {
@@ -574,5 +668,18 @@ export const subscribeToNotifications = (uid: string, callback: (notis: AppNotif
   
   return onSnapshot(q, (snapshot) => {
     callback(snapshot.docs.map(doc => doc.data()));
+  });
+};
+
+/**
+ * Contact Form
+ */
+export const sendContactMessage = async (message: { name?: string; email: string; purpose: string; message: string }) => {
+  return addDoc(collection(db, "contactMessages"), {
+    name: (message.name || "").slice(0, 100),
+    email: message.email.slice(0, 200),
+    purpose: message.purpose.slice(0, 50),
+    message: message.message.slice(0, 4000),
+    createdAt: Timestamp.now()
   });
 };

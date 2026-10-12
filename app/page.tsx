@@ -24,6 +24,8 @@ import { NotificationToastManager } from "@/components/features/notifications/No
 import { NotificationCenter } from "@/components/features/notifications/NotificationCenter";
 import { Bell } from "lucide-react";
 import { LandingPage } from "@/components/features/auth/LandingPage";
+import { PENDING_INVITE_KEY } from "@/lib/constants";
+import { getCheckInDateId } from "@/lib/utils";
 
 export default function Home() {
   const { 
@@ -96,8 +98,8 @@ export default function Home() {
 
   useEffect(() => {
     const isAnyPopupOpen = showCheckInPopup || !!activeSafeSpace || isOverlayActive || 
-      ((couple as any)?.resetStatus === "pending" && (couple as any)?.resetBy !== user?.uid) ||
-      (!!(couple as any)?.whiteFlagBy && (couple as any)?.whiteFlagBy !== user?.uid);
+      (couple?.resetStatus === "pending" && couple?.resetBy !== user?.uid) ||
+      (!!couple?.whiteFlagBy && couple?.whiteFlagBy !== user?.uid);
     
     if (isAnyPopupOpen) {
       document.body.style.overflow = "hidden";
@@ -116,7 +118,11 @@ export default function Home() {
         return;
       } else if (!hasOnboarded) {
         router.push("/onboarding");
-      } else if (isPaired && hasLoadedCheckins) {
+      } else if (!isPaired) {
+        // Arrived through an invite link: finish pairing now that the account exists
+        const pendingInvite = localStorage.getItem(PENDING_INVITE_KEY);
+        if (pendingInvite) router.push(`/pair?code=${pendingInvite}`);
+      } else if (hasLoadedCheckins) {
          // Auto-trigger daily sync if not done
          const userCheckIn = checkins.find(c => c.userUid === user?.uid);
          if (!userCheckIn) {
@@ -134,7 +140,7 @@ export default function Home() {
          }
       }
     }
-  }, [user, loading, hasOnboarded, isPaired, router, overlayDismissed, checkins]);
+  }, [user, loading, hasOnboarded, isPaired, router, overlayDismissed, checkins, hasLoadedCheckins]);
 
   useEffect(() => {
     const handlePopup = (e: any) => setIsAnyPopupOpen(e.detail.isOpen);
@@ -385,14 +391,12 @@ export default function Home() {
             <EmpathyNudge 
                 key="empathy-nudge"
                 onWriteNote={() => {
-                    const todayId = new Date().toISOString().split('T')[0];
-                    localStorage.setItem(`nudge_shown_${todayId}`, 'true');
+                    localStorage.setItem(`nudge_shown_${getCheckInDateId()}`, 'true');
                     setShowEmpathyNudge(false);
                     setShowCompose(true);
                 }}
                 onDismiss={() => {
-                    const todayId = new Date().toISOString().split('T')[0];
-                    localStorage.setItem(`nudge_shown_${todayId}`, 'true');
+                    localStorage.setItem(`nudge_shown_${getCheckInDateId()}`, 'true');
                     setShowEmpathyNudge(false);
                 }}
             />

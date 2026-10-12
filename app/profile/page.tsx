@@ -24,6 +24,7 @@ import {
 import { LeavePartnerModal } from "@/components/features/profile/LeavePartnerModal";
 import { AmbientBackground } from "@/components/ui/AmbientBackground";
 import { cn } from "@/lib/utils";
+import { useAuthGuard } from "@/hooks/useAuthGuard";
 import { doc, updateDoc } from "firebase/firestore";
 import { db } from "@/lib/firebase";
 
@@ -67,8 +68,9 @@ const CHARACTERS = [
 ];
 
 export default function ProfilePage() {
-  const { user, partner, couple, logout, leavePartner, isPaired, loading } = useMailbox();
+  const { user, partner, couple, logout, leavePartner, clearPartnerLeftStatus, isPaired, loading } = useMailbox();
   const router = useRouter();
+  useAuthGuard();
   
   const [view, setView] = useState<"me" | "partner">("me");
   const [editingSection, setEditingSection] = useState<string | null>(null);
@@ -118,7 +120,7 @@ export default function ProfilePage() {
 
   const handleLeavePartner = async () => {
     await leavePartner();
-    router.push("/pair");
+    router.push("/");
   };
 
   const handleSaveName = async () => {
@@ -228,7 +230,7 @@ export default function ProfilePage() {
   const mainName = displayNameRaw || (isMe ? "You" : "Partner");
   const subText = isMe 
     ? "Your Profile" 
-    : (nicknameRaw ? nicknameRaw : `Give ${displayedUser?.gender === 'Female' ? 'her' : 'him'} a sweet nickname`);
+    : (nicknameRaw ? nicknameRaw : "Give them a sweet nickname");
 
   const getAvatar = (u: any) => {
     if (u?.gender === "Male") return <Cat className="w-16 h-16 text-blue-400" />;
@@ -503,7 +505,7 @@ export default function ProfilePage() {
                         <button 
                             onClick={async () => {
                                 if (user.leftByPartner) {
-                                    await useMailbox().clearPartnerLeftStatus();
+                                    await clearPartnerLeftStatus();
                                 }
                                 router.push("/pair");
                             }}

@@ -21,7 +21,6 @@ const inter = Inter({
 export const metadata: Metadata = {
   title: "Honest Mailbox | Safe Communication for Couples",
   description: "A cute and safe space for honest communication and emotional repair.",
-  manifest: "/manifest.json",
   appleWebApp: {
     capable: true,
     statusBarStyle: "black-translucent",

@@ -7,6 +7,7 @@ import { useMailbox } from "@/context/MailboxContext";
 import { X, Save, Clock } from "lucide-react";
 import { useSensoryFeedback } from "@/hooks/useSensoryFeedback";
 import { PREMIUM_ICONS, INTENT_ICONS } from "@/lib/constants";
+import { cn } from "@/lib/utils";
 
 const editStatuses = (Object.keys(PREMIUM_ICONS) as MailboxStatus[]).map(id => ({
     id,

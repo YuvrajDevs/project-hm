@@ -1,125 +1,113 @@
 "use client";
 
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, Suspense } from "react";
 import { auth, db } from "@/lib/firebase";
-import { 
-  doc, 
-  setDoc, 
-  getDoc, 
-  updateDoc, 
-  onSnapshot,
-  serverTimestamp 
-} from "firebase/firestore";
+import { doc, updateDoc, onSnapshot } from "firebase/firestore";
 import { motion, AnimatePresence } from "framer-motion";
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import { Share2, Link as LinkIcon, Check, Copy, ArrowRight, Loader2, Heart } from "lucide-react";
+import { useMailbox } from "@/context/MailboxContext";
+import { createInvite, acceptInvite, InviteError } from "@/lib/firestore-helpers";
+import { PENDING_INVITE_KEY } from "@/lib/constants";
 
-export default function Pair() {
-  const [mode, setMode] = useState<"choice" | "create" | "join" | "success">("choice");
+const INVITE_ERRORS: Record<InviteError, string> = {
+  "invalid": "That code isn't valid or was already used",
+  "expired": "That invite has expired. Ask for a new one",
+  "self": "That's your own invite. Send it to your partner",
+  "already-paired": "You're already connected to a partner",
+};
+
+export default function PairPage() {
+  return (
+    <Suspense fallback={<div className="h-screen w-screen bg-[#0a0a0a]" />}>
+      <Pair />
+    </Suspense>
+  );
+}
+
+function Pair() {
+  const { fbUser, user } = useMailbox();
+  const searchParams = useSearchParams();
+  const linkCode = (searchParams.get("code") || "").toUpperCase().slice(0, 6);
+
+  const [mode, setMode] = useState<"choice" | "create" | "join" | "success">(linkCode ? "join" : "choice");
   const [coupleId, setCoupleId] = useState("");
   const [inviteCode, setInviteCode] = useState("");
-  const [inputCode, setInputCode] = useState("");
+  const [inputCode, setInputCode] = useState(linkCode);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
   const [copied, setCopied] = useState(false);
   const [anniversaryDate, setAnniversaryDate] = useState("");
   const router = useRouter();
 
-  const generateCode = () => {
-    const chars = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789";
-    let result = "";
-    for (let i = 0; i < 6; i++) {
-      result += chars.charAt(Math.floor(Math.random() * chars.length));
+  // Opened from an invite link before signing in: remember the code and come back after sign-up
+  useEffect(() => {
+    if (fbUser === "loading") return;
+    if (fbUser !== null) {
+      // The code is on screen now; don't keep bouncing back here from the home page
+      localStorage.removeItem(PENDING_INVITE_KEY);
+      return;
     }
-    return result;
-  };
+    if (linkCode) localStorage.setItem(PENDING_INVITE_KEY, linkCode);
+    router.replace("/");
+  }, [fbUser, linkCode, router]);
+
+  // While an invite is out, watch for the partner joining
+  useEffect(() => {
+    if (mode !== "create" || !inviteCode || !auth.currentUser) return;
+    return onSnapshot(doc(db, "users", auth.currentUser.uid), (snap) => {
+      const joinedCoupleId = snap.data()?.coupleId;
+      if (joinedCoupleId) {
+        setCoupleId(joinedCoupleId);
+        setMode("success");
+      }
+    });
+  }, [mode, inviteCode]);
+
+  const inviteLink = typeof window !== "undefined" && inviteCode
+    ? `${window.location.origin}/pair?code=${inviteCode}`
+    : "";
 
   const handleCreateInvite = async () => {
+    const current = auth.currentUser;
+    if (!current) return;
+    if (user?.coupleId) {
+      setError(INVITE_ERRORS["already-paired"]);
+      return;
+    }
     setLoading(true);
-    const user = auth.currentUser;
-    if (!user) return;
-    const code = generateCode();
+    setError("");
     try {
-      await setDoc(doc(db, "invites", code), {
-        createdBy: user.uid,
-        createdAt: serverTimestamp(),
-        used: false
-      });
-      setInviteCode(code);
+      setInviteCode(await createInvite(current.uid));
       setMode("create");
-      // Listen for pairing happening
-      const unsub = onSnapshot(doc(db, "users", user.uid), (snap) => {
-        if (snap.exists() && snap.data().coupleId) {
-          unsub();
-          setCoupleId(snap.data().coupleId);
-          setMode("success");
-        }
-      });
-    } catch {
-      setError("Failed to create invite");
+    } catch (err) {
+      console.error(err);
+      setError("Couldn't create an invite. Check your connection and try again.");
     } finally {
       setLoading(false);
     }
   };
 
   const handleJoin = async () => {
-    if (inputCode.length !== 6) return;
+    const current = auth.currentUser;
+    if (inputCode.length !== 6 || !current) return;
     setLoading(true);
     setError("");
-    const user = auth.currentUser;
-    if (!user) return;
 
     try {
-      const code = inputCode.toUpperCase();
-      const inviteSnap = await getDoc(doc(db, "invites", code));
-      if (!inviteSnap.exists() || inviteSnap.data().used) {
-        setError("Invalid or expired code");
-        setLoading(false);
-        return;
-      }
-
-      const partnerUid = inviteSnap.data().createdBy;
-      if (partnerUid === user.uid) {
-        setError("You cannot pair with yourself");
-        setLoading(false);
-        return;
-      }
-
-      const generateSessionId = () => {
-        const chars = "abcdefghijklmnopqrstuvwxyz0123456789";
-        let res = "";
-        for (let i = 0; i < 12; i++) res += chars.charAt(Math.floor(Math.random() * chars.length));
-        return res;
-      };
-      const coupleId = generateSessionId();
-
-      await setDoc(doc(db, "couples", coupleId), {
-        id: coupleId,
-        partnerA_uid: partnerUid,
-        partnerB_uid: user.uid,
-        createdAt: serverTimestamp(),
-        settings: {
-          notifications: {
-            checkInReminderTime: "20:00",
-            doNotDisturb: { enabled: false, start: "22:00", end: "08:00" }
-          }
-        }
-      });
-
-      await updateDoc(doc(db, "users", partnerUid), {
-        coupleId, role: "PARTNER_A", partnerId: user.uid
-      });
-      await updateDoc(doc(db, "users", user.uid), {
-        coupleId, role: "PARTNER_B", partnerId: partnerUid
-      });
-      await updateDoc(doc(db, "invites", code), {
-        used: true, usedBy: user.uid
-      });
-
-      setCoupleId(coupleId);
+      const newCoupleId = await acceptInvite(current.uid, inputCode);
+      localStorage.removeItem(PENDING_INVITE_KEY);
+      setCoupleId(newCoupleId);
       setMode("success");
-    } catch {
-      setError("Something went wrong. Try again.");
+    } catch (err) {
+      const reason = (err as Error).message as InviteError;
+      if (reason in INVITE_ERRORS) {
+        setError(INVITE_ERRORS[reason]);
+        if (reason !== "expired") localStorage.removeItem(PENDING_INVITE_KEY);
+      } else {
+        console.error(err);
+        setError("Couldn't connect. The invite may no longer be valid. Try again.");
+      }
     } finally {
       setLoading(false);
     }
@@ -134,15 +122,24 @@ export default function Pair() {
       });
       router.push("/");
     } catch {
-      setError("Failed to save anniversary. You can do this later in settings.");
+      setError("Couldn't save the date. You can add it later from your profile.");
       setTimeout(() => router.push("/"), 2000);
     } finally {
       setLoading(false);
     }
   };
 
-  const copyToClipboard = () => {
-    navigator.clipboard.writeText(inviteCode);
+  const shareInvite = async () => {
+    const text = "Join me on Honest Mailbox, a private space for the two of us.";
+    if (navigator.share) {
+      try {
+        await navigator.share({ title: "Honest Mailbox", text, url: inviteLink });
+        return;
+      } catch {
+        // Share sheet dismissed: fall through to copying the link
+      }
+    }
+    await navigator.clipboard.writeText(inviteLink);
     setCopied(true);
     setTimeout(() => setCopied(false), 2500);
   };
@@ -202,7 +199,7 @@ export default function Pair() {
                 >
                   <div>
                     <h3 className="text-xl font-bebas text-white tracking-widest uppercase mb-1">Invite Partner</h3>
-                    <p className="text-neutral-500 font-outfit text-xs">Generate a private code</p>
+                    <p className="text-neutral-500 font-outfit text-xs">Send a private link or code</p>
                   </div>
                   <div className="p-3 rounded-2xl bg-white/5 group-hover:bg-pink-500/20 group-hover:text-pink-400 transition-all text-neutral-500">
                     {loading ? <Loader2 className="w-5 h-5 animate-spin" /> : <Share2 className="w-5 h-5" />}
@@ -221,6 +218,12 @@ export default function Pair() {
                     <LinkIcon className="w-5 h-5" />
                   </div>
                 </button>
+
+                {error && (
+                  <p className="text-rose-500 text-[10px] uppercase font-bebas tracking-widest text-center">
+                    {error}
+                  </p>
+                )}
               </motion.div>
             )}
 
@@ -236,7 +239,7 @@ export default function Pair() {
               >
                 <div>
                   <h1 className="text-4xl font-bebas text-white tracking-[0.15em] uppercase leading-none mb-2">Your Code</h1>
-                  <p className="text-neutral-500 font-outfit text-xs uppercase tracking-[0.3em]">Share this with your partner</p>
+                  <p className="text-neutral-500 font-outfit text-xs uppercase tracking-[0.3em]">Send the link, or read out the code</p>
                 </div>
 
                 <div className="w-full bg-white/5 border border-white/10 rounded-3xl p-8 flex flex-col items-center gap-6">
@@ -244,11 +247,12 @@ export default function Pair() {
                     {inviteCode}
                   </div>
                   <button
-                    onClick={copyToClipboard}
+                    onClick={shareInvite}
                     className="flex items-center gap-2 px-6 py-3 bg-white text-black font-bebas text-base rounded-xl hover:bg-neutral-200 active:scale-95 transition-all"
                   >
-                    {copied ? <><Check className="w-4 h-4" /> Copied!</> : <><Copy className="w-4 h-4" /> Copy Code</>}
+                    {copied ? <><Check className="w-4 h-4" /> Link Copied!</> : <><Copy className="w-4 h-4" /> Share Invite Link</>}
                   </button>
+                  <p className="text-neutral-600 font-outfit text-[10px] uppercase tracking-widest">Valid for 7 days, for one person</p>
                 </div>
 
                 <div className="flex items-center gap-3 text-neutral-600">
@@ -325,7 +329,7 @@ export default function Pair() {
 
                 <div className="space-y-6">
                     <div>
-                        <p className="text-white font-bebas text-lg tracking-widest uppercase mb-4">When did you guys meet?</p>
+                        <p className="text-white font-bebas text-lg tracking-widest uppercase mb-4">When did you two meet?</p>
                         <p className="text-neutral-600 font-outfit text-xs mb-6 uppercase tracking-widest leading-relaxed">
                             We use this to track special days<br />and help you celebrate your journey.
                         </p>
@@ -362,7 +366,7 @@ export default function Pair() {
 
       {/* Bottom */}
       <div className="flex-none h-8 z-10 text-center">
-        <p className="text-[9px] font-bebas tracking-[0.5em] text-neutral-800 uppercase">Private • Encrypted • Just you two</p>
+        <p className="text-[9px] font-bebas tracking-[0.5em] text-neutral-800 uppercase">Private • Just you two</p>
       </div>
     </div>
   );
