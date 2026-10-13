@@ -4,6 +4,7 @@ import React, { useState, useEffect } from "react";
 import { auth, db } from "@/lib/firebase";
 import { doc, updateDoc } from "firebase/firestore";
 import { useAuthGuard } from "@/hooks/useAuthGuard";
+import { useMailbox } from "@/context/MailboxContext";
 import { motion, AnimatePresence } from "framer-motion";
 import { useRouter } from "next/navigation";
 import { MessageCircle, Cloud, Battery, Heart, ChevronRight, User } from "lucide-react";
@@ -84,11 +85,12 @@ export default function Onboarding() {
   const router = useRouter();
   useAuthGuard();
 
-  // Pre-fill name from Google if available
+  // Pre-fill the name from Google once sign-in has been restored (it is not ready on the first render after a reload)
+  const { fbUser } = useMailbox();
+  const googleName = fbUser && fbUser !== "loading" ? fbUser.displayName : null;
   useEffect(() => {
-    const googleName = auth.currentUser?.displayName;
-    if (googleName) setName(googleName);
-  }, []);
+    if (googleName) setName((current) => current || googleName);
+  }, [googleName]);
 
   const profileIndex = step - 1; // which profileSteps entry we're on
   const currentProfile = profileSteps[profileIndex];
