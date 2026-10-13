@@ -250,6 +250,7 @@ export const startSafeSpaceSession = async (coupleId: string, uid: string, partn
   const ref = await addDoc(sessionsRef, {
     active: true,
     startedBy: uid,
+    currentTurnUid: uid,
     startedAt: Timestamp.now(),
     lastMessageAt: Timestamp.now(),
     seen: { [uid]: new Date().toISOString() },
@@ -293,6 +294,8 @@ export const sendSafeSpaceMessage = async (coupleId: string, sessionId: string, 
   await updateDoc(sessionRef, {
     lastMessageAt: Timestamp.now(),
     lastMessageBy: senderUid,
+    // Whoever is speaking has the floor until they hand it over
+    currentTurnUid: senderUid,
     [`seen.${senderUid}`]: new Date().toISOString(),
   });
 
@@ -304,6 +307,41 @@ export const sendSafeSpaceMessage = async (coupleId: string, sessionId: string, 
       body: "Your partner shared something in the safe space.",
     });
   }
+};
+
+/**
+ * Presence: a heartbeat while someone has the room open, cleared when they step out.
+ * When both are present the conversation goes one at a time; otherwise each writes freely.
+ */
+export const setSafeSpacePresence = async (coupleId: string, sessionId: string, uid: string, present: boolean) => {
+  return updateDoc(doc(db, "couples", coupleId, "safe_space_sessions", sessionId), {
+    [`present.${uid}`]: present ? new Date().toISOString() : null,
+  });
+};
+
+/** Pass the floor to the other person. */
+export const handoverMic = async (coupleId: string, sessionId: string, nextUid: string) => {
+  return updateDoc(doc(db, "couples", coupleId, "safe_space_sessions", sessionId), {
+    currentTurnUid: nextUid,
+    micRequest: null,
+  });
+};
+
+/** The listener asks for the floor. */
+export const requestMic = async (coupleId: string, sessionId: string, uid: string) => {
+  const now = new Date().toISOString();
+  return updateDoc(doc(db, "couples", coupleId, "safe_space_sessions", sessionId), {
+    micRequest: { uid, requestedAt: now },
+    lastMicRequestAt: now,
+    lastMicRequestBy: uid,
+  });
+};
+
+/** The speaker answers a request: hand over now, or finish first. */
+export const respondToMicRequest = async (coupleId: string, sessionId: string, requesterUid: string, approve: boolean) => {
+  return updateDoc(doc(db, "couples", coupleId, "safe_space_sessions", sessionId), approve
+    ? { currentTurnUid: requesterUid, micRequest: null }
+    : { micRequest: null });
 };
 
 /** Record that this person has read the space up to now. */
