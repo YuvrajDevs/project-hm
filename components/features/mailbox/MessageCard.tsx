@@ -112,7 +112,6 @@ export const MessageCard = ({ message }: { message: MailboxMessage }) => {
   return (
     <motion.div
       ref={cardRef}
-      layout
       initial={{ opacity: 0, scale: 0.95 }}
       animate={{ opacity: 1, scale: 1 }}
       className={cn(
@@ -137,7 +136,7 @@ export const MessageCard = ({ message }: { message: MailboxMessage }) => {
                   <img 
                     src={config.url} 
                     alt={config.label}
-                    className="w-12 h-12 md:w-16 md:h-16 relative z-10 drop-shadow-2xl animate-float"
+                    className="w-12 h-12 md:w-16 md:h-16 relative z-10 drop-shadow-2xl"
                   />
               </div>
               <h2 className="text-3xl md:text-4xl font-bebas tracking-tight uppercase leading-none">
@@ -146,7 +145,7 @@ export const MessageCard = ({ message }: { message: MailboxMessage }) => {
           </div>
         </div>
         <div className="flex items-center gap-3 relative z-20">
-            <div className="text-[10px] font-bebas tracking-widest opacity-60 bg-black/10 px-3 py-1.5 rounded-full backdrop-blur-sm border border-white/5">
+            <div className="text-[10px] font-bebas tracking-widest opacity-60 bg-black/10 px-3 py-1.5 rounded-full border border-white/5">
                 {new Date(message.createdAt).toLocaleDateString([], { month: 'short', day: 'numeric' })}, {new Date(message.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
             </div>
             
@@ -240,7 +239,7 @@ export const MessageCard = ({ message }: { message: MailboxMessage }) => {
                             <button 
                                 onClick={() => setIsComposing(true)}
                                 disabled={responding}
-                                className="flex-1 bg-black/10 hover:bg-black/20 backdrop-blur-md border border-white/20 py-4 rounded-2xl flex flex-col items-center gap-2 transition-all group active:scale-95"
+                                className="flex-1 bg-black/10 hover:bg-black/20 border border-white/20 py-4 rounded-2xl flex flex-col items-center gap-2 transition-all group active:scale-95"
                             >
                                 <Users className="w-6 h-6 group-hover:scale-110 transition-transform" />
                                 <span className="font-bebas text-lg uppercase tracking-widest">I&apos;m Here</span>
@@ -248,7 +247,7 @@ export const MessageCard = ({ message }: { message: MailboxMessage }) => {
                             <button 
                                 onClick={() => handleResponse("MINUTE")}
                                 disabled={responding}
-                                className="flex-1 bg-black/10 hover:bg-black/20 backdrop-blur-md border border-white/20 py-4 rounded-2xl flex flex-col items-center gap-2 transition-all group active:scale-95"
+                                className="flex-1 bg-black/10 hover:bg-black/20 border border-white/20 py-4 rounded-2xl flex flex-col items-center gap-2 transition-all group active:scale-95"
                             >
                                 <Clock className="w-6 h-6 group-hover:scale-110 transition-transform" />
                                 <span className="font-bebas text-lg uppercase tracking-widest">30 Mins</span>

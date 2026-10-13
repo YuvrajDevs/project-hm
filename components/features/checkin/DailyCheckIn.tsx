@@ -17,7 +17,7 @@ export const DailyCheckIn: React.FC<DailyCheckInProps> = ({ onOpenPopup }) => {
   const isComplete = userCheckIn && partnerCheckIn;
 
   return (
-    <div className="w-full bg-white/5 border border-white/5 rounded-3xl overflow-hidden p-6 shadow-xl backdrop-blur-md relative group">
+    <div className="w-full bg-white/5 border border-white/5 rounded-3xl overflow-hidden p-6 shadow-xl relative group">
       <div className="absolute top-0 right-0 p-6 opacity-5 group-hover:opacity-10 transition-opacity pointer-events-none">
         <Sparkles className="w-24 h-24" />
       </div>

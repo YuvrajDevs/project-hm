@@ -270,7 +270,7 @@ export const DailyCheckInPopup: React.FC<DailyCheckInPopupProps> = ({ onClose })
                      
                      <div className="space-y-4">
                          {/* Score Banner */}
-                         <div className="flex items-center justify-between bg-white/5 border border-white/10 p-6 rounded-3xl backdrop-blur-md relative overflow-hidden">
+                         <div className="flex items-center justify-between bg-white/5 border border-white/10 p-6 rounded-3xl relative overflow-hidden">
                             <div className="absolute inset-0 bg-gradient-to-r from-pink-500/5 to-transparent pointer-events-none" />
                             <div className="flex items-center gap-4 relative z-10">
                                 <motion.div 

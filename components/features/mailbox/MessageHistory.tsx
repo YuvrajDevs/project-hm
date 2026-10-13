@@ -52,7 +52,7 @@ export const MessageHistory: React.FC<MessageHistoryProps> = ({ onComposeClick }
                 </header>
 
                 {/* Filters Section */}
-                <div className="flex items-center gap-2 p-1.5 bg-white/5 border border-white/10 rounded-2xl w-fit backdrop-blur-md">
+                <div className="flex items-center gap-2 p-1.5 bg-white/5 border border-white/10 rounded-2xl w-fit">
                     <button
                         onClick={() => setFilter("all")}
                         className={cn(
@@ -94,8 +94,8 @@ export const MessageHistory: React.FC<MessageHistoryProps> = ({ onComposeClick }
                                     initial={{ opacity: 0, y: 20 }}
                                     animate={{ opacity: 1, y: 0 }}
                                     exit={{ opacity: 0, scale: 0.95 }}
-                                    transition={{ duration: 0.3, delay: index * 0.05 }}
-                                    layout
+                                    transition={{ duration: 0.3, delay: Math.min(index, 6) * 0.05 }}
+                                    className="list-item-lazy"
                                 >
                                     {msg.sealed || (msg.unlockAt && new Date(msg.unlockAt).getTime() > now) ? (
                                         (msg.isSecretBeforeUnlock && msg.senderUid !== user?.uid) ? null : (

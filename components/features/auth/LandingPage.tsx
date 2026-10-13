@@ -208,7 +208,7 @@ export const LandingPage = () => {
                 whileInView={{ opacity: 1, y: 0 }}
                 viewport={{ once: true }}
                 transition={{ delay: i * 0.1 }}
-                className={`p-8 rounded-[2rem] border border-white/5 bg-gradient-to-b ${card.color} backdrop-blur-xl space-y-6 relative group hover:border-white/10 transition-colors`}
+                className={`p-8 rounded-[2rem] border border-white/5 bg-gradient-to-b ${card.color} space-y-6 relative group hover:border-white/10 transition-colors`}
               >
                 <div className="w-12 h-12 rounded-2xl bg-white/5 flex items-center justify-center group-hover:scale-110 transition-transform">
                   {card.icon}

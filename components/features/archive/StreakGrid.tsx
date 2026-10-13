@@ -173,7 +173,7 @@ export const StreakGrid: React.FC<StreakGridProps> = ({ history }) => {
       </div>
 
       {/* Calendar Grid Container */}
-      <div className="bg-white/5 p-8 md:p-16 rounded-[2.5rem] md:rounded-[4rem] border border-white/5 backdrop-blur-xl relative overflow-hidden group/grid">
+      <div className="bg-white/5 p-8 md:p-16 rounded-[2.5rem] md:rounded-[4rem] border border-white/5 relative overflow-hidden group/grid">
         {/* Master Grid (Header + Dates) */}
         <div className="grid grid-cols-7 gap-y-10 md:gap-y-14 gap-x-4 md:gap-x-12 place-items-center relative z-10 h-full">
             {/* Row 1: Days Header */}

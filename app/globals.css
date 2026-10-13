@@ -85,6 +85,29 @@ h1, h2, h3, h4, h5, h6 {
   box-shadow: 0 4px 20px -2px rgba(0, 0, 0, 0.5);
 }
 
+/* Ambient background washes */
+.ambient-wash {
+  will-change: transform;
+  transition: opacity 1s;
+}
+.ambient-wash-a { animation: wash-a 35s ease-in-out infinite; }
+.ambient-wash-b { animation: wash-b 40s ease-in-out infinite; }
+
+@keyframes wash-a {
+  0%, 100% { transform: translate3d(-20%, -20%, 0) scale(1); }
+  50% { transform: translate3d(-10%, -10%, 0) scale(1.1); }
+}
+@keyframes wash-b {
+  0%, 100% { transform: translate3d(20%, 20%, 0) scale(1.2); }
+  50% { transform: translate3d(10%, 10%, 0) scale(1); }
+}
+
+/* Long lists: the browser skips layout and paint for cards that are off screen */
+.list-item-lazy {
+  content-visibility: auto;
+  contain-intrinsic-size: auto 240px;
+}
+
 /* Animations */
 @keyframes stamp {
   0% { transform: scale(3) rotate(20deg); opacity: 0; }
