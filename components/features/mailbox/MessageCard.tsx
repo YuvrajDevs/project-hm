@@ -24,6 +24,7 @@ export const MessageCard = ({ message }: { message: MailboxMessage }) => {
   const [showOptions, setShowOptions] = useState(false);
   const [confirmHide, setConfirmHide] = useState(false);
   const [responding, setResponding] = useState(false);
+  const respondingRef = useRef(false);
   const [error, setError] = useState("");
   const cardRef = useRef<HTMLDivElement>(null);
   const optionsRef = useRef<HTMLDivElement>(null);
@@ -82,7 +83,8 @@ export const MessageCard = ({ message }: { message: MailboxMessage }) => {
   }, [message.response]);
 
   const handleResponse = async (mode: ResponseMode, text?: string) => {
-    if (isSender || responding) return;
+    if (isSender || respondingRef.current) return;
+    respondingRef.current = true;
     setResponding(true);
     setError("");
     
@@ -101,6 +103,7 @@ export const MessageCard = ({ message }: { message: MailboxMessage }) => {
       console.error(err);
       setError("Your response didn't send. Check your connection and try again.");
     } finally {
+      respondingRef.current = false;
       setResponding(false);
     }
   };

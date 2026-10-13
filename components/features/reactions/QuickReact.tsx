@@ -28,6 +28,7 @@ export const QuickReact = ({ onClose }: { onClose: () => void }) => {
   const [note, setNote] = useState("");
   const [cooldown, setCooldown] = useState(0);
   const [sending, setSending] = useState(false);
+  const sendingRef = useRef(false);
   const [error, setError] = useState("");
   const { playSend, playPop } = useSensoryFeedback();
 
@@ -57,7 +58,8 @@ export const QuickReact = ({ onClose }: { onClose: () => void }) => {
   }, [cooldown]);
 
   const handleSend = async () => {
-    if (!user?.coupleId || !selected || cooldown > 0 || sending) return;
+    if (!user?.coupleId || !selected || cooldown > 0 || sendingRef.current) return;
+    sendingRef.current = true;
     setSending(true);
     setError("");
     
@@ -74,6 +76,7 @@ export const QuickReact = ({ onClose }: { onClose: () => void }) => {
       console.error(err);
       setError("Couldn't send. Check your connection and try again.");
     } finally {
+      sendingRef.current = false;
       setSending(false);
     }
   };

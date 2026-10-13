@@ -33,6 +33,7 @@ export const SafeSpaceSession = () => {
   const [inputText, setInputText] = useState("");
   const [showClosure, setShowClosure] = useState(false);
   const [sending, setSending] = useState(false);
+  const sendingRef = React.useRef(false);
   const [sendError, setSendError] = useState("");
   const { playTransition, playSend } = useSensoryFeedback();
 
@@ -65,7 +66,8 @@ export const SafeSpaceSession = () => {
 
   const handleSendMessage = async () => {
     const text = inputText.trim();
-    if (!text || sending || !user?.coupleId || !activeSafeSpace?.id) return;
+    if (!text || sendingRef.current || !user?.coupleId || !activeSafeSpace?.id) return;
+    sendingRef.current = true;
     setSending(true);
     setSendError("");
     try {
@@ -76,6 +78,7 @@ export const SafeSpaceSession = () => {
       console.error(err);
       setSendError("Not sent. Check your connection and try again.");
     } finally {
+      sendingRef.current = false;
       setSending(false);
     }
   };

@@ -8,16 +8,19 @@ import { useMailbox } from "@/context/MailboxContext";
 export const WhiteFlagOverlay = () => {
     const { partner, lowerFlag, startSafeSpace, setOverlayActive } = useMailbox();
     const [busy, setBusy] = React.useState(false);
+    const busyRef = React.useRef(false);
 
     // One action at a time, however fast the buttons are tapped
     const run = async (action: () => Promise<void>) => {
-        if (busy) return;
+        if (busyRef.current) return;
+        busyRef.current = true;
         setBusy(true);
         try {
             await action();
         } catch (err) {
             console.error(err);
         } finally {
+            busyRef.current = false;
             setBusy(false);
         }
     };

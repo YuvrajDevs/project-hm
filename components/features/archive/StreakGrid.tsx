@@ -45,6 +45,7 @@ export const StreakGrid: React.FC<StreakGridProps> = ({ history }) => {
   const [eventRepeat, setEventRepeat] = useState<"none" | "monthly" | "yearly">("none");
   const [isSurprise, setIsSurprise] = useState(false);
   const [savingEvent, setSavingEvent] = useState(false);
+  const savingEventRef = React.useRef(false);
   const [eventError, setEventError] = useState("");
 
 
@@ -105,7 +106,8 @@ export const StreakGrid: React.FC<StreakGridProps> = ({ history }) => {
   const getDayEvents = (dateId: string) => events.filter(e => eventFallsOn(e.dateId, e.repeat, dateId));
 
   const handleSaveEvent = async () => {
-    if (!selectedDate || !eventTitle.trim() || savingEvent) return;
+    if (!selectedDate || !eventTitle.trim() || savingEventRef.current) return;
+    savingEventRef.current = true;
     setSavingEvent(true);
     setEventError("");
     try {
@@ -121,6 +123,7 @@ export const StreakGrid: React.FC<StreakGridProps> = ({ history }) => {
       setEventError("Couldn't save. Check your connection and try again.");
       return;
     } finally {
+      savingEventRef.current = false;
       setSavingEvent(false);
     }
     // Reset and close form

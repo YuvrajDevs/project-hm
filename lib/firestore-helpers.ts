@@ -35,6 +35,7 @@ import {
   AppNotification
 } from "./types";
 import type { User as FirebaseUser } from "firebase/auth";
+import { REACTION_ICONS } from "./constants";
 
 /**
  * Generic converter for Firestore to maintain type safety
@@ -230,7 +231,7 @@ export const sendQuickReact = async (coupleId: string, react: Omit<QuickReact, "
     uid: partnerUid,
     type: "REACTION",
     title: "New Signal",
-    body: `Your partner sent you a ${react.type.toLowerCase()} signal.`,
+    body: `Your partner sent you a signal: ${REACTION_ICONS[react.type]?.label ?? "a feeling"}.`,
   });
 };
 
@@ -492,6 +493,8 @@ export const acceptCoupleReset = async (coupleId: string) => {
     anniversaryDate: null,
     whiteFlagBy: null,
     whiteFlagAt: null,
+    streakCount: 0,
+    streakLastDay: null,
   });
 };
 
@@ -551,6 +554,9 @@ export const deleteUserAccount = async (uid: string, partnerUid: string | null) 
 
   // Private sub-collections are not removed with the parent document
   const refs: DocumentReference[] = [];
+  // Any invite this person created goes too. Best effort: it must never block the deletion itself.
+  const inviteCode = (await getDoc(doc(db, "users", uid))).data()?.inviteCode;
+  if (inviteCode) await deleteDoc(doc(db, "invites", inviteCode)).catch(() => {});
   for (const colName of ["notes", "notifications"]) {
     const snap = await getDocs(collection(db, "users", uid, colName));
     snap.docs.forEach((d) => refs.push(d.ref));

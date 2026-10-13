@@ -2,13 +2,12 @@
 
 import React, { createContext, useContext, useState, useEffect, useMemo, useRef } from "react";
 import { MailboxMessage, User, Couple, QuickReact, DailyCheckIn, SafeSpaceSession, CoupleEvent, AppNotification, ReactionType } from "@/lib/types";
-import { db, auth, googleProvider } from "@/lib/firebase";
+import { db, auth, reauthenticate } from "@/lib/firebase";
 import { MotionConfig } from "framer-motion";
 import { 
   onAuthStateChanged, 
   signOut as firebaseSignOut,
   deleteUser,
-  reauthenticateWithPopup,
   User as FirebaseUser 
 } from "firebase/auth";
 import { 
@@ -648,7 +647,7 @@ export const MailboxProvider: React.FC<{ children: React.ReactNode }> = ({ child
   const wipeoutUserAccount = async () => {
     if (!user?.uid || !fbUser || fbUser === "loading") return;
     // Deleting the sign-in itself needs a fresh login, so confirm identity before touching any data
-    await reauthenticateWithPopup(fbUser, googleProvider);
+    await reauthenticate(fbUser);
     deletingRef.current = true;
     try {
       await deleteUserAccount(user.uid, user.partnerId || null);

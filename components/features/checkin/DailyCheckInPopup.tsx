@@ -35,6 +35,8 @@ export const DailyCheckInPopup: React.FC<DailyCheckInPopupProps> = ({ onClose })
   const [connection, setConnection] = useState(5);
   const [moodStatus, setMoodStatus] = useState("");
   const [saving, setSaving] = useState(false);
+  // Synchronous guard: state alone cannot stop two taps that land in the same instant
+  const savingRef = React.useRef(false);
   const [error, setError] = useState("");
 
   useEffect(() => {
@@ -47,7 +49,8 @@ export const DailyCheckInPopup: React.FC<DailyCheckInPopupProps> = ({ onClose })
   const partnerCheckIn = checkins.find(c => c.userUid === partner?.uid);
 
   const handleSubmit = async () => {
-    if (!user?.coupleId || !moodStatus) return;
+    if (!user?.coupleId || !moodStatus || savingRef.current) return;
+    savingRef.current = true;
     setSaving(true);
     setError("");
     try {
@@ -74,6 +77,7 @@ export const DailyCheckInPopup: React.FC<DailyCheckInPopupProps> = ({ onClose })
       console.error(err);
       setError("Couldn't save your check-in. Try again.");
     } finally {
+      savingRef.current = false;
       setSaving(false);
     }
   };
