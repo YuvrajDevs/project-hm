@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useRef } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { useMailbox } from "@/context/MailboxContext";
 import { ReactionType, QuickReact as QuickReactType } from "@/lib/types";
@@ -27,6 +27,9 @@ export const QuickReact = ({ onClose }: { onClose: () => void }) => {
   const [selected, setSelected] = useState<ReactionConfig | null>(null);
   const [note, setNote] = useState("");
   const [cooldown, setCooldown] = useState(0);
+  const [sending, setSending] = useState(false);
+  const sendingRef = useRef(false);
+  const [error, setError] = useState("");
   const { playSend, playPop } = useSensoryFeedback();
 
   useEffect(() => {
@@ -55,19 +58,26 @@ export const QuickReact = ({ onClose }: { onClose: () => void }) => {
   }, [cooldown]);
 
   const handleSend = async () => {
-    if (!user?.coupleId || !selected || cooldown > 0) return;
+    if (!user?.coupleId || !selected || cooldown > 0 || sendingRef.current) return;
+    sendingRef.current = true;
+    setSending(true);
+    setError("");
     
     try {
       playSend();
       await sendSignal(selected.type, note.trim() || "");
       
       // SYNC: Update user's global mood state
-      await updateMood(selected.label);
+      await updateMood(selected.label, false);
       
       localStorage.setItem('last_signal_sent', Date.now().toString());
       onClose();
     } catch (err) {
       console.error(err);
+      setError("Couldn't send. Check your connection and try again.");
+    } finally {
+      sendingRef.current = false;
+      setSending(false);
     }
   };
 
@@ -140,10 +150,10 @@ export const QuickReact = ({ onClose }: { onClose: () => void }) => {
 
                 <button 
                     onClick={handleSend}
-                    disabled={cooldown > 0}
+                    disabled={cooldown > 0 || sending}
                     className="w-full py-5 bg-white text-black font-bebas text-lg tracking-widest uppercase rounded-2xl flex items-center justify-center gap-3 shadow-xl disabled:opacity-50"
                 >
-                    {cooldown > 0 ? <span>Wait {cooldown}s</span> : <><Send className="w-5 h-5" /> Send Signal</>}
+                    {sending ? <span>Sending...</span> : cooldown > 0 ? <span>Wait {cooldown}s</span> : error ? <span>Try Again</span> : <><Send className="w-5 h-5" /> Send Signal</>}
                 </button>
             </div>
         )}
@@ -158,32 +168,42 @@ export const IncomingReactionIndicator = () => {
   const [isManual, setIsManual] = useState(false);
   const { playDewdrop } = useSensoryFeedback();
 
-  useEffect(() => {
-    // 1. Auto Trigger on NEW reactions
-    const latestPartnerReact = reactions.find(r => r.senderUid === partner?.uid);
-    if (latestPartnerReact) {
-      const timeDiff = Date.now() - new Date(latestPartnerReact.createdAt).getTime();
-      if (timeDiff < 5000) { 
-        playDewdrop();
-        setActiveSplash(latestPartnerReact);
-        setIsManual(false);
-        const timer = setTimeout(() => setActiveSplash(null), 3500);
-        return () => clearTimeout(timer);
-      }
-    }
+  const partnerUid = partner?.uid;
+  const latestPartnerReact = reactions.find(r => r.senderUid === partnerUid);
+  const latestId = latestPartnerReact?.id;
+  const lastSeenId = useRef<string | null | undefined>(undefined);
+  const latestRef = useRef(latestPartnerReact);
+  useEffect(() => { latestRef.current = latestPartnerReact; });
 
-    // 2. Listen for Manual Trigger (from Home Page Hub)
+  // 1. Auto trigger, once per new signal. Whatever is already there when the app opens is not "new".
+  useEffect(() => {
+    if (!partnerUid) return;
+    if (lastSeenId.current === undefined) {
+      lastSeenId.current = latestId ?? null;
+      return;
+    }
+    if (!latestId || latestId === lastSeenId.current) return;
+    lastSeenId.current = latestId;
+    // The first load also looks like "new"; a generous age limit tells the two apart
+    if (Date.now() - new Date(latestRef.current?.createdAt || 0).getTime() > 2 * 60 * 1000) return;
+    playDewdrop();
+    setActiveSplash(latestRef.current ?? null);
+    setIsManual(false);
+    const timer = setTimeout(() => setActiveSplash(null), 3500);
+    return () => clearTimeout(timer);
+  }, [latestId, partnerUid, playDewdrop]);
+
+  // 2. Manual trigger (from the home page mood tile)
+  useEffect(() => {
     const handleManualTrigger = () => {
-        const latest = reactions.find(r => r.senderUid === partner?.uid);
-        if (latest) {
-            setActiveSplash(latest);
+        if (latestRef.current) {
+            setActiveSplash(latestRef.current);
             setIsManual(true);
         }
     };
-    
     window.addEventListener('triggerSignalSplash', handleManualTrigger);
     return () => window.removeEventListener('triggerSignalSplash', handleManualTrigger);
-  }, [reactions, partner]);
+  }, []);
 
   const reactionConfig = activeSplash ? REACTIONS.find(r => r.type === activeSplash.type) : null;
 
@@ -196,7 +216,7 @@ export const IncomingReactionIndicator = () => {
           animate={{ opacity: 1 }}
           exit={{ opacity: 0 }}
           transition={{ duration: 0.6 }}
-          className={`fixed inset-0 z-[300] flex items-center justify-center ${reactionConfig.bgColor} backdrop-blur-3xl p-8`}
+          className={`fixed inset-0 z-[300] flex items-center justify-center ${reactionConfig.bgColor} backdrop-blur-xl p-8`}
         >
             <div className="max-w-md w-full space-y-12 text-center relative">
                 

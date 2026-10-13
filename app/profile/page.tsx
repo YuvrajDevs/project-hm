@@ -2,7 +2,7 @@
 
 import React, { useState, useEffect } from "react";
 import { useMailbox } from "@/context/MailboxContext";
-import { updateProfile, updatePartnerNickname, updateCoupleAnniversary } from "@/lib/firestore-helpers";
+import { updateProfile, updatePartnerNickname, updateCoupleAnniversary, notifyPartner } from "@/lib/firestore-helpers";
 import { motion } from "framer-motion";
 import { useRouter } from "next/navigation";
 import {
@@ -179,6 +179,15 @@ export default function ProfilePage() {
     setError("");
     try {
         await updateCoupleAnniversary(user.coupleId, date);
+        // It is one shared date, so the other person is told when it changes
+        if (user.partnerId) {
+          notifyPartner(user.partnerId, {
+            uid: user.partnerId,
+            type: "CHECK_IN",
+            title: "Day You Met Updated",
+            body: `${user.displayName.split(" ")[0] || "Your partner"} set the day you met to ${formatDate(date)}.`,
+          });
+        }
         setEditingSection(null);
     } catch (err) {
         console.error(err);
@@ -416,7 +425,7 @@ export default function ProfilePage() {
                             className="flex items-center gap-2 text-[11px] font-bebas tracking-widest uppercase text-neutral-500 hover:text-white transition-colors"
                         >
                             <CalendarHeart className="w-3.5 h-3.5" />
-                            {couple?.anniversaryDate ? <>Together since <span className="text-white">{formatDate(couple.anniversaryDate)}</span></> : "Add the day you met"}
+                            {couple?.anniversaryDate ? <>Together since <span className="text-white">{formatDate(couple.anniversaryDate)}</span></> : "Add the day you met (shared)"}
                             <Pencil className="w-3 h-3" />
                         </button>
                         {editingSection === "anniversary" && (

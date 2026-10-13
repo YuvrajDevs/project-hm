@@ -38,6 +38,9 @@ function Pair() {
   const [error, setError] = useState("");
   const [copied, setCopied] = useState(false);
   const [anniversaryDate, setAnniversaryDate] = useState("");
+  // Shared details are asked once, of the person who accepted the invite. The inviter is never
+  // shown the same question, so the two of them cannot enter different answers.
+  const [isJoiner, setIsJoiner] = useState(false);
   const router = useRouter();
 
   // Opened from an invite link before signing in: remember the code and come back after sign-up
@@ -98,6 +101,7 @@ function Pair() {
       const newCoupleId = await acceptInvite(current.uid, inputCode);
       localStorage.removeItem(PENDING_INVITE_KEY);
       setCoupleId(newCoupleId);
+      setIsJoiner(true);
       setMode("success");
     } catch (err) {
       const reason = (err as Error).message as InviteError;
@@ -152,7 +156,7 @@ function Pair() {
       {/* Top bar */}
       <div className="flex-none flex items-center justify-between px-8 pt-8 pb-4 z-10">
         <div className="flex items-center gap-2">
-          <img src="/HM.png" alt="HM Logo" className="w-4 h-auto" />
+          <img src="/logo.png" alt="HM Logo" className="w-4 h-auto" />
           <span className="font-bebas text-sm tracking-[0.4em] text-neutral-500 uppercase">Honest Mailbox</span>
         </div>
         {mode !== "choice" ? (
@@ -323,23 +327,31 @@ function Pair() {
                   </div>
                   <div>
                     <h1 className="text-4xl font-bebas text-white tracking-widest uppercase mb-2">Connected!</h1>
-                    <p className="text-neutral-500 font-outfit text-sm">You are now paired. One more thing...</p>
+                    <p className="text-neutral-500 font-outfit text-sm">
+                      {isJoiner ? "You are now paired. One more thing..." : "Your partner accepted your invite. Your shared space is ready."}
+                    </p>
                   </div>
                 </div>
 
-                <div className="space-y-6">
+                {isJoiner ? (
+                  <div className="space-y-6">
                     <div>
                         <p className="text-white font-bebas text-lg tracking-widest uppercase mb-4">When did you two meet?</p>
                         <p className="text-neutral-600 font-outfit text-xs mb-6 uppercase tracking-widest leading-relaxed">
-                            We use this to track special days<br />and help you celebrate your journey.
+                            One date for the two of you.<br />Either of you can change it later in your profile.
                         </p>
                         <input 
                             type="date"
                             value={anniversaryDate}
+                            max={new Date().toISOString().split("T")[0]}
                             onChange={(e) => setAnniversaryDate(e.target.value)}
                             className="w-full bg-white/5 border border-white/10 rounded-2xl py-4 px-6 text-center text-white font-outfit focus:outline-none focus:border-pink-500/40 transition-all [color-scheme:dark]"
                         />
                     </div>
+
+                    {error && (
+                      <p className="text-rose-500 text-xs font-outfit text-center">{error}</p>
+                    )}
 
                     <div className="flex flex-col gap-3">
                         <button
@@ -356,7 +368,15 @@ function Pair() {
                             Skip for now
                         </button>
                     </div>
-                </div>
+                  </div>
+                ) : (
+                  <button
+                    onClick={() => router.push("/")}
+                    className="w-full bg-white text-black font-bebas text-xl py-5 rounded-2xl flex items-center justify-center gap-2 hover:bg-neutral-200 active:scale-95 transition-all"
+                  >
+                    Enter Our Space <ArrowRight className="w-5 h-5" />
+                  </button>
+                )}
               </motion.div>
             )}
 

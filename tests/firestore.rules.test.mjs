@@ -223,6 +223,49 @@ test("safe space sessions and messages work for members only", async () => {
   await assertFails(getDocs(collection(db(MALLORY), "couples", COUPLE, "safe_space_sessions", session.id, "messages")));
 });
 
+test("the receiver cannot rewrite a note, and the sender cannot fake a response", async () => {
+  await seedCouple();
+  await assertFails(updateDoc(doc(db(BOB), "couples", COUPLE, "mailbox", "m1"), { note: "you said this" }));
+  await assertFails(updateDoc(doc(db(ALICE), "couples", COUPLE, "mailbox", "m1"), { response: { mode: "HERE" } }));
+  await assertFails(updateDoc(doc(db(ALICE), "couples", COUPLE, "mailbox", "m1"), { readAt: "now" }));
+});
+
+test("the sender can edit their note until it is answered, and either can hide it for themselves", async () => {
+  await seedCouple();
+  await assertSucceeds(updateDoc(doc(db(ALICE), "couples", COUPLE, "mailbox", "m1"), { note: "edited", status: "LOVE_NOTE", updatedAt: Timestamp.now() }));
+  await assertSucceeds(updateDoc(doc(db(BOB), "couples", COUPLE, "mailbox", "m1"), { hiddenFor: [BOB] }));
+  await assertSucceeds(updateDoc(doc(db(BOB), "couples", COUPLE, "mailbox", "m1"), { response: { mode: "HERE" } }));
+  await assertFails(updateDoc(doc(db(ALICE), "couples", COUPLE, "mailbox", "m1"), { note: "changed after the answer" }));
+});
+
+test("a check-in document id must be the writer's own for that day", async () => {
+  await seedCouple();
+  await assertFails(setDoc(doc(db(ALICE), "couples", COUPLE, "checkins", "anything"), { userUid: ALICE, mood: 5, connection: 5, moodStatus: "Peace", dateId: "2026-10-12" }));
+  await assertFails(setDoc(doc(db(ALICE), "couples", COUPLE, "checkins", `2026-10-13_${ALICE}`), { userUid: ALICE, mood: 5, connection: 5, moodStatus: "Peace", dateId: "2026-10-12" }));
+});
+
+test("members can update the couple's shared day settings and streak", async () => {
+  await seedCouple();
+  await assertSucceeds(updateDoc(doc(db(ALICE), "couples", COUPLE), { dayTimezone: "Asia/Kolkata" }));
+  const d = db(BOB);
+  await assertSucceeds(runTransaction(d, async (tx) => {
+    await tx.get(doc(d, "couples", COUPLE));
+    tx.update(doc(d, "couples", COUPLE), { streakCount: 1, streakLastDay: "2026-10-12" });
+  }));
+});
+
+test("a still-locked capsule cannot be opened into the mailbox, and its words cannot be swapped", async () => {
+  await seedCouple();
+  await seed(async (d) => {
+    await setDoc(doc(d, "couples", COUPLE, "mailbox", "early"), { senderUid: ALICE, sealed: true, unlockAt: new Date(Date.now() + 3_600_000).toISOString() });
+    await setDoc(doc(d, "couples", COUPLE, "capsules", "early"), { senderUid: ALICE, status: "LOVE_NOTE", intent: "SAY_IT", note: "later", unlockAtTs: Timestamp.fromMillis(Date.now() + 3_600_000) });
+    await setDoc(doc(d, "couples", COUPLE, "mailbox", "ready"), { senderUid: ALICE, sealed: true, unlockAt: new Date(Date.now() - 60_000).toISOString() });
+    await setDoc(doc(d, "couples", COUPLE, "capsules", "ready"), { senderUid: ALICE, status: "LOVE_NOTE", intent: "SAY_IT", note: "real words", unlockAtTs: Timestamp.fromMillis(Date.now() - 60_000) });
+  });
+  await assertFails(updateDoc(doc(db(BOB), "couples", COUPLE, "mailbox", "early"), { status: "LOVE_NOTE", intent: "SAY_IT", note: "later", sealed: false }));
+  await assertFails(updateDoc(doc(db(BOB), "couples", COUPLE, "mailbox", "ready"), { status: "LOVE_NOTE", intent: "SAY_IT", note: "made up", sealed: false }));
+});
+
 // ─── Time capsules ──────────────────────────────────────────────────────────
 test("a sealed capsule is readable by the sender, and by the receiver only after it unlocks", async () => {
   await seedCouple();

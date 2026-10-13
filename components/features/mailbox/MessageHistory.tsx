@@ -97,7 +97,7 @@ export const MessageHistory: React.FC<MessageHistoryProps> = ({ onComposeClick }
                                     transition={{ duration: 0.3, delay: index * 0.05 }}
                                     layout
                                 >
-                                    {msg.unlockAt && new Date(msg.unlockAt).getTime() > now ? (
+                                    {msg.sealed || (msg.unlockAt && new Date(msg.unlockAt).getTime() > now) ? (
                                         (msg.isSecretBeforeUnlock && msg.senderUid !== user?.uid) ? null : (
                                             <LockedCapsule message={msg} />
                                         )
@@ -122,7 +122,7 @@ export const MessageHistory: React.FC<MessageHistoryProps> = ({ onComposeClick }
                                 </div>
                                 <div className="text-center space-y-1">
                                     <p className="font-bebas text-xl tracking-widest uppercase text-neutral-400">Empty Archive</p>
-                                    <p className="text-[10px] font-outfit uppercase tracking-[0.2em] text-neutral-600">No {filter} messages found</p>
+                                    <p className="text-[10px] font-outfit uppercase tracking-[0.2em] text-neutral-600">{filter === "all" ? "No notes yet" : `No ${filter} notes yet`}</p>
                                 </div>
                             </motion.div>
                         )}

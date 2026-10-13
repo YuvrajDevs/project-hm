@@ -25,7 +25,6 @@ import { NotificationCenter } from "@/components/features/notifications/Notifica
 import { Bell } from "lucide-react";
 import { LandingPage } from "@/components/features/auth/LandingPage";
 import { PENDING_INVITE_KEY } from "@/lib/constants";
-import { getCheckInDateId } from "@/lib/utils";
 
 export default function Home() {
   const { 
@@ -43,6 +42,7 @@ export default function Home() {
     hasLoadedCheckins,
     isOverlayActive,
     couple,
+    todayId,
     unreadNotificationsCount
   } = useMailbox();
 
@@ -117,7 +117,7 @@ export default function Home() {
       } else if (user?.leftByPartner && !overlayDismissed) {
         return;
       } else if (!hasOnboarded) {
-        router.push("/onboarding");
+        router.replace("/onboarding");
       } else if (!isPaired) {
         // Arrived through an invite link: finish pairing now that the account exists
         const pendingInvite = localStorage.getItem(PENDING_INVITE_KEY);
@@ -127,7 +127,7 @@ export default function Home() {
          const userCheckIn = checkins.find(c => c.userUid === user?.uid);
          if (!userCheckIn) {
             // Invite once a day; after that the check-in stays one tap away on the home screen
-            const promptKey = `checkin_prompted_${getCheckInDateId()}`;
+            const promptKey = `checkin_prompted_${todayId}`;
             if (!localStorage.getItem(promptKey)) {
                localStorage.setItem(promptKey, 'true');
                setShowCheckInPopup(true);
@@ -139,7 +139,8 @@ export default function Home() {
                const todayId = userCheckIn.dateId;
                const hasShownNudge = localStorage.getItem(`nudge_shown_${todayId}`);
                if (!hasShownNudge && (userCheckIn.connection < 5 || (partnerCheckIn.connection < 5))) {
-                   setTimeout(() => setShowEmpathyNudge(true), 1500); 
+                   const nudgeTimer = setTimeout(() => setShowEmpathyNudge(true), 1500);
+                   return () => clearTimeout(nudgeTimer);
                }
             }
          }
@@ -186,6 +187,18 @@ export default function Home() {
     }
   }, [loading, user, hasOnboarded]);
 
+  // A different person signing in on this device starts from a clean slate
+  useEffect(() => {
+    if (fbUser === null) {
+      setHasLoadedInitially(false);
+      setOverlayDismissed(false);
+      setShowCheckInPopup(false);
+      setShowEmpathyNudge(false);
+      setShowCompose(false);
+      setActiveView("mailbox");
+    }
+  }, [fbUser]);
+
   // 1. Auth is still determining (initial check) OR server-side hydration guard
   if (!mounted || fbUser === "loading") {
     return (
@@ -194,7 +207,7 @@ export default function Home() {
           animate={{ opacity: [0.3, 0.6, 0.3], scale: [0.95, 1, 0.95] }}
           transition={{ repeat: Infinity, duration: 2, ease: "easeInOut" }}
         >
-          <img src="/HM.png" alt="HM Logo" className="w-12 h-auto grayscale opacity-50" />
+          <img src="/logo.png" alt="HM Logo" className="w-12 h-auto grayscale opacity-50" />
         </motion.div>
       </div>
     );
@@ -211,7 +224,7 @@ export default function Home() {
       <div className="min-h-screen bg-[#0a0a0a] flex items-center justify-center">
         <div className="flex flex-col items-center gap-6">
           <div className="flex items-center justify-center mb-2">
-            <img src="/HM.png" alt="HM Logo" className="w-16 h-auto drop-shadow-lg" />
+            <img src="/logo.png" alt="HM Logo" className="w-16 h-auto drop-shadow-lg" />
           </div>
           <div className="flex flex-col items-center gap-6">
             <div className="flex items-center gap-3">
@@ -281,13 +294,14 @@ export default function Home() {
             className="flex justify-between items-center w-full fixed top-0 left-0 p-8 z-50 bg-gradient-to-b from-black/80 to-transparent backdrop-blur-sm pointer-events-none"
           >
             <div className="flex items-center gap-3 pointer-events-auto">
-              <img src="/HM.png" alt="HM Logo" className="w-6 h-auto" />
+              <img src="/logo.png" alt="HM Logo" className="w-6 h-auto" />
               <span className="font-bebas text-xl tracking-widest text-white uppercase">Honest Mailbox</span>
             </div>
             
             <div className="flex items-center gap-2 pointer-events-auto">
                {/* Notification Bell */}
                <button 
+                aria-label="Notifications"
                 onClick={() => { setShowNotiCenter(true); }}
                 className="w-10 h-10 rounded-full bg-white/5 border border-white/5 flex items-center justify-center hover:bg-white/10 transition-all text-neutral-400 hover:text-white shadow-2xl relative"
               >
@@ -302,6 +316,7 @@ export default function Home() {
               </button>
 
               <button 
+                aria-label="Settings"
                 onClick={() => router.push("/settings")}
                 className="w-10 h-10 rounded-full bg-white/5 border border-white/5 flex items-center justify-center hover:bg-white/10 transition-all text-neutral-400 hover:text-white shadow-2xl"
               >
@@ -400,12 +415,12 @@ export default function Home() {
             <EmpathyNudge 
                 key="empathy-nudge"
                 onWriteNote={() => {
-                    localStorage.setItem(`nudge_shown_${getCheckInDateId()}`, 'true');
+                    localStorage.setItem(`nudge_shown_${todayId}`, 'true');
                     setShowEmpathyNudge(false);
                     setShowCompose(true);
                 }}
                 onDismiss={() => {
-                    localStorage.setItem(`nudge_shown_${getCheckInDateId()}`, 'true');
+                    localStorage.setItem(`nudge_shown_${todayId}`, 'true');
                     setShowEmpathyNudge(false);
                 }}
             />

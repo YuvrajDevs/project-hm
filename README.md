@@ -23,8 +23,26 @@ npm run dev
 npx tsc --noEmit        # types
 npm run lint            # lint (0 errors expected)
 npm run build           # production build
+npm run test:unit       # date and streak logic
 npm run test:rules      # Firestore security rules, in the emulator (needs Java)
 ```
+
+## Testing signed-in flows without real accounts
+
+```bash
+npm run emulators       # local Auth + Firestore emulators (needs Java), with the real security rules
+npm run dev:emulators   # the app, pointed at the emulators
+```
+
+In this mode the app uses a throwaway `demo-` project that cannot reach real data, and only on localhost.
+Sign in from the browser console with a made-up account:
+
+```js
+await window.__hmTestSignIn("someone@example.com", "Someone")
+```
+
+Use a second port (`npx next dev -p 3001` is not possible alongside the first; build with
+`NEXT_PUBLIC_USE_EMULATORS=1 npm run build` and run `npx next start -p 3001`) to act as the partner.
 
 ## Data model
 

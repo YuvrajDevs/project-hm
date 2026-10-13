@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useRef } from "react";
 import { MailboxMessage, ResponseMode } from "@/lib/types";
 import { motion, AnimatePresence } from "framer-motion";
 import { useMailbox } from "@/context/MailboxContext";
@@ -22,13 +22,45 @@ export const MessageCard = ({ message }: { message: MailboxMessage }) => {
   const [responseText, setResponseText] = useState("");
   const [isEditing, setIsEditing] = useState(false);
   const [showOptions, setShowOptions] = useState(false);
+  const [confirmHide, setConfirmHide] = useState(false);
+  const [responding, setResponding] = useState(false);
+  const respondingRef = useRef(false);
+  const [error, setError] = useState("");
+  const cardRef = useRef<HTMLDivElement>(null);
+  const optionsRef = useRef<HTMLDivElement>(null);
 
-  // Mark as Read Logic
+  // Mark as read once the note has actually been on screen
+  const needsReadReceipt = !isSender && !message.readAt && !!user?.coupleId;
   useEffect(() => {
-    if (!isSender && !message.readAt && user?.coupleId) {
-      markAsRead(message.id);
-    }
-  }, [message.id, isSender, message.readAt, user?.coupleId]);
+    const el = cardRef.current;
+    if (!needsReadReceipt || !el) return;
+    const observer = new IntersectionObserver(([entry]) => {
+      if (entry.isIntersecting) {
+        observer.disconnect();
+        markAsRead(message.id);
+      }
+    }, { threshold: 0.5 });
+    observer.observe(el);
+    return () => observer.disconnect();
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- markAsRead is stable in behaviour
+  }, [message.id, needsReadReceipt]);
+
+  // Close the options menu when tapping anywhere else
+  useEffect(() => {
+    if (!showOptions) return;
+    const close = (e: MouseEvent | TouchEvent) => {
+      if (!optionsRef.current?.contains(e.target as Node)) {
+        setShowOptions(false);
+        setConfirmHide(false);
+      }
+    };
+    document.addEventListener("mousedown", close);
+    document.addEventListener("touchstart", close);
+    return () => {
+      document.removeEventListener("mousedown", close);
+      document.removeEventListener("touchstart", close);
+    };
+  }, [showOptions]);
 
   useEffect(() => {
     if (message.response?.mode === "MINUTE" && message.response.timerExpiresAt) {
@@ -51,7 +83,10 @@ export const MessageCard = ({ message }: { message: MailboxMessage }) => {
   }, [message.response]);
 
   const handleResponse = async (mode: ResponseMode, text?: string) => {
-    if (isSender) return;
+    if (isSender || respondingRef.current) return;
+    respondingRef.current = true;
+    setResponding(true);
+    setError("");
     
     playPop();
     const responseObj: { mode: ResponseMode; text?: string; timerExpiresAt?: string } = { mode };
@@ -66,12 +101,17 @@ export const MessageCard = ({ message }: { message: MailboxMessage }) => {
       setIsComposing(false);
     } catch (err) {
       console.error(err);
+      setError("Your response didn't send. Check your connection and try again.");
+    } finally {
+      respondingRef.current = false;
+      setResponding(false);
     }
   };
 
 
   return (
     <motion.div
+      ref={cardRef}
       layout
       initial={{ opacity: 0, scale: 0.95 }}
       animate={{ opacity: 1, scale: 1 }}
@@ -110,9 +150,10 @@ export const MessageCard = ({ message }: { message: MailboxMessage }) => {
                 {new Date(message.createdAt).toLocaleDateString([], { month: 'short', day: 'numeric' })}, {new Date(message.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
             </div>
             
-            <div className="relative">
+            <div className="relative" ref={optionsRef}>
                 <button 
-                  onClick={() => { vibrateTick(); setShowOptions(!showOptions); }}
+                  onClick={() => { vibrateTick(); setShowOptions(!showOptions); setConfirmHide(false); }}
+                  aria-label="Note options"
                   className="p-1.5 rounded-full hover:bg-black/10 transition-colors"
                 >
                     <MoreVertical className="w-4 h-4" />
@@ -136,11 +177,16 @@ export const MessageCard = ({ message }: { message: MailboxMessage }) => {
                           </button>
                         )}
                         <button 
-                          onClick={() => { deleteForMe(message.id); setShowOptions(false); }}
+                          onClick={() => {
+                            if (!confirmHide) { setConfirmHide(true); return; }
+                            deleteForMe(message.id).catch(console.error);
+                            setShowOptions(false);
+                            setConfirmHide(false);
+                          }}
                           className="w-full flex items-center gap-3 px-3 py-2.5 hover:bg-red-500/10 rounded-xl text-left transition-colors"
                         >
                           <Trash2 className="w-4 h-4 text-red-400" />
-                          <span className="font-bebas text-sm uppercase tracking-widest text-red-200">Delete for Me</span>
+                          <span className="font-bebas text-sm uppercase tracking-widest text-red-200">{confirmHide ? "Tap Again to Hide" : "Hide for Me"}</span>
                         </button>
                     </motion.div>
                   )}
@@ -162,6 +208,9 @@ export const MessageCard = ({ message }: { message: MailboxMessage }) => {
       </div>
 
       <div className="pt-4 border-t border-white/10 relative z-10">
+        {error && (
+          <p className="text-white text-xs font-outfit bg-black/30 rounded-xl px-3 py-2 mb-3">{error}</p>
+        )}
 
         {!message.response ? (
           isSender ? (
@@ -190,6 +239,7 @@ export const MessageCard = ({ message }: { message: MailboxMessage }) => {
                         >
                             <button 
                                 onClick={() => setIsComposing(true)}
+                                disabled={responding}
                                 className="flex-1 bg-black/10 hover:bg-black/20 backdrop-blur-md border border-white/20 py-4 rounded-2xl flex flex-col items-center gap-2 transition-all group active:scale-95"
                             >
                                 <Users className="w-6 h-6 group-hover:scale-110 transition-transform" />
@@ -197,6 +247,7 @@ export const MessageCard = ({ message }: { message: MailboxMessage }) => {
                             </button>
                             <button 
                                 onClick={() => handleResponse("MINUTE")}
+                                disabled={responding}
                                 className="flex-1 bg-black/10 hover:bg-black/20 backdrop-blur-md border border-white/20 py-4 rounded-2xl flex flex-col items-center gap-2 transition-all group active:scale-95"
                             >
                                 <Clock className="w-6 h-6 group-hover:scale-110 transition-transform" />
@@ -236,6 +287,8 @@ export const MessageCard = ({ message }: { message: MailboxMessage }) => {
                                 </div>
                                 <button 
                                     onClick={() => handleResponse("HERE", responseText)}
+                                    disabled={responding}
+                                    aria-label="Send response"
                                     className="bg-white text-black p-3 rounded-xl hover:bg-neutral-100 transition-all active:scale-95 shadow-xl"
                                 >
                                     <Send className="w-5 h-5" />

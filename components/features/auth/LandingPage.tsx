@@ -1,8 +1,8 @@
 "use client";
 
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { auth, googleProvider } from "@/lib/firebase";
-import { signInWithPopup } from "firebase/auth";
+import { signInWithPopup, signInWithRedirect, getRedirectResult } from "firebase/auth";
 import { ensureUserDoc } from "@/lib/firestore-helpers";
 import { motion, useScroll, useTransform } from "framer-motion";
 import Link from "next/link";
@@ -37,6 +37,32 @@ export const LandingPage = () => {
   const opacity = useTransform(scrollYProgress, [0, 0.2], [1, 0]);
   const scale = useTransform(scrollYProgress, [0, 0.2], [1, 0.95]);
 
+  // Apps like Instagram, Facebook and TikTok open links in their own mini browser, where Google refuses to sign in
+  const [inAppBrowser, setInAppBrowser] = useState(false);
+  const [linkCopied, setLinkCopied] = useState(false);
+
+  useEffect(() => {
+    setInAppBrowser(/FBAN|FBAV|FB_IAB|Instagram|Line\/|TikTok|musical_ly|Snapchat|LinkedInApp|Twitter|; wv\)/i.test(navigator.userAgent));
+
+    // Coming back from a full-page Google sign-in (used when the popup is blocked)
+    getRedirectResult(auth)
+      .then(result => { if (result?.user) return ensureUserDoc(result.user); })
+      .catch(err => {
+        console.error(err);
+        setError("Sign-in didn't complete. Please try again.");
+      });
+  }, []);
+
+  const copyLink = async () => {
+    try {
+      await navigator.clipboard.writeText(window.location.href);
+      setLinkCopied(true);
+      setTimeout(() => setLinkCopied(false), 2500);
+    } catch {
+      setError("Couldn't copy. Use the menu (⋯) and choose “Open in browser”.");
+    }
+  };
+
   const handleGoogle = async () => {
     setLoading(true);
     setError("");
@@ -46,7 +72,18 @@ export const LandingPage = () => {
       await ensureUserDoc(result.user);
     } catch (err) {
       const code = (err as { code?: string }).code;
-      if (code !== "auth/popup-closed-by-user" && code !== "auth/cancelled-popup-request") {
+      if (code === "auth/popup-blocked" || code === "auth/operation-not-supported-in-this-environment") {
+        // No popups here (some phones and home-screen apps): use the full-page sign-in instead
+        try {
+          await signInWithRedirect(auth, googleProvider);
+          return;
+        } catch (redirectErr) {
+          console.error(redirectErr);
+          setError("Your browser blocked the sign-in window. Allow pop-ups for this site and try again.");
+        }
+      } else if (code === "auth/network-request-failed") {
+        setError("No connection. Check your internet and try again.");
+      } else if (code !== "auth/popup-closed-by-user" && code !== "auth/cancelled-popup-request") {
         setError("Something went wrong. Please try again.");
       }
     } finally {
@@ -67,7 +104,7 @@ export const LandingPage = () => {
             animate={{ opacity: 1, y: 0 }}
             className="flex items-center gap-2 mb-4"
           >
-            <img src="/HM.png" alt="HM Logo" className="w-4 h-auto" />
+            <img src="/logo.png" alt="HM Logo" className="w-4 h-auto" />
             <span className="font-bebas text-sm tracking-[0.4em] text-neutral-500 uppercase">Honest Mailbox</span>
           </motion.div>
 
@@ -82,7 +119,7 @@ export const LandingPage = () => {
               whileHover={{ scale: 1.05, rotate: 2 }}
               className="flex items-center justify-center mb-4"
             >
-              <img src="/HM.png" alt="Logo" className="w-20 h-auto object-contain drop-shadow-2xl" />
+              <img src="/logo.png" alt="Logo" className="w-20 h-auto object-contain drop-shadow-2xl" />
             </motion.div>
 
             <div>
@@ -121,9 +158,23 @@ export const LandingPage = () => {
             </button>
 
             {error && (
-              <p className="text-rose-500 text-[9px] uppercase font-bebas tracking-widest text-center mt-4">
+              <p className="text-rose-500 text-xs font-outfit text-center mt-4 leading-relaxed">
                 {error}
               </p>
+            )}
+
+            {inAppBrowser && (
+              <div className="mt-4 bg-white/5 border border-white/10 rounded-2xl p-4 text-center space-y-3">
+                <p className="text-xs text-neutral-300 font-outfit leading-relaxed">
+                  Google sign-in doesn&apos;t work inside this app&apos;s browser. Open this page in Safari or Chrome: tap the menu (⋯) and choose “Open in browser”, or copy the link.
+                </p>
+                <button
+                  onClick={copyLink}
+                  className="text-pink-400 font-bebas text-sm tracking-widest uppercase hover:text-pink-300 transition-colors"
+                >
+                  {linkCopied ? "Link Copied" : "Copy Link"}
+                </button>
+              </div>
             )}
           </motion.div>
         </motion.div>
@@ -157,7 +208,7 @@ export const LandingPage = () => {
                 whileInView={{ opacity: 1, y: 0 }}
                 viewport={{ once: true }}
                 transition={{ delay: i * 0.1 }}
-                className={`p-8 rounded-[2rem] border border-white/5 bg-gradient-to-b ${card.color} backdrop-blur-3xl space-y-6 relative group hover:border-white/10 transition-colors`}
+                className={`p-8 rounded-[2rem] border border-white/5 bg-gradient-to-b ${card.color} backdrop-blur-xl space-y-6 relative group hover:border-white/10 transition-colors`}
               >
                 <div className="w-12 h-12 rounded-2xl bg-white/5 flex items-center justify-center group-hover:scale-110 transition-transform">
                   {card.icon}
@@ -198,7 +249,7 @@ export const LandingPage = () => {
       <footer className="py-20 px-6 border-t border-white/5 bg-black/50 backdrop-blur-xl">
         <div className="max-w-4xl mx-auto flex flex-col items-center gap-12">
           <div className="flex items-center gap-3 grayscale opacity-30">
-            <img src="/HM.png" alt="HM Logo" className="w-5 h-auto" />
+            <img src="/logo.png" alt="HM Logo" className="w-5 h-auto" />
             <span className="font-bebas text-lg tracking-widest">Honest Mailbox</span>
           </div>
 

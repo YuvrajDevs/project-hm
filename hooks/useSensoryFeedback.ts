@@ -2,17 +2,23 @@
 
 import { useRef, useCallback, useEffect } from "react";
 
+// Browsers allow only a handful of audio contexts, so the whole app shares one
+let sharedAudioCtx: AudioContext | null = null;
+
+const getAudioCtx = () => {
+  if (typeof window === "undefined") return null;
+  if (!sharedAudioCtx) {
+    const AudioCtx = window.AudioContext || (window as unknown as { webkitAudioContext?: typeof AudioContext }).webkitAudioContext;
+    if (AudioCtx) sharedAudioCtx = new AudioCtx();
+  }
+  return sharedAudioCtx;
+};
+
 export const useSensoryFeedback = () => {
   const audioCtxRef = useRef<AudioContext | null>(null);
 
   useEffect(() => {
-    // Only init if window exists
-    if (typeof window !== "undefined") {
-      const AudioCtx = window.AudioContext || (window as unknown as { webkitAudioContext?: typeof AudioContext }).webkitAudioContext;
-      if (AudioCtx) {
-        audioCtxRef.current = new AudioCtx();
-      }
-    }
+    audioCtxRef.current = getAudioCtx();
   }, []);
 
   const resumeCtx = async () => {

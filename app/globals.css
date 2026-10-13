@@ -142,3 +142,12 @@ h1, h2, h3, h4, h5, h6 {
 .policy-content li {
   margin-bottom: 0.5rem !important;
 }
+
+/* People who ask their device for less motion get none of the decorative loops */
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    scroll-behavior: auto !important;
+  }
+}

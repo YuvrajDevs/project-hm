@@ -45,9 +45,26 @@ export default function SettingsPage() {
 
   const handleResetHistory = async () => {
     setIsProcessing(true);
-    await requestReset();
-    setIsProcessing(false);
-    setShowResetConfirm(false);
+    setError("");
+    try {
+      await requestReset();
+      setShowResetConfirm(false);
+    } catch (err) {
+      console.error(err);
+      setError("Couldn't send the reset request. Check your connection and try again.");
+    } finally {
+      setIsProcessing(false);
+    }
+  };
+
+  const handleCancelReset = async () => {
+    setError("");
+    try {
+      await cancelReset();
+    } catch (err) {
+      console.error(err);
+      setError("Couldn't update the reset request. Try again.");
+    }
   };
 
   const handleLogout = async () => {
@@ -261,7 +278,7 @@ export default function SettingsPage() {
                         {couple.resetStatus === "pending" && couple.resetBy === user.uid && (
                             <motion.div initial={{ opacity: 0, height: 0 }} animate={{ opacity: 1, height: "auto" }} className="mt-4 p-4 bg-white/5 border border-white/10 rounded-xl text-center">
                                 <p className="text-xs text-neutral-400 font-outfit uppercase tracking-wider">Awaiting your partner&apos;s agreement...</p>
-                                <button onClick={cancelReset} className="mt-2 text-[10px] text-pink-500 font-bebas uppercase tracking-widest hover:underline">Cancel Request</button>
+                                <button onClick={handleCancelReset} className="mt-2 text-[10px] text-pink-500 font-bebas uppercase tracking-widest hover:underline">Cancel Request</button>
                             </motion.div>
                         )}
                         {couple.resetStatus === "declined" && couple.resetBy === user.uid && (
@@ -269,7 +286,7 @@ export default function SettingsPage() {
                                 <p className="text-xs text-neutral-300 font-outfit leading-relaxed">
                                     Your partner would rather keep your history for now.
                                 </p>
-                                <button onClick={cancelReset} className="mt-2 text-[10px] text-pink-500 font-bebas uppercase tracking-widest hover:underline">Okay</button>
+                                <button onClick={handleCancelReset} className="mt-2 text-[10px] text-pink-500 font-bebas uppercase tracking-widest hover:underline">Okay</button>
                              </motion.div>
                         )}
                     </AnimatePresence>

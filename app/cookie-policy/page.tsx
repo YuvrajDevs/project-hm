@@ -21,7 +21,7 @@ export default function CookiePolicy() {
             <ArrowLeft className="w-4 h-4 group-hover:-translate-x-1 transition-transform" /> Back
           </Link>
           <div className="flex items-center gap-3 mb-6">
-            <img src="/HM.png" alt="Honest Mailbox Logo" className="w-8 h-auto" />
+            <img src="/logo.png" alt="Honest Mailbox Logo" className="w-8 h-auto" />
             <span className="font-inter text-2xl tracking-[0.2em] text-white uppercase font-bold">Honest Mailbox</span>
           </div>
           <h1 className="text-4xl md:text-5xl font-inter font-bold tracking-widest uppercase text-white mb-4">
@@ -64,7 +64,7 @@ export default function CookiePolicy() {
         {/* Footer */}
         <div className="mt-20 pt-8 border-t border-white/5 text-center">
           <div className="flex items-center justify-center gap-2 mb-4">
-            <img src="/HM.png" alt="HM Logo" className="w-4 h-auto opacity-50" />
+            <img src="/logo.png" alt="HM Logo" className="w-4 h-auto opacity-50" />
           </div>
           <p className="text-xs text-neutral-600 font-inter tracking-[0.2em] uppercase">
             Private • Just You Two

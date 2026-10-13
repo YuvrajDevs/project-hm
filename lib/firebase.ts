@@ -1,10 +1,15 @@
 import { initializeApp, getApps, getApp } from "firebase/app";
-import { initializeFirestore, getFirestore } from "firebase/firestore";
+import { getFirestore, connectFirestoreEmulator } from "firebase/firestore";
 import { 
   getAuth, 
   setPersistence, 
   browserLocalPersistence,
-  GoogleAuthProvider 
+  GoogleAuthProvider,
+  connectAuthEmulator,
+  signInWithCredential,
+  reauthenticateWithPopup,
+  reauthenticateWithCredential,
+  User as FirebaseUser
 } from "firebase/auth";
 
 // Firebase project configuration using environment variables
@@ -17,10 +22,27 @@ const firebaseConfig = {
   appId: process.env.NEXT_PUBLIC_FIREBASE_APP_ID,
 };
 
+// Local testing only: `npm run dev:emulators` points the app at the Firebase emulators with throwaway
+// accounts. The "demo-" project id cannot reach any real project, and this never applies off localhost.
+const useEmulators = process.env.NEXT_PUBLIC_USE_EMULATORS === "1"
+  && typeof window !== "undefined"
+  && ["localhost", "127.0.0.1"].includes(window.location.hostname);
+
 // Initialize Firebase for Client-side
-const app = getApps().length > 0 ? getApp() : initializeApp(firebaseConfig);
+const app = getApps().length > 0
+  ? getApp()
+  : initializeApp(useEmulators ? { ...firebaseConfig, projectId: "demo-honest-mailbox" } : firebaseConfig);
 const db = getFirestore(app);
 const auth = getAuth(app);
+
+if (useEmulators && !(globalThis as { __hmEmulators?: boolean }).__hmEmulators) {
+  (globalThis as { __hmEmulators?: boolean }).__hmEmulators = true;
+  connectAuthEmulator(auth, "http://127.0.0.1:9099", { disableWarnings: true });
+  connectFirestoreEmulator(db, "127.0.0.1", 8080);
+  // The Auth emulator accepts a made-up Google identity, so tests can sign in without a real account
+  (window as unknown as { __hmTestSignIn?: (email: string, name: string) => Promise<unknown> }).__hmTestSignIn =
+    (email, name) => signInWithCredential(auth, GoogleAuthProvider.credential(JSON.stringify({ sub: email, email, email_verified: true, name })));
+}
 const googleProvider = new GoogleAuthProvider();
 // Always show the account chooser, so a second Google account can be picked on a shared browser
 googleProvider.setCustomParameters({ prompt: "select_account" });
@@ -29,6 +51,18 @@ googleProvider.setCustomParameters({ prompt: "select_account" });
 if (typeof window !== "undefined") {
   setPersistence(auth, browserLocalPersistence);
 }
+
+/**
+ * Ask the signed-in person to prove it is them again (needed before deleting the account).
+ */
+export const reauthenticate = (user: FirebaseUser) => {
+  if (useEmulators) {
+    // Emulator accounts have no real Google popup to show
+    const { email, displayName } = user;
+    return reauthenticateWithCredential(user, GoogleAuthProvider.credential(JSON.stringify({ sub: email, email, email_verified: true, name: displayName })));
+  }
+  return reauthenticateWithPopup(user, googleProvider);
+};
 
 export { db, auth, googleProvider };
 

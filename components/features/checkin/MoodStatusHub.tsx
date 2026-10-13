@@ -8,10 +8,9 @@ import { getCheckInDateId } from "@/lib/utils";
 import { REACTION_ICONS } from "@/lib/constants";
 
 export const MoodStatusHub = () => {
-  const { user, partner } = useMailbox();
+  const { user, partner, couple, todayId } = useMailbox();
 
-  const todayId = getCheckInDateId();
-  const needsUpdate = !user?.moodUpdatedAt || getCheckInDateId(new Date(user.moodUpdatedAt)) !== todayId;
+  const needsUpdate = !user?.moodUpdatedAt || getCheckInDateId(new Date(user.moodUpdatedAt), couple?.dayTimezone) !== todayId;
 
   const openSignalSelector = () => {
     window.dispatchEvent(new CustomEvent('openSignalSelector'));

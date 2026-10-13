@@ -35,6 +35,7 @@ import {
   AppNotification
 } from "./types";
 import type { User as FirebaseUser } from "firebase/auth";
+import { REACTION_ICONS } from "./constants";
 
 /**
  * Generic converter for Firestore to maintain type safety
@@ -130,11 +131,34 @@ export const updateCapsuleContent = async (coupleId: string, messageId: string, 
  */
 export const unsealCapsule = async (coupleId: string, messageId: string) => {
   const content = await getCapsuleContent(coupleId, messageId);
-  if (!content) return;
+  if (!content) return false;
   const batch = writeBatch(db);
   batch.update(doc(db, "couples", coupleId, "mailbox", messageId), { ...content, sealed: false });
   batch.delete(doc(db, "couples", coupleId, "capsules", messageId));
   await batch.commit();
+  return true;
+};
+
+/**
+ * Advance the couple's running streak for a day on which both partners checked in.
+ * Runs in a transaction, so both phones doing this at once still count the day only once.
+ */
+export const recordStreak = async (coupleId: string, today: string, historyStreak: number) => {
+  const coupleRef = doc(db, "couples", coupleId);
+  await runTransaction(db, async (tx) => {
+    const data = (await tx.get(coupleRef)).data();
+    if (!data || data.streakLastDay === today) return;
+
+    const [y, m, d] = today.split("-").map(Number);
+    const prev = new Date(Date.UTC(y, m - 1, d - 1)).toISOString().slice(0, 10);
+
+    let streakCount = 1;
+    if (data.streakLastDay === prev) streakCount = (data.streakCount || 0) + 1;
+    // First time for a couple that already had history: start from what the history shows
+    else if (!data.streakLastDay) streakCount = Math.max(1, historyStreak);
+
+    tx.update(coupleRef, { streakCount, streakLastDay: today });
+  });
 };
 
 export const markMessageAsRead = async (coupleId: string, messageId: string) => {
@@ -157,6 +181,7 @@ export const deleteMailboxMessage = async (coupleId: string, messageId: string) 
   batch.delete(doc(db, "couples", coupleId, "mailbox", messageId));
   batch.delete(doc(db, "couples", coupleId, "capsules", messageId));
   await batch.commit();
+  return true;
 };
 
 export const hideMessageForUser = async (coupleId: string, messageId: string, uid: string) => {
@@ -190,10 +215,12 @@ export const saveCheckIn = async (coupleId: string, checkIn: Omit<DailyCheckIn, 
 /**
  * Quick React Helpers
  */
-export const sendQuickReact = async (coupleId: string, react: Omit<QuickReact, "id" | "createdAt">, partnerUid: string, notify = true) => {
+export const sendQuickReact = async (coupleId: string, react: Omit<QuickReact, "id" | "createdAt">, partnerUid: string, notify = true, docId?: string) => {
   // Firestore rejects undefined, so the optional note is only written when present
   const { note, ...rest } = react;
-  await addDoc(collection(db, "couples", coupleId, "reactions"), {
+  // A fixed id (used by the daily check-in) makes a retry overwrite instead of adding a second signal
+  const reactionsRef = collection(db, "couples", coupleId, "reactions");
+  await setDoc(docId ? doc(reactionsRef, docId) : doc(reactionsRef), {
     ...rest,
     ...(note ? { note } : {}),
     createdAt: Timestamp.now()
@@ -204,7 +231,7 @@ export const sendQuickReact = async (coupleId: string, react: Omit<QuickReact, "
     uid: partnerUid,
     type: "REACTION",
     title: "New Signal",
-    body: `Your partner sent you a ${react.type.toLowerCase()} signal.`,
+    body: `Your partner sent you a signal: ${REACTION_ICONS[react.type]?.label ?? "a feeling"}.`,
   });
 };
 
@@ -466,6 +493,8 @@ export const acceptCoupleReset = async (coupleId: string) => {
     anniversaryDate: null,
     whiteFlagBy: null,
     whiteFlagAt: null,
+    streakCount: 0,
+    streakLastDay: null,
   });
 };
 
@@ -525,6 +554,9 @@ export const deleteUserAccount = async (uid: string, partnerUid: string | null) 
 
   // Private sub-collections are not removed with the parent document
   const refs: DocumentReference[] = [];
+  // Any invite this person created goes too. Best effort: it must never block the deletion itself.
+  const inviteCode = (await getDoc(doc(db, "users", uid))).data()?.inviteCode;
+  if (inviteCode) await deleteDoc(doc(db, "invites", inviteCode)).catch(() => {});
   for (const colName of ["notes", "notifications"]) {
     const snap = await getDocs(collection(db, "users", uid, colName));
     snap.docs.forEach((d) => refs.push(d.ref));
@@ -560,6 +592,16 @@ const randomString = (length: number, chars: string) => {
 };
 
 export const createInvite = async (uid: string) => {
+  // Hand back the invite this person already has out, rather than minting a new valid code on every tap
+  const userRef = doc(db, "users", uid);
+  const existing = (await getDoc(userRef)).data()?.inviteCode as string | undefined;
+  if (existing) {
+    const invite = (await getDoc(doc(db, "invites", existing))).data();
+    const stillValid = invite && !invite.used && invite.createdBy === uid
+      && invite.expiresAt instanceof Timestamp && invite.expiresAt.toMillis() > Date.now() + 60 * 60 * 1000;
+    if (stillValid) return existing;
+  }
+
   const code = randomString(6, "ABCDEFGHJKLMNPQRSTUVWXYZ23456789");
   await setDoc(doc(db, "invites", code), {
     createdBy: uid,
@@ -567,6 +609,7 @@ export const createInvite = async (uid: string) => {
     expiresAt: Timestamp.fromMillis(Date.now() + INVITE_TTL_MS),
     used: false
   });
+  await updateDoc(userRef, { inviteCode: code }).catch(console.error);
   return code;
 };
 
@@ -694,7 +737,7 @@ export const sendNotification = async (toUid: string, notification: Omit<AppNoti
 /**
  * A notification is a courtesy. It must never make the action that triggered it look like it failed.
  */
-const notifyPartner = async (toUid: string, notification: Omit<AppNotification, "id" | "createdAt" | "read">) => {
+export const notifyPartner = async (toUid: string, notification: Omit<AppNotification, "id" | "createdAt" | "read">) => {
   try {
     await sendNotification(toUid, notification);
   } catch (err) {

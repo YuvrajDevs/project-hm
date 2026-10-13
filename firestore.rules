@@ -134,9 +134,36 @@ service cloud.firestore {
         && !request.resource.data.diff(resource.data).affectedKeys().hasAny(['partnerA_uid', 'partnerB_uid', 'id', 'inviteCode']);
 
       match /mailbox/{messageId} {
-        allow read, delete: if isPartOfCouple(coupleId);
+        allow read: if isPartOfCouple(coupleId);
         allow create: if isPartOfCouple(coupleId) && request.resource.data.senderUid == request.auth.uid;
-        allow update: if isPartOfCouple(coupleId) && request.resource.data.senderUid == resource.data.senderUid;
+
+        // The sender edits their own words (only until the note is answered).
+        // The receiver can only respond and mark as read.
+        // Either one can hide it for themselves, or open an unlocked time capsule.
+        allow update: if isPartOfCouple(coupleId) && (
+          (resource.data.senderUid == request.auth.uid
+            && !('response' in resource.data)
+            && changedOnly(['status', 'intent', 'note', 'updatedAt']))
+          || (resource.data.senderUid != request.auth.uid
+            && changedOnly(['response', 'readAt']))
+          || changedOnly(['hiddenFor'])
+          || (resource.data.get('sealed', false) == true
+            && request.resource.data.sealed == false
+            && changedOnly(['status', 'intent', 'note', 'sealed'])
+            && isOpeningCapsule(messageId))
+        );
+
+        // An unlocked capsule is opened by copying its exact words into the note, nothing else
+        function isOpeningCapsule(messageId) {
+          let capsule = get(/databases/$(database)/documents/couples/$(coupleId)/capsules/$(messageId)).data;
+          return capsule.unlockAtTs <= request.time
+            && request.resource.data.status == capsule.status
+            && request.resource.data.intent == capsule.intent
+            && request.resource.data.note == capsule.note;
+        }
+
+        // Either member can delete: reset and unpair remove the whole history
+        allow delete: if isPartOfCouple(coupleId);
       }
 
       // Time capsule contents: only the sender can read them before the unlock time.
@@ -155,7 +182,10 @@ service cloud.firestore {
 
       match /checkins/{checkinId} {
         allow read, delete: if isPartOfCouple(coupleId);
-        allow create, update: if isPartOfCouple(coupleId) && request.resource.data.userUid == request.auth.uid;
+        // One document per person per day, and only that person can write it
+        allow create, update: if isPartOfCouple(coupleId)
+          && request.resource.data.userUid == request.auth.uid
+          && checkinId == request.resource.data.dateId + '_' + request.auth.uid;
       }
 
       match /reactions/{reactionId} {

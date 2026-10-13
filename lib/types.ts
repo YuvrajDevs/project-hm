@@ -38,6 +38,9 @@ export interface Couple {
     }
   },
   anniversaryDate?: string; // ISO date YYYY-MM-DD
+  dayTimezone?: string; // shared timezone that decides which day a check-in belongs to
+  streakCount?: number; // running count of consecutive days both partners checked in
+  streakLastDay?: string; // the last day (YYYY-MM-DD) counted in streakCount
   // Reset Flow
   resetBy?: string;
   resetStatus?: "pending" | "declined" | null;
