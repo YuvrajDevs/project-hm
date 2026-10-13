@@ -156,6 +156,11 @@ export interface SafeSpaceSession {
   lastMessageBy?: string;
   lastMessageAt?: string; // ISO, normalised when read
   seen?: { [uid: string]: string }; // when each person last read the space (ISO)
+  present?: { [uid: string]: string | null }; // heartbeat while a person has the room open (ISO), null once they leave
+  currentTurnUid?: string; // who has the floor; only matters while both are in the room together
+  micRequest?: { uid: string; requestedAt: string } | null; // the listener asking for the floor
+  lastMicRequestAt?: string;
+  lastMicRequestBy?: string;
   startedAt?: string;
   endedAt?: string;
   endedBy?: string;

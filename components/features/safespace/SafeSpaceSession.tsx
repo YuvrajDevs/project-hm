@@ -7,6 +7,10 @@ import {
   subscribeToSafeSpaceMessages,
   sendSafeSpaceMessage,
   markSafeSpaceSeen,
+  setSafeSpacePresence,
+  handoverMic,
+  requestMic,
+  respondToMicRequest,
   endSafeSpaceSession
 } from "@/lib/firestore-helpers";
 import { SafeSpaceMessage } from "@/lib/types";
@@ -16,7 +20,10 @@ import {
   Clock,
   ShieldQuestion,
   ChevronRight,
-  CheckCheck
+  CheckCheck,
+  Mic2,
+  HandMetal,
+  Sparkles
 } from "lucide-react";
 import { AmbientBackground } from "../../ui/AmbientBackground";
 import { cn, formatRelativeTime } from "@/lib/utils";
@@ -29,9 +36,16 @@ interface SafeSpaceSessionProps {
   onClosed: () => void;
 }
 
+const HEARTBEAT_MS = 20_000;
+const PRESENCE_STALE_MS = 50_000;
+const MIC_COOLDOWN_MS = 5 * 60 * 1000;
+
 /**
- * The couple's one safe space, shown as a room. It stays open until someone closes it:
- * either person can write, leave, and come back to read and answer in their own time.
+ * The couple's one safe space, shown as a room. It stays open until someone closes it.
+ *
+ * Alone in the room: write freely, leave, and come back to read and answer in your own time.
+ * Both in the room at once: one at a time. Whoever has the floor speaks without interruption,
+ * then hands it over; the listener can ask for it.
  */
 export const SafeSpaceSession: React.FC<SafeSpaceSessionProps> = ({ onLeave, onClosed }) => {
   const { user, partner, activeSafeSpace } = useMailbox();
@@ -61,6 +75,34 @@ export const SafeSpaceSession: React.FC<SafeSpaceSessionProps> = ({ onLeave, onC
     return subscribeToSafeSpaceMessages(coupleId, sessionId, setMessages);
   }, [coupleId, sessionId]);
 
+  // Presence: tell the partner this person is in the room, for as long as the screen is actually in front of them
+  useEffect(() => {
+    if (!coupleId || !sessionId || !uid) return;
+    const beat = () => {
+      if (document.visibilityState === "visible") setSafeSpacePresence(coupleId, sessionId, uid, true).catch(() => {});
+    };
+    const leave = () => { setSafeSpacePresence(coupleId, sessionId, uid, false).catch(() => {}); };
+    const onVisibility = () => (document.visibilityState === "visible" ? beat() : leave());
+
+    beat();
+    const heartbeat = setInterval(beat, HEARTBEAT_MS);
+    document.addEventListener("visibilitychange", onVisibility);
+    window.addEventListener("pagehide", leave);
+    return () => {
+      clearInterval(heartbeat);
+      document.removeEventListener("visibilitychange", onVisibility);
+      window.removeEventListener("pagehide", leave);
+      leave();
+    };
+  }, [coupleId, sessionId, uid]);
+
+  // A clock, so a partner whose heartbeat has stopped is noticed without any new data arriving
+  const [clock, setClock] = useState(() => Date.now());
+  useEffect(() => {
+    const tick = setInterval(() => setClock(Date.now()), 5000);
+    return () => clearInterval(tick);
+  }, []);
+
   // While this person is in the room, everything in it counts as read
   const lastMessage = messages[messages.length - 1];
   const lastMessageId = lastMessage?.id;
@@ -72,16 +114,43 @@ export const SafeSpaceSession: React.FC<SafeSpaceSessionProps> = ({ onLeave, onC
     if (lastFromPartner) playTransition();
   }, [coupleId, sessionId, uid, lastMessageId, lastFromPartner, playTransition]);
 
+  // Together or apart? Decides whether turns apply.
+  const partnerUid = partner?.uid;
+  const partnerPresentAt = partnerUid ? activeSafeSpace?.present?.[partnerUid] : null;
+  const partnerPresent = !!partnerPresentAt && clock - new Date(partnerPresentAt).getTime() < PRESENCE_STALE_MS;
+  const floorUid = activeSafeSpace?.currentTurnUid ?? activeSafeSpace?.lastMessageBy ?? activeSafeSpace?.startedBy;
+  const myTurn = floorUid === uid;
+  // Alone: write whenever. Together: only the person with the floor.
+  const canWrite = !partnerPresent || myTurn;
+
+  const micRequest = activeSafeSpace?.micRequest;
+  const partnerIsAsking = partnerPresent && myTurn && !!micRequest && micRequest.uid === partnerUid;
+  const iAmAsking = !!micRequest && micRequest.uid === uid;
+  const lastRequestAt = activeSafeSpace?.lastMicRequestAt ? new Date(activeSafeSpace.lastMicRequestAt).getTime() : 0;
+  // The wait before asking again applies only to the person who asked
+  const cooldownActive = !iAmAsking && activeSafeSpace?.lastMicRequestBy === uid && clock - lastRequestAt < MIC_COOLDOWN_MS;
+
+  const runMicAction = async (action: () => Promise<unknown>) => {
+    setSendError("");
+    try {
+      await action();
+    } catch (err) {
+      console.error(err);
+      setSendError("That didn't go through. Check your connection and try again.");
+    }
+  };
+
   const handleSendMessage = async () => {
     const text = inputText.trim();
-    if (!text || sendingRef.current || !coupleId || !sessionId || !uid) return;
+    if (!text || sendingRef.current || !coupleId || !sessionId || !uid || !canWrite) return;
     sendingRef.current = true;
     setSending(true);
     setSendError("");
     try {
       playSend();
       // One notification when the conversation turns to the partner, not one per message
-      const notifyUid = activeSafeSpace?.lastMessageBy !== uid ? partner?.uid : undefined;
+      // and none at all when they are sitting in the room
+      const notifyUid = !partnerPresent && activeSafeSpace?.lastMessageBy !== uid ? partner?.uid : undefined;
       await sendSafeSpaceMessage(coupleId, sessionId, uid, text, notifyUid);
       setInputText("");
     } catch (err) {
@@ -112,13 +181,17 @@ export const SafeSpaceSession: React.FC<SafeSpaceSessionProps> = ({ onLeave, onC
   // Where the conversation stands, in one line
   const partnerSeenAt = partner?.uid ? activeSafeSpace.seen?.[partner.uid] : undefined;
   const partnerHasSeenLast = !!lastMessage && !!partnerSeenAt && partnerSeenAt >= lastMessage.createdAt;
-  const status = !lastMessage
-    ? `Say what's on your mind. ${partnerName} can read it whenever they come in.`
-    : lastFromPartner
-      ? `${partnerName} is waiting for you. Answer now, or leave and come back.`
-      : partnerHasSeenLast
-        ? `${partnerName} has read this. You can leave; it stays open for their answer.`
-        : `${partnerName} hasn't seen this yet. You can leave; it stays open for them.`;
+  const status = partnerPresent
+    ? (myTurn
+        ? `${partnerName} is here and listening. Say what you need to, then hand over.`
+        : `${partnerName} is here and has the floor. Read first; you can ask to speak.`)
+    : !lastMessage
+      ? `Say what's on your mind. ${partnerName} can read it whenever they come in.`
+      : lastFromPartner
+        ? `${partnerName} is waiting for you. Answer now, or leave and come back.`
+        : partnerHasSeenLast
+          ? `${partnerName} has read this. You can leave; it stays open for their answer.`
+          : `${partnerName} hasn't seen this yet. You can leave; it stays open for them.`;
 
   return (
     <motion.div
@@ -143,7 +216,10 @@ export const SafeSpaceSession: React.FC<SafeSpaceSessionProps> = ({ onLeave, onC
                 </div>
                 <div className="text-center sm:text-left min-w-0">
                     <p className="text-white font-bebas text-lg tracking-widest uppercase leading-none">Safe Space</p>
-                    <h2 className="text-[10px] font-bebas tracking-[0.2em] text-neutral-500 uppercase mt-1">Open until one of you closes it</h2>
+                    <h2 className={cn("text-[10px] font-bebas tracking-[0.2em] uppercase mt-1 flex items-center justify-center sm:justify-start gap-1.5", partnerPresent ? "text-indigo-300" : "text-neutral-500")}>
+                        {partnerPresent && <span className="w-1.5 h-1.5 rounded-full bg-indigo-400" />}
+                        {partnerPresent ? `${partnerName} is in the room` : "Open until one of you closes it"}
+                    </h2>
                 </div>
             </div>
             <button
@@ -202,26 +278,67 @@ export const SafeSpaceSession: React.FC<SafeSpaceSessionProps> = ({ onLeave, onC
                 {sendError && (
                     <p className="text-rose-500 text-xs font-outfit text-center">{sendError}</p>
                 )}
-                <textarea
-                    value={inputText}
-                    onChange={(e) => setInputText(e.target.value)}
-                    placeholder="Share your thought honestly..."
-                    maxLength={2000}
-                    className="w-full bg-white/5 border border-white/10 rounded-2xl p-5 text-lg text-white focus:outline-none focus:border-indigo-500/50 h-[14vh] min-h-[96px] transition-all resize-none"
-                    onKeyDown={(e) => {
-                        if (e.key === 'Enter' && !e.shiftKey && !e.nativeEvent.isComposing) {
-                            e.preventDefault();
-                            handleSendMessage();
-                        }
-                    }}
-                />
-                <button
-                    onClick={handleSendMessage}
-                    disabled={!inputText.trim() || sending}
-                    className="w-full bg-white text-black font-bebas text-xl py-4 rounded-2xl disabled:opacity-20 flex items-center justify-center gap-2 group active:scale-95 transition-all"
-                >
-                    {sending ? "Sending..." : <>Send Thought <ChevronRight className="w-5 h-5 group-hover:translate-x-1 transition-transform" /></>}
-                </button>
+                {partnerIsAsking && (
+                    <div className="bg-indigo-500/10 border border-indigo-500/30 p-4 rounded-2xl flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+                        <div className="flex items-center gap-3">
+                            <Sparkles className="w-5 h-5 text-indigo-400 shrink-0" />
+                            <p className="text-sm text-indigo-100">{partnerName} would like to speak. Ready to listen?</p>
+                        </div>
+                        <div className="flex gap-2 shrink-0">
+                            <button onClick={() => runMicAction(() => respondToMicRequest(coupleId!, sessionId!, partnerUid!, false))} className="px-4 py-2 bg-white/5 rounded-xl text-neutral-300 hover:text-white transition-all text-xs font-bebas tracking-widest uppercase">Let Me Finish</button>
+                            <button onClick={() => runMicAction(() => respondToMicRequest(coupleId!, sessionId!, partnerUid!, true))} className="px-6 py-2 bg-indigo-500 rounded-xl text-white font-bebas tracking-widest uppercase text-xs">Hand Over</button>
+                        </div>
+                    </div>
+                )}
+
+                {canWrite ? (
+                    <>
+                        <textarea
+                            value={inputText}
+                            onChange={(e) => setInputText(e.target.value)}
+                            placeholder="Share your thought honestly..."
+                            maxLength={2000}
+                            className="w-full bg-white/5 border border-white/10 rounded-2xl p-5 text-lg text-white focus:outline-none focus:border-indigo-500/50 h-[14vh] min-h-[96px] transition-all resize-none"
+                            onKeyDown={(e) => {
+                                if (e.key === 'Enter' && !e.shiftKey && !e.nativeEvent.isComposing) {
+                                    e.preventDefault();
+                                    handleSendMessage();
+                                }
+                            }}
+                        />
+                        <div className="flex items-center gap-3">
+                            {partnerPresent && partnerUid && (
+                                <button
+                                    onClick={() => runMicAction(() => handoverMic(coupleId!, sessionId!, partnerUid))}
+                                    className="flex items-center gap-2 px-5 py-4 bg-white/5 border border-white/10 rounded-2xl text-neutral-300 hover:text-white hover:bg-white/10 transition-all text-xs font-bebas tracking-widest uppercase shrink-0"
+                                >
+                                    <HandMetal className="w-4 h-4" /> Your Turn, {partnerName}
+                                </button>
+                            )}
+                            <button
+                                onClick={handleSendMessage}
+                                disabled={!inputText.trim() || sending}
+                                className="flex-1 bg-white text-black font-bebas text-xl py-4 rounded-2xl disabled:opacity-20 flex items-center justify-center gap-2 group active:scale-95 transition-all"
+                            >
+                                {sending ? "Sending..." : <>Send Thought <ChevronRight className="w-5 h-5 group-hover:translate-x-1 transition-transform" /></>}
+                            </button>
+                        </div>
+                    </>
+                ) : (
+                    <div className="flex flex-col items-center py-6 gap-5">
+                        <div className="flex items-center gap-3">
+                            <Mic2 className="w-5 h-5 text-indigo-300" />
+                            <span className="text-lg font-bebas text-neutral-300 tracking-widest uppercase">{partnerName} has the floor</span>
+                        </div>
+                        <button
+                            onClick={() => runMicAction(() => requestMic(coupleId!, sessionId!, uid!))}
+                            disabled={iAmAsking || cooldownActive}
+                            className="bg-white/5 border border-white/10 text-white font-bebas text-sm tracking-widest uppercase px-8 py-3 rounded-full hover:bg-white/10 transition-all disabled:opacity-40 disabled:cursor-not-allowed"
+                        >
+                            {iAmAsking ? `Asked. Waiting for ${partnerName}` : cooldownActive ? "You can ask again in a few minutes" : "Ask to Speak"}
+                        </button>
+                    </div>
+                )}
             </div>
         </div>
 
