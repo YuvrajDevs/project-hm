@@ -4,7 +4,6 @@ import React, { useState, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { useMailbox } from "@/context/MailboxContext";
 import { Activity, ArrowRight, X, Zap, Send, Sparkles, Heart } from "lucide-react";
-import { getCheckInDateId } from "@/lib/utils";
 import { MoodSelector } from "./MoodSelector";
 import { ReactionType } from "@/lib/types";
 import { useSensoryFeedback } from "@/hooks/useSensoryFeedback";
@@ -29,7 +28,7 @@ const LABEL_TO_TYPE: Record<string, ReactionType> = {
 };
 
 export const DailyCheckInPopup: React.FC<DailyCheckInPopupProps> = ({ onClose }) => {
-  const { user, partner, checkins, updateMood, sendSignal, saveDailyCheckIn } = useMailbox();
+  const { user, partner, checkins, updateMood, sendSignal, saveDailyCheckIn, todayId: today } = useMailbox();
   const { playChime, playTick } = useSensoryFeedback();
   const [step, setStep] = useState<"intro" | "mood" | "connection" | "moodStatus" | "summary">("intro");
   const [mood, setMood] = useState(5);
@@ -45,7 +44,6 @@ export const DailyCheckInPopup: React.FC<DailyCheckInPopupProps> = ({ onClose })
     }
   }, [checkins, user, step]);
 
-  const today = getCheckInDateId();
   const partnerCheckIn = checkins.find(c => c.userUid === partner?.uid);
 
   const handleSubmit = async () => {
@@ -64,7 +62,7 @@ export const DailyCheckInPopup: React.FC<DailyCheckInPopupProps> = ({ onClose })
       // 2. Send signal (triggers splash)
       const type = LABEL_TO_TYPE[moodStatus];
       if (type) {
-        await sendSignal(type, undefined, false);
+        await sendSignal(type, undefined, false, `checkin_${today}_${user.uid}`);
       }
 
       // 3. Update persistent user mood label

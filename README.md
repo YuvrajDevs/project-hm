@@ -23,6 +23,7 @@ npm run dev
 npx tsc --noEmit        # types
 npm run lint            # lint (0 errors expected)
 npm run build           # production build
+npm run test:unit       # date and streak logic
 npm run test:rules      # Firestore security rules, in the emulator (needs Java)
 ```
 

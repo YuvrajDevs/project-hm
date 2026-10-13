@@ -103,7 +103,7 @@ export const PartnerNotes = () => {
               animate={{ opacity: 1, height: "auto", scale: 1 }}
               exit={{ opacity: 0, height: 0, scale: 0.95 }}
               transition={{ duration: 0.3, ease: [0.16, 1, 0.3, 1] }}
-              className="bg-white/10 border border-white/10 rounded-[2.5rem] p-8 space-y-6 backdrop-blur-2xl mb-12 overflow-hidden shadow-2xl relative"
+              className="bg-white/10 border border-white/10 rounded-[2.5rem] p-8 space-y-6 backdrop-blur-xl mb-12 overflow-hidden shadow-2xl relative"
             >
               <div className="absolute top-0 left-1/2 -translate-x-1/2 w-20 h-1 bg-white/10 rounded-full" />
               

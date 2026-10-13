@@ -7,38 +7,41 @@ import { AppNotification } from "@/lib/types";
 import { Bell, Heart, MessageCircle, Sparkles, X } from "lucide-react";
 import { useSensoryFeedback } from "@/hooks/useSensoryFeedback";
 
+const RECENT_MS = 2 * 60 * 1000;
+
 export const NotificationToastManager = () => {
     const { notifications, notificationsEnabled, partner } = useMailbox();
     const [activeToast, setActiveToast] = useState<AppNotification | null>(null);
-    const lastNotiId = useRef<string | null>(null);
     const { playChime } = useSensoryFeedback();
 
-    useEffect(() => {
-        if (!notificationsEnabled || notifications.length === 0) return;
+    const latestId = notifications[0]?.id;
+    const latestRef = useRef(notifications[0]);
+    useEffect(() => { latestRef.current = notifications[0]; });
+    const lastNotiId = useRef<string | null | undefined>(undefined);
 
-        const latest = notifications[0];
-        
-        // Only trigger if it's a NEW notification and not seen before in this session
-        if (latest.id !== lastNotiId.current) {
-            const timeDiff = Date.now() - new Date(latest.createdAt).getTime();
-            
-            // Only show if it happened in the last 10 seconds (wasn't a catch-up on load)
-            if (timeDiff < 10000) {
-                playChime();
-                setActiveToast(latest);
-                
-                // Auto dismiss after 5 seconds
-                const timer = setTimeout(() => {
-                    setActiveToast(null);
-                }, 5000);
-                
-                lastNotiId.current = latest.id;
-                return () => clearTimeout(timer);
-            }
+    // Show a toast for a notification that arrives while the app is open.
+    // What was already waiting when the app loaded is left to the bell.
+    useEffect(() => {
+        if (lastNotiId.current === undefined) {
+            lastNotiId.current = latestId ?? null;
+            return;
         }
-        
-        lastNotiId.current = latest.id;
-    }, [notifications, notificationsEnabled, playChime]);
+        if (!latestId || latestId === lastNotiId.current) return;
+        lastNotiId.current = latestId;
+        if (!notificationsEnabled || !latestRef.current || latestRef.current.read) return;
+        // The first load also looks like "new"; a generous age limit tells the two apart
+        if (Date.now() - new Date(latestRef.current.createdAt).getTime() > RECENT_MS) return;
+        playChime();
+        setActiveToast(latestRef.current);
+    }, [latestId, notificationsEnabled, playChime]);
+
+    // Dismissal runs on its own timer, so list updates (such as marking as read) cannot cancel it
+    const activeToastId = activeToast?.id;
+    useEffect(() => {
+        if (!activeToastId) return;
+        const timer = setTimeout(() => setActiveToast(null), 5000);
+        return () => clearTimeout(timer);
+    }, [activeToastId]);
 
     return (
         <AnimatePresence>

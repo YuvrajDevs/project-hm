@@ -81,7 +81,11 @@ export const ComposeMessage = ({ onClose }: { onClose: () => void }) => {
 
   const handleSend = async () => {
     if (!status || !intent) return;
-    if (showCapsuleParams && unlockAt && new Date(unlockAt).getTime() <= Date.now()) {
+    if (showCapsuleParams && !unlockAt) {
+      setError("Pick when the time capsule should open, or turn it off.");
+      return;
+    }
+    if (showCapsuleParams && new Date(unlockAt).getTime() <= Date.now()) {
       setError("Pick an unlock time in the future.");
       return;
     }

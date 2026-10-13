@@ -44,7 +44,7 @@ export const MailboxScreen: React.FC<MailboxScreenProps> = ({ onOpenCheckIn, onC
                     <motion.div 
                         initial={{ opacity: 0, y: 20 }}
                         animate={{ opacity: 1, y: 0 }}
-                        className="relative bg-white/5 border border-white/10 rounded-[2.5rem] p-8 overflow-hidden backdrop-blur-2xl flex items-center justify-between"
+                        className="relative bg-white/5 border border-white/10 rounded-[2.5rem] p-8 overflow-hidden backdrop-blur-xl flex items-center justify-between"
                     >
                         <div className="space-y-4">
                             <div className="flex items-center gap-2">
@@ -106,7 +106,8 @@ export const MailboxScreen: React.FC<MailboxScreenProps> = ({ onOpenCheckIn, onC
                     {messages.length > 0 ? (
                         messages.slice(0, 3).map((msg) => {
                             if (msg.unlockAt) {
-                                const isLocked = new Date(msg.unlockAt).getTime() > now;
+                                // Still sealed counts as locked: the words have not arrived yet
+                                const isLocked = !!msg.sealed || new Date(msg.unlockAt).getTime() > now;
                                 if (isLocked) {
                                     if (msg.isSecretBeforeUnlock && msg.senderUid !== user?.uid) {
                                         return null; // Don't even show it

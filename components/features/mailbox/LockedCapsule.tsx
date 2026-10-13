@@ -16,6 +16,25 @@ export const LockedCapsule = ({ message }: { message: MailboxMessage }) => {
   const [timeLeft, setTimeLeft] = useState<string>("");
   const [isEditing, setIsEditing] = useState(false);
   const [showOptions, setShowOptions] = useState(false);
+  const [confirming, setConfirming] = useState<"unsend" | "hide" | null>(null);
+  const optionsRef = React.useRef<HTMLDivElement>(null);
+
+  // Close the options menu when tapping anywhere else
+  useEffect(() => {
+    if (!showOptions) return;
+    const close = (e: MouseEvent | TouchEvent) => {
+      if (!optionsRef.current?.contains(e.target as Node)) {
+        setShowOptions(false);
+        setConfirming(null);
+      }
+    };
+    document.addEventListener("mousedown", close);
+    document.addEventListener("touchstart", close);
+    return () => {
+      document.removeEventListener("mousedown", close);
+      document.removeEventListener("touchstart", close);
+    };
+  }, [showOptions]);
   
   const isSender = message.senderUid === user?.uid;
 
@@ -59,9 +78,10 @@ export const LockedCapsule = ({ message }: { message: MailboxMessage }) => {
       <div className="absolute inset-0 opacity-20 pointer-events-none" style={{ backgroundImage: "radial-gradient(circle at center, rgba(236,72,153,0.15), transparent 70%)" }} />
 
       {/* Management Options */}
-      <div className="absolute top-4 right-4 z-20">
+      <div className="absolute top-4 right-4 z-20" ref={optionsRef}>
           <button 
-              onClick={() => { vibrateTick(); setShowOptions(!showOptions); }}
+              aria-label="Capsule options"
+              onClick={() => { vibrateTick(); setShowOptions(!showOptions); setConfirming(null); }}
               className="p-2 rounded-full bg-black/20 text-white/40 hover:text-white transition-all border border-white/5"
           >
               <MoreVertical className="w-4 h-4" />
@@ -85,20 +105,30 @@ export const LockedCapsule = ({ message }: { message: MailboxMessage }) => {
                                     <span className="font-bebas text-sm uppercase tracking-widest text-white">Edit Capsule</span>
                                 </button>
                                 <button 
-                                    onClick={() => { unsendCapsule(message.id); setShowOptions(false); }}
+                                    onClick={() => {
+                                        if (confirming !== "unsend") { setConfirming("unsend"); return; }
+                                        unsendCapsule(message.id).catch(console.error);
+                                        setShowOptions(false);
+                                        setConfirming(null);
+                                    }}
                                     className="w-full flex items-center gap-3 px-3 py-2.5 hover:bg-red-500/10 rounded-xl text-left transition-colors"
                                 >
                                     <X className="w-4 h-4 text-red-400" />
-                                    <span className="font-bebas text-sm uppercase tracking-widest text-red-200">Unsend for Both</span>
+                                    <span className="font-bebas text-sm uppercase tracking-widest text-red-200">{confirming === "unsend" ? "Tap Again to Unsend" : "Unsend for Both"}</span>
                                 </button>
                             </>
                         )}
                         <button 
-                            onClick={() => { deleteForMe(message.id); setShowOptions(false); }}
+                            onClick={() => {
+                                if (confirming !== "hide") { setConfirming("hide"); return; }
+                                deleteForMe(message.id).catch(console.error);
+                                setShowOptions(false);
+                                setConfirming(null);
+                            }}
                             className="w-full flex items-center gap-3 px-3 py-2.5 hover:bg-red-500/10 rounded-xl text-left transition-colors"
                         >
                             <Trash2 className="w-4 h-4 text-red-500/60" />
-                            <span className="font-bebas text-sm uppercase tracking-widest text-neutral-400">Hide for Me</span>
+                            <span className="font-bebas text-sm uppercase tracking-widest text-neutral-400">{confirming === "hide" ? "Tap Again to Hide" : "Hide for Me"}</span>
                         </button>
                   </motion.div>
               )}

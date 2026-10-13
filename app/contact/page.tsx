@@ -15,10 +15,13 @@ export default function ContactPage() {
     message: ''
   });
   const [status, setStatus] = useState<'idle' | 'sending' | 'sent' | 'error'>('idle');
+  const [website, setWebsite] = useState('');
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!formData.email || !formData.message) return;
+    if (!formData.email || !formData.message.trim()) return;
+    // Bots fill every field, including the one people cannot see
+    if (website) { setStatus('sent'); return; }
     
     setStatus('sending');
     try {
@@ -44,7 +47,7 @@ export default function ContactPage() {
             <ArrowLeft className="w-4 h-4 group-hover:-translate-x-1 transition-transform" /> Back
           </Link>
           <div className="flex items-center gap-3 mb-6">
-            <img src="/HM.png" alt="Honest Mailbox Logo" className="w-8 h-auto" />
+            <img src="/logo.png" alt="Honest Mailbox Logo" className="w-8 h-auto" />
             <span className="font-inter text-2xl tracking-[0.2em] text-white uppercase font-bold">Honest Mailbox</span>
           </div>
           <h1 className="text-4xl md:text-5xl font-inter font-bold tracking-widest uppercase text-white mb-4">Contact & Support</h1>
@@ -91,6 +94,16 @@ export default function ContactPage() {
               onSubmit={handleSubmit}
               className="space-y-6"
             >
+              <input
+                type="text"
+                name="website"
+                value={website}
+                onChange={(e) => setWebsite(e.target.value)}
+                tabIndex={-1}
+                autoComplete="off"
+                aria-hidden="true"
+                className="hidden"
+              />
               <div className="grid gap-6 md:grid-cols-2">
               <div className="space-y-2">
                 <label className="text-[10px] font-inter font-bold text-neutral-500 uppercase tracking-widest ml-1">Name (Optional)</label>

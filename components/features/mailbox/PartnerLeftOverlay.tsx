@@ -38,7 +38,7 @@ export const PartnerLeftOverlay: React.FC<PartnerLeftOverlayProps> = ({ onClearD
       <motion.div
         initial={{ opacity: 0, y: 20 }}
         animate={{ opacity: 1, y: 0 }}
-        className="relative z-10 w-full max-w-md bg-white/5 border border-white/10 rounded-[3rem] p-10 text-center space-y-8 backdrop-blur-3xl shadow-2xl"
+        className="relative z-10 w-full max-w-md bg-white/5 border border-white/10 rounded-[3rem] p-10 text-center space-y-8 backdrop-blur-xl shadow-2xl"
       >
         <div className="flex justify-center">
           <motion.div

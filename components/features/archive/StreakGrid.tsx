@@ -10,7 +10,7 @@ import {
     Calendar as CalendarIcon, 
     Plus, Trash2, Gift, Sparkles 
 } from "lucide-react";
-import { formatDateId, getCheckInDateId } from "@/lib/utils";
+import { formatDateId, eventFallsOn } from "@/lib/utils";
 import { useMailbox } from "@/context/MailboxContext";
 
 interface StreakGridProps {
@@ -20,7 +20,7 @@ interface StreakGridProps {
 const DAYS_OF_WEEK = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
 
 export const StreakGrid: React.FC<StreakGridProps> = ({ history }) => {
-  const { events, addEvent, removeEvent, user, partner } = useMailbox();
+  const { events, addEvent, removeEvent, user, partner, todayId: todayStr } = useMailbox();
   const [selectedDate, setSelectedDate] = useState<string | null>(null);
   const [viewDate, setViewDate] = useState(new Date());
   const [isAddingEvent, setIsAddingEvent] = useState(false);
@@ -44,8 +44,9 @@ export const StreakGrid: React.FC<StreakGridProps> = ({ history }) => {
   const [eventNote, setEventNote] = useState("");
   const [eventRepeat, setEventRepeat] = useState<"none" | "monthly" | "yearly">("none");
   const [isSurprise, setIsSurprise] = useState(false);
+  const [savingEvent, setSavingEvent] = useState(false);
+  const [eventError, setEventError] = useState("");
 
-  const todayStr = getCheckInDateId();
 
   // Navigation handlers
   const handlePrevMonth = () => {
@@ -101,34 +102,27 @@ export const StreakGrid: React.FC<StreakGridProps> = ({ history }) => {
     };
   };
 
-  const getDayEvents = (dateId: string) => {
-    const d = parseDateId(dateId);
-    const dayNum = d.getDate();
-    const monthNum = d.getMonth();
-
-    return events.filter(e => {
-        if (e.dateId === dateId) return true;
-        if (e.repeat === "monthly") {
-            const eventDate = parseDateId(e.dateId);
-            return eventDate.getDate() === dayNum && dateId >= e.dateId;
-        }
-        if (e.repeat === "yearly") {
-            const eventDate = parseDateId(e.dateId);
-            return eventDate.getDate() === dayNum && eventDate.getMonth() === monthNum && dateId >= e.dateId;
-        }
-        return false;
-    });
-  };
+  const getDayEvents = (dateId: string) => events.filter(e => eventFallsOn(e.dateId, e.repeat, dateId));
 
   const handleSaveEvent = async () => {
-    if (!selectedDate || !eventTitle) return;
-    await addEvent({
-        title: eventTitle,
-        note: eventNote,
+    if (!selectedDate || !eventTitle.trim() || savingEvent) return;
+    setSavingEvent(true);
+    setEventError("");
+    try {
+      await addEvent({
+        title: eventTitle.trim(),
+        note: eventNote.trim(),
         dateId: selectedDate,
         repeat: eventRepeat,
         isSurprise
-    });
+      });
+    } catch (err) {
+      console.error(err);
+      setEventError("Couldn't save. Check your connection and try again.");
+      return;
+    } finally {
+      setSavingEvent(false);
+    }
     // Reset and close form
     setEventTitle("");
     setEventNote("");
@@ -176,7 +170,7 @@ export const StreakGrid: React.FC<StreakGridProps> = ({ history }) => {
       </div>
 
       {/* Calendar Grid Container */}
-      <div className="bg-white/5 p-8 md:p-16 rounded-[2.5rem] md:rounded-[4rem] border border-white/5 backdrop-blur-3xl relative overflow-hidden group/grid">
+      <div className="bg-white/5 p-8 md:p-16 rounded-[2.5rem] md:rounded-[4rem] border border-white/5 backdrop-blur-xl relative overflow-hidden group/grid">
         {/* Master Grid (Header + Dates) */}
         <div className="grid grid-cols-7 gap-y-10 md:gap-y-14 gap-x-4 md:gap-x-12 place-items-center relative z-10 h-full">
             {/* Row 1: Days Header */}
@@ -348,10 +342,10 @@ export const StreakGrid: React.FC<StreakGridProps> = ({ history }) => {
                                     </button>
                                     <button 
                                         onClick={handleSaveEvent}
-                                        disabled={!eventTitle}
+                                        disabled={!eventTitle.trim() || savingEvent}
                                         className="flex-[2] py-4 rounded-2xl bg-gradient-to-r from-cyan-500 to-blue-600 text-white font-bebas tracking-widest uppercase text-sm shadow-xl disabled:opacity-50"
                                     >
-                                        Save Day
+                                        {savingEvent ? "Saving..." : "Save Day"}
                                     </button>
                                 </div>
                             </div>

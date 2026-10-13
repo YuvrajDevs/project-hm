@@ -8,14 +8,28 @@ import { useMailbox } from "@/context/MailboxContext";
 export const ResetRequestOverlay = () => {
     const { couple, user, partner, confirmReset, rejectReset } = useMailbox();
     const [isResetting, setIsResetting] = useState(false);
+    const [error, setError] = useState("");
 
     const handleConfirm = async () => {
         setIsResetting(true);
+        setError("");
         try {
             await confirmReset();
         } catch (err) {
             console.error(err);
+            setError("The reset didn't finish. Check your connection and try again.");
+        } finally {
             setIsResetting(false);
+        }
+    };
+
+    const handleReject = async () => {
+        setError("");
+        try {
+            await rejectReset();
+        } catch (err) {
+            console.error(err);
+            setError("Couldn't send your answer. Try again.");
         }
     };
     
@@ -48,9 +62,13 @@ export const ResetRequestOverlay = () => {
                         <h2 className="text-4xl font-bebas text-white tracking-[0.1em] uppercase">Start Fresh?</h2>
                         <p className="text-neutral-400 font-outfit text-sm leading-relaxed max-w-xs mx-auto">
                             {partner?.displayName || "Your partner"} wants to reset your history together for a clean slate.
-                            This will **permanently delete** all shared messages and check-ins.
+                            This will <span className="text-white">permanently delete</span> all shared notes, check-ins, signals and special days.
                         </p>
                     </div>
+
+                    {error && (
+                        <p className="text-rose-500 text-xs font-outfit text-center">{error}</p>
+                    )}
 
                     <AnimatePresence mode="wait">
                         {isResetting ? (
@@ -80,7 +98,7 @@ export const ResetRequestOverlay = () => {
                                 </button>
                                 
                                 <button 
-                                    onClick={rejectReset}
+                                    onClick={handleReject}
                                     className="w-full bg-white/5 border border-white/10 text-neutral-400 font-bebas text-lg py-4 rounded-[2rem] hover:bg-white/10 hover:text-white transition-all"
                                 >
                                     Not Now

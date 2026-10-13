@@ -43,7 +43,8 @@ export const EditMessage = ({
         setIntent(message.intent);
         setNote(message.note || "");
     }
-  }, [isOpen, message]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- only when the dialog opens
+  }, [isOpen]);
 
   const handleSave = async () => {
     setSaving(true);

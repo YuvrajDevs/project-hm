@@ -32,6 +32,8 @@ export const SafeSpaceSession = () => {
   const [messages, setMessages] = useState<SafeSpaceMessage[]>([]);
   const [inputText, setInputText] = useState("");
   const [showClosure, setShowClosure] = useState(false);
+  const [sending, setSending] = useState(false);
+  const [sendError, setSendError] = useState("");
   const { playTransition, playSend } = useSensoryFeedback();
 
   const isMyTurn = activeSafeSpace?.currentTurnUid === user?.uid;
@@ -62,13 +64,19 @@ export const SafeSpaceSession = () => {
   const cooldownActive = clock - lastRequest < 5 * 60 * 1000;
 
   const handleSendMessage = async () => {
-    if (!inputText.trim() || !user?.coupleId || !activeSafeSpace?.id) return;
+    const text = inputText.trim();
+    if (!text || sending || !user?.coupleId || !activeSafeSpace?.id) return;
+    setSending(true);
+    setSendError("");
     try {
       playSend();
-      await sendSafeSpaceMessage(user.coupleId, activeSafeSpace.id, user.uid, inputText);
+      await sendSafeSpaceMessage(user.coupleId, activeSafeSpace.id, user.uid, text);
       setInputText("");
     } catch (err) {
       console.error(err);
+      setSendError("Not sent. Check your connection and try again.");
+    } finally {
+      setSending(false);
     }
   };
 
@@ -144,7 +152,7 @@ export const SafeSpaceSession = () => {
         </div>
 
         {/* Footer UI (Turns & Mic Requests) */}
-        <div className="p-6 bg-black/20 backdrop-blur-3xl border-t border-white/5 space-y-4 pb-12 relative z-10">
+        <div className="p-6 bg-black/20 backdrop-blur-xl border-t border-white/5 space-y-4 pb-12 relative z-10">
             <AnimatePresence>
                 {hasRequestFromPartner && isMyTurn && (
                     <motion.div 
@@ -166,6 +174,9 @@ export const SafeSpaceSession = () => {
             </AnimatePresence>
 
             <div className="max-w-2xl mx-auto flex flex-col gap-4">
+                {sendError && (
+                    <p className="text-rose-500 text-xs font-outfit text-center">{sendError}</p>
+                )}
                 {isMyTurn ? (
                     <div className="space-y-4">
                         <textarea 
@@ -174,7 +185,7 @@ export const SafeSpaceSession = () => {
                             placeholder="Share your thought honestly..."
                             className="w-full bg-white/5 border border-white/10 rounded-2xl p-6 text-xl text-white focus:outline-none focus:border-indigo-500/50 h-[12vh] transition-all resize-none"
                             onKeyDown={(e) => {
-                                if (e.key === 'Enter' && !e.shiftKey) {
+                                if (e.key === 'Enter' && !e.shiftKey && !e.nativeEvent.isComposing) {
                                     e.preventDefault();
                                     handleSendMessage();
                                 }
@@ -189,7 +200,7 @@ export const SafeSpaceSession = () => {
                             </button>
                             <button 
                                 onClick={handleSendMessage}
-                                disabled={!inputText.trim()}
+                                disabled={!inputText.trim() || sending}
                                 className="bg-white text-black font-bebas text-xl px-12 py-4 rounded-2xl disabled:opacity-20 flex items-center gap-2 group"
                             >
                                 Send Thought <ChevronRight className="w-5 h-5 group-hover:translate-x-1 transition-transform" />

@@ -6,7 +6,21 @@ import { Sparkles, MessageSquareHeart } from "lucide-react";
 import { useMailbox } from "@/context/MailboxContext";
 
 export const WhiteFlagOverlay = () => {
-    const { couple, user, partner, lowerFlag, startSafeSpace, setOverlayActive } = useMailbox();
+    const { partner, lowerFlag, startSafeSpace, setOverlayActive } = useMailbox();
+    const [busy, setBusy] = React.useState(false);
+
+    // One action at a time, however fast the buttons are tapped
+    const run = async (action: () => Promise<void>) => {
+        if (busy) return;
+        setBusy(true);
+        try {
+            await action();
+        } catch (err) {
+            console.error(err);
+        } finally {
+            setBusy(false);
+        }
+    };
     
     return (
         <motion.div 
@@ -14,7 +28,7 @@ export const WhiteFlagOverlay = () => {
             animate={{ opacity: 1, scale: 1, filter: "blur(0px)" }}
             exit={{ opacity: 0, scale: 1.1, filter: "blur(10px)" }}
             transition={{ duration: 0.6, ease: [0.16, 1, 0.3, 1] }}
-            className="fixed inset-0 z-[200] flex items-center justify-center p-6 bg-white/95 backdrop-blur-3xl"
+            className="fixed inset-0 z-[200] flex items-center justify-center p-6 bg-white/95 backdrop-blur-xl"
         >
             <div className="max-w-md w-full space-y-12 text-center">
                 <motion.div 
@@ -48,20 +62,20 @@ export const WhiteFlagOverlay = () => {
 
                     <div className="pt-8 flex flex-col gap-4">
                         <button 
-                            onClick={async () => {
-                                await lowerFlag();
-                            }}
+                            disabled={busy}
+                            onClick={() => run(lowerFlag)}
                             className="w-full bg-black text-white font-bebas text-xl py-4 rounded-[2rem] flex items-center justify-center gap-3 hover:bg-neutral-800 active:scale-[0.98] transition-all shadow-2xl"
                         >
                             <Sparkles className="w-5 h-5" /> Let&apos;s Find Peace
                         </button>
 
                         <button 
-                            onClick={async () => {
+                            disabled={busy}
+                            onClick={() => run(async () => {
                                 await startSafeSpace();
                                 await lowerFlag();
                                 setOverlayActive(false);
-                            }}
+                            })}
                             className="w-full bg-white border border-neutral-200 text-black font-bebas text-xl py-4 rounded-[2rem] flex items-center justify-center gap-3 hover:bg-neutral-50 active:scale-[0.98] transition-all shadow-lg"
                         >
                             <MessageSquareHeart className="w-5 h-5" /> Let&apos;s talk in Safe Space
