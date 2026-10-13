@@ -30,10 +30,12 @@ export default function Home() {
   const { 
     fbUser,
     user, 
+    partner,
     loading, 
     hasOnboarded, 
     isPaired, 
     activeSafeSpace, 
+    safeSpaceHasNew,
     logout, 
     clearPartnerLeftStatus,
     sendMessage,
@@ -54,6 +56,15 @@ export default function Home() {
   const [isAnyPopupOpen, setIsAnyPopupOpen] = React.useState(false);
   const [showEmpathyNudge, setShowEmpathyNudge] = React.useState(false);
   const [showNotiCenter, setShowNotiCenter] = React.useState(false);
+  // The safe space stays open in the background; this is only whether this person is inside it right now
+  const [safeSpaceOpen, setSafeSpaceOpen] = React.useState(false);
+  const [showAfterSafeSpace, setShowAfterSafeSpace] = React.useState(false);
+  const inSafeSpace = safeSpaceOpen && !!activeSafeSpace;
+
+  // Signing out, or the space being closed by the partner, always leaves the room
+  useEffect(() => {
+    if (!activeSafeSpace) setSafeSpaceOpen(false);
+  }, [activeSafeSpace]);
   const [takeLongerThanUsual, setTakeLongerThanUsual] = React.useState(false);
   const [mounted, setMounted] = React.useState(false);
   
@@ -79,8 +90,8 @@ export default function Home() {
            alertString = "(1) New Message!";
            hasAlert = true;
        }
-       if (activeSafeSpace) {
-           alertString = "(!) Safe Space Active!";
+       if (safeSpaceHasNew) {
+           alertString = "(1) Safe Space";
            hasAlert = true;
        }
 
@@ -94,10 +105,10 @@ export default function Home() {
            };
        }
     }
-  }, [isHidden, messages.length, activeSafeSpace]);
+  }, [isHidden, messages.length, safeSpaceHasNew]);
 
   useEffect(() => {
-    const isAnyPopupOpen = showCheckInPopup || !!activeSafeSpace || isOverlayActive || 
+    const isAnyPopupOpen = showCheckInPopup || inSafeSpace || isOverlayActive || 
       (couple?.resetStatus === "pending" && couple?.resetBy !== user?.uid) ||
       (!!couple?.whiteFlagBy && couple?.whiteFlagBy !== user?.uid);
     
@@ -107,7 +118,7 @@ export default function Home() {
       document.body.style.overflow = "";
     }
     return () => { document.body.style.overflow = ""; };
-  }, [showCheckInPopup, activeSafeSpace, isOverlayActive, couple, user]);
+  }, [showCheckInPopup, inSafeSpace, isOverlayActive, couple, user]);
 
   useEffect(() => {
     if (!loading) {
@@ -151,13 +162,16 @@ export default function Home() {
   useEffect(() => {
     const handlePopup = (e: Event) => setIsAnyPopupOpen((e as CustomEvent<{ isOpen: boolean }>).detail.isOpen);
     const handleOpenSelector = () => setShowReactions(true);
+    const handleOpenSafeSpace = () => setSafeSpaceOpen(true);
     
     window.addEventListener('popupStateChange', handlePopup);
     window.addEventListener('openSignalSelector', handleOpenSelector);
+    window.addEventListener('openSafeSpace', handleOpenSafeSpace);
     
     return () => {
         window.removeEventListener('popupStateChange', handlePopup);
         window.removeEventListener('openSignalSelector', handleOpenSelector);
+        window.removeEventListener('openSafeSpace', handleOpenSafeSpace);
     };
   }, []);
 
@@ -179,7 +193,7 @@ export default function Home() {
     return () => clearTimeout(timer);
   }, [loading, hasLoadedInitially]);
 
-  const effectivelyPopupOpen = isAnyPopupOpen || showCompose || showCheckInPopup || showEmpathyNudge || !!activeSafeSpace || isOverlayActive;
+  const effectivelyPopupOpen = isAnyPopupOpen || showCompose || showCheckInPopup || showEmpathyNudge || inSafeSpace || isOverlayActive || showAfterSafeSpace;
 
   useEffect(() => {
     if (!loading && user && hasOnboarded) {
@@ -192,6 +206,7 @@ export default function Home() {
     if (fbUser === null) {
       setHasLoadedInitially(false);
       setOverlayDismissed(false);
+      setShowAfterSafeSpace(false);
       setShowCheckInPopup(false);
       setShowEmpathyNudge(false);
       setShowCompose(false);
@@ -398,9 +413,50 @@ export default function Home() {
         )}
         <IncomingReactionIndicator key="reaction-indicator" />
 
-        {activeSafeSpace ? (
-            <SafeSpaceSession key="safe-space-session" />
+        {inSafeSpace ? (
+            <SafeSpaceSession
+                key="safe-space-session"
+                onLeave={() => setSafeSpaceOpen(false)}
+                onClosed={() => { setSafeSpaceOpen(false); setShowAfterSafeSpace(true); }}
+            />
         ) : null}
+
+        {/* After closing: a gentle nudge to put the outcome in writing */}
+        {showAfterSafeSpace && (
+            <motion.div
+                key="after-safe-space"
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 1 }}
+                exit={{ opacity: 0 }}
+                className="fixed inset-0 z-[100] flex items-center justify-center p-6 overlay-backdrop"
+            >
+                <div className="w-full max-w-sm bg-[#111] border border-white/10 rounded-[2.5rem] p-8 text-center space-y-6">
+                    <div className="w-14 h-14 rounded-2xl bg-pink-500/10 flex items-center justify-center mx-auto text-pink-400">
+                        <MessageSquareHeart className="w-7 h-7" />
+                    </div>
+                    <div className="space-y-2">
+                        <h3 className="text-3xl font-bebas tracking-widest uppercase leading-none">Safe Space Closed</h3>
+                        <p className="text-neutral-400 font-outfit text-sm leading-relaxed">
+                            Want to send {partner?.displayName?.split(" ")[0] || "your partner"}{" "}a thought about it? A line on what you understood, what you agreed, or simply that you&apos;re there. It goes in your mailbox, so you both keep it.
+                        </p>
+                    </div>
+                    <div className="flex flex-col gap-3">
+                        <button
+                            onClick={() => { setShowAfterSafeSpace(false); setShowCompose(true); }}
+                            className="w-full bg-white text-black font-bebas tracking-widest uppercase rounded-2xl py-4 hover:bg-neutral-200 active:scale-95 transition-all"
+                        >
+                            Write a Thought
+                        </button>
+                        <button
+                            onClick={() => setShowAfterSafeSpace(false)}
+                            className="w-full text-neutral-500 font-bebas text-xs tracking-widest uppercase hover:text-white transition-all py-2"
+                        >
+                            Not Now
+                        </button>
+                    </div>
+                </div>
+            </motion.div>
+        )}
         {user?.leftByPartner && !overlayDismissed ? (
             <PartnerLeftOverlay 
                 key="partner-left-overlay"

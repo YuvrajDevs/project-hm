@@ -71,6 +71,7 @@ interface MailboxContextType {
   unreadNotificationsCount: number;
   notificationsEnabled: boolean;
   activeSafeSpace: SafeSpaceSession | null;
+  safeSpaceHasNew: boolean;
   checkins: DailyCheckIn[];
   historyCheckins: DailyCheckIn[];
   metrics: {
@@ -122,7 +123,6 @@ interface MailboxContextType {
 }
 
 const MAILBOX_PAGE_SIZE = 30;
-const SAFE_SPACE_IDLE_MS = 12 * 60 * 60 * 1000;
 
 const MailboxContext = createContext<MailboxContextType | undefined>(undefined);
 
@@ -515,14 +515,15 @@ export const MailboxProvider: React.FC<{ children: React.ReactNode }> = ({ child
         const [first, ...extras] = [...snap.docs].sort((a, b) => a.id.localeCompare(b.id));
         extras.forEach(d => updateDoc(d.ref, { active: false }).catch(() => {}));
 
-        // A session nobody has spoken in for half a day is over
-        const lastMessageAt = first.data().lastMessageAt?.toMillis?.() ?? Date.now();
-        if (Date.now() - lastMessageAt > SAFE_SPACE_IDLE_MS) {
-            updateDoc(first.ref, { active: false }).catch(() => {});
-            setActiveSafeSpace(null);
-            return;
-        }
-        setActiveSafeSpace({ ...first.data(), id: first.id } as SafeSpaceSession);
+        // It stays open until one of them closes it, however long that takes
+        const data = first.data();
+        setActiveSafeSpace({
+            ...data,
+            id: first.id,
+            lastMessageAt: data.lastMessageAt?.toDate ? data.lastMessageAt.toDate().toISOString() : data.lastMessageAt,
+            startedAt: data.startedAt?.toDate ? data.startedAt.toDate().toISOString() : data.startedAt,
+        } as SafeSpaceSession);
+
       } else {
         setActiveSafeSpace(null);
       }
@@ -585,6 +586,17 @@ export const MailboxProvider: React.FC<{ children: React.ReactNode }> = ({ child
 
   const hasOlderMessages = rawMessages.length >= mailboxPageSize;
   const loadOlderMessages = () => setMailboxPageSize(size => size + MAILBOX_PAGE_SIZE);
+
+  // Something in the safe space this person has not read yet: a new thought from the partner,
+  // or a space the partner opened that they have not entered
+  const safeSpaceHasNew = useMemo(() => {
+    if (!activeSafeSpace || !user?.uid) return false;
+    const seenAt = activeSafeSpace.seen?.[user.uid];
+    if (!seenAt) return activeSafeSpace.startedBy !== user.uid;
+    return !!activeSafeSpace.lastMessageBy
+        && activeSafeSpace.lastMessageBy !== user.uid
+        && (activeSafeSpace.lastMessageAt || "") > seenAt;
+  }, [activeSafeSpace, user?.uid]);
 
   // ─── Actions ──────────────────────────────────────────────────────────────
   const logout = async () => {
@@ -715,7 +727,7 @@ export const MailboxProvider: React.FC<{ children: React.ReactNode }> = ({ child
 
   const startSafeSpace = async () => {
     if (!user?.coupleId || !user.uid) return;
-    await startSafeSpaceSession(user.coupleId, user.uid);
+    await startSafeSpaceSession(user.coupleId, user.uid, user.partnerId || undefined);
   };
 
   const markAsRead = async (messageId: string) => {
@@ -759,6 +771,7 @@ export const MailboxProvider: React.FC<{ children: React.ReactNode }> = ({ child
     unreadNotificationsCount,
     notificationsEnabled,
     activeSafeSpace,
+    safeSpaceHasNew,
     checkins,
     historyCheckins,
     metrics,
@@ -798,7 +811,7 @@ export const MailboxProvider: React.FC<{ children: React.ReactNode }> = ({ child
     isOverlayActive,
     setOverlayActive
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }), [fbUser, user, couple, partner, messages, reactions, checkins, events, notifications, unreadNotificationsCount, notificationsEnabled, activeSafeSpace, metrics, loading, hasOnboarded, isPaired, hasLoadedCheckins, isOverlayActive, now, hasOlderMessages, todayId]);
+  }), [fbUser, user, couple, partner, messages, reactions, checkins, events, notifications, unreadNotificationsCount, notificationsEnabled, activeSafeSpace, metrics, loading, hasOnboarded, isPaired, hasLoadedCheckins, isOverlayActive, now, hasOlderMessages, todayId, safeSpaceHasNew]);
 
   return (
     <MailboxContext.Provider value={value}>
