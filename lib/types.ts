@@ -152,17 +152,13 @@ export interface SafeSpaceMessage {
 export interface SafeSpaceSession {
   id: string;
   active: boolean;
-  participants: string[];
-  currentTurnUid: string;
-  micRequest?: {
-    uid: string;
-    requestedAt: string;
-    status: "pending" | "approved" | "denied";
-  };
-  lastMicRequestAt?: string; // For 5min cooldown
-  lastMessageAt: string;
-  startedAt: string;
+  startedBy?: string;
+  lastMessageBy?: string;
+  lastMessageAt?: string; // ISO, normalised when read
+  seen?: { [uid: string]: string }; // when each person last read the space (ISO)
+  startedAt?: string;
   endedAt?: string;
+  endedBy?: string;
   closureMood?: 1 | 2 | 3; // 🟢/🟡/🔴
 }
 

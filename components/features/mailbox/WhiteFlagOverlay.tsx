@@ -58,7 +58,7 @@ export const WhiteFlagOverlay = () => {
                             You are more important <br/> than this argument
                         </h2>
                         <p className="text-neutral-500 font-outfit text-base leading-relaxed max-w-sm mx-auto">
-                            {partner?.displayName || "Your partner"} has raised the white flag. 
+                            {partner?.displayName?.split(" ")[0] || "Your partner"}{" "}has raised the white flag. 
                             It&apos;s not an apology—it&apos;s a reminder that your connection belongs above the winning or losing.
                         </p>
                     </div>
@@ -78,6 +78,7 @@ export const WhiteFlagOverlay = () => {
                                 await startSafeSpace();
                                 await lowerFlag();
                                 setOverlayActive(false);
+                                window.dispatchEvent(new CustomEvent('openSafeSpace'));
                             })}
                             className="w-full bg-white border border-neutral-200 text-black font-bebas text-xl py-4 rounded-[2rem] flex items-center justify-center gap-3 hover:bg-neutral-50 active:scale-[0.98] transition-all shadow-lg"
                         >

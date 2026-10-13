@@ -20,7 +20,8 @@ import {
   FirestoreDataConverter,
   QueryDocumentSnapshot,
   SnapshotOptions,
-  limit
+  limit,
+  limitToLast
 } from "firebase/firestore";
 import { db } from "./firebase";
 import { 
@@ -237,35 +238,40 @@ export const sendQuickReact = async (coupleId: string, react: Omit<QuickReact, "
 
 /**
  * Safe Space Helpers
+ *
+ * A couple has one safe space. Once opened it stays open, whether or not anyone is looking at it,
+ * until one of them closes it. Either person can come and go, read, and add to it in their own time.
  */
-export const startSafeSpaceSession = async (coupleId: string, currentTurnUid: string) => {
+export const startSafeSpaceSession = async (coupleId: string, uid: string, partnerUid?: string) => {
   const sessionsRef = collection(db, "couples", coupleId, "safe_space_sessions");
   const active = await getDocs(query(sessionsRef, where("active", "==", true)));
   if (!active.empty) return active.docs[0].ref;
 
-  return addDoc(sessionsRef, {
+  const ref = await addDoc(sessionsRef, {
     active: true,
-    participants: [], // Will be populated by joiners if needed, or derived
-    currentTurnUid,
+    startedBy: uid,
     startedAt: Timestamp.now(),
     lastMessageAt: Timestamp.now(),
+    seen: { [uid]: new Date().toISOString() },
   });
-};
 
-export const subscribeToSafeSpaceSession = (coupleId: string, sessionId: string, callback: (session: SafeSpaceSession) => void) => {
-  const docRef = doc(db, "couples", coupleId, "safe_space_sessions", sessionId).withConverter(converter<SafeSpaceSession>());
-  return onSnapshot(docRef, (snap) => {
-    if (snap.exists()) callback(snap.data());
-  });
+  if (partnerUid) {
+    await notifyPartner(partnerUid, {
+      uid: partnerUid,
+      type: "SAFE_SPACE",
+      title: "Safe Space Opened",
+      body: "Your partner opened the safe space. Come in whenever you're ready.",
+    });
+  }
+  return ref;
 };
 
 export const subscribeToSafeSpaceMessages = (coupleId: string, sessionId: string, callback: (messages: SafeSpaceMessage[]) => void) => {
-  // Filter for last 24 hours to keep it ephemeral
-  const yesterday = new Date(Date.now() - 24 * 60 * 60000);
+  // The whole conversation stays for as long as the space is open
   const q = query(
     collection(db, "couples", coupleId, "safe_space_sessions", sessionId, "messages"),
-    where("createdAt", ">=", Timestamp.fromDate(yesterday)),
-    orderBy("createdAt", "asc")
+    orderBy("createdAt", "asc"),
+    limitToLast(200)
   ).withConverter(converter<SafeSpaceMessage>());
   
   return onSnapshot(q, (snapshot) => {
@@ -273,51 +279,37 @@ export const subscribeToSafeSpaceMessages = (coupleId: string, sessionId: string
   });
 };
 
-export const sendSafeSpaceMessage = async (coupleId: string, sessionId: string, senderUid: string, text: string) => {
+/**
+ * Add a thought. The partner gets one notification when it becomes their turn to read,
+ * not one for every message.
+ */
+export const sendSafeSpaceMessage = async (coupleId: string, sessionId: string, senderUid: string, text: string, notifyUid?: string) => {
   const sessionRef = doc(db, "couples", coupleId, "safe_space_sessions", sessionId);
   await addDoc(collection(db, "couples", coupleId, "safe_space_sessions", sessionId, "messages"), {
     senderUid,
     text,
     createdAt: Timestamp.now()
   });
-  return updateDoc(sessionRef, { lastMessageAt: Timestamp.now() });
-};
-
-export const requestMic = async (coupleId: string, sessionId: string, uid: string) => {
-  const sessionRef = doc(db, "couples", coupleId, "safe_space_sessions", sessionId);
-  return updateDoc(sessionRef, {
-    micRequest: {
-      uid,
-      requestedAt: new Date().toISOString(),
-      status: "pending"
-    },
-    lastMicRequestAt: new Date().toISOString()
+  await updateDoc(sessionRef, {
+    lastMessageAt: Timestamp.now(),
+    lastMessageBy: senderUid,
+    [`seen.${senderUid}`]: new Date().toISOString(),
   });
-};
 
-export const respondToMicRequest = async (coupleId: string, sessionId: string, approve: boolean) => {
-  const sessionRef = doc(db, "couples", coupleId, "safe_space_sessions", sessionId);
-  const snap = await getDoc(sessionRef);
-  if (!snap.exists()) return;
-  const data = snap.data();
-  
-  if (approve && data.micRequest) {
-    return updateDoc(sessionRef, {
-      currentTurnUid: data.micRequest.uid,
-      micRequest: null,
-    });
-  } else {
-    return updateDoc(sessionRef, {
-      micRequest: null
+  if (notifyUid) {
+    await notifyPartner(notifyUid, {
+      uid: notifyUid,
+      type: "SAFE_SPACE",
+      title: "Safe Space",
+      body: "Your partner shared something in the safe space.",
     });
   }
 };
 
-export const handoverMic = async (coupleId: string, sessionId: string, nextUid: string) => {
-  const sessionRef = doc(db, "couples", coupleId, "safe_space_sessions", sessionId);
-  return updateDoc(sessionRef, {
-    currentTurnUid: nextUid,
-    micRequest: null
+/** Record that this person has read the space up to now. */
+export const markSafeSpaceSeen = async (coupleId: string, sessionId: string, uid: string) => {
+  return updateDoc(doc(db, "couples", coupleId, "safe_space_sessions", sessionId), {
+    [`seen.${uid}`]: new Date().toISOString(),
   });
 };
 
@@ -403,14 +395,6 @@ export const respondToMessage = async (coupleId: string, messageId: string, resp
     type: "MAILBOX",
     title: "New Response",
     body: "Your partner responded to your message.",
-  });
-};
-
-export const updateSafeSpaceTurn = async (coupleId: string, sessionId: string, nextTurnUid: string) => {
-  const sessionRef = doc(db, "couples", coupleId, "safe_space_sessions", sessionId);
-  return updateDoc(sessionRef, {
-    currentTurnUid: nextTurnUid,
-    lastMessageAt: Timestamp.now()
   });
 };
 

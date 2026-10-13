@@ -61,7 +61,7 @@ export const ResetRequestOverlay = () => {
                     <div className="space-y-2">
                         <h2 className="text-4xl font-bebas text-white tracking-[0.1em] uppercase">Start Fresh?</h2>
                         <p className="text-neutral-400 font-outfit text-sm leading-relaxed max-w-xs mx-auto">
-                            {partner?.displayName || "Your partner"} wants to reset your history together for a clean slate.
+                            {partner?.displayName?.split(" ")[0] || "Your partner"}{" "}wants to reset your history together for a clean slate.
                             This will <span className="text-white">permanently delete</span> all shared notes, check-ins, signals and special days.
                         </p>
                     </div>
