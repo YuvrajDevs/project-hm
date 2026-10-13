@@ -44,7 +44,7 @@ export const MailboxScreen: React.FC<MailboxScreenProps> = ({ onOpenCheckIn, onC
                     <motion.div 
                         initial={{ opacity: 0, y: 20 }}
                         animate={{ opacity: 1, y: 0 }}
-                        className="relative bg-white/5 border border-white/10 rounded-[2.5rem] p-8 overflow-hidden backdrop-blur-xl flex items-center justify-between"
+                        className="relative bg-white/5 border border-white/10 rounded-[2.5rem] p-8 overflow-hidden flex items-center justify-between"
                     >
                         <div className="space-y-4">
                             <div className="flex items-center gap-2">
@@ -65,7 +65,7 @@ export const MailboxScreen: React.FC<MailboxScreenProps> = ({ onOpenCheckIn, onC
 
                         <div className="relative group">
                             <div className="absolute inset-0 opacity-20 group-hover:opacity-40 transition-opacity" style={{ backgroundImage: "radial-gradient(circle at center, rgba(249,115,22,0.5), transparent 70%)" }} />
-                            <div className="relative w-24 h-24 rounded-full border-2 border-white/10 flex items-center justify-center bg-black/40 backdrop-blur-md">
+                            <div className="relative w-24 h-24 rounded-full border-2 border-white/10 flex items-center justify-center bg-black/40">
                                 <motion.div 
                                     animate={{ scale: [1, 1.1, 1], rotate: [0, 5, -5, 0] }}
                                     transition={{ duration: 4, repeat: Infinity }}

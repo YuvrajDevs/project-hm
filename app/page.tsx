@@ -3,28 +3,38 @@
 import React, { useEffect } from "react";
 import { useMailbox } from "@/context/MailboxContext";
 import { MailboxScreen } from "@/components/features/mailbox/MailboxScreen";
-import { MessageHistory } from "@/components/features/mailbox/MessageHistory";
-import { SafeSpaceSession } from "@/components/features/safespace/SafeSpaceSession";
-import { PartnerLeftOverlay } from "@/components/features/mailbox/PartnerLeftOverlay";
-import { SingleHub } from "@/components/features/mailbox/SingleHub";
 import { BottomDock } from "@/components/layout/BottomDock";
-import { ArchiveDashboard } from "@/components/features/archive/ArchiveDashboard";
 import { QuickReact, IncomingReactionIndicator } from "@/components/features/reactions/QuickReact";
-import { ComposeMessage } from "@/components/features/mailbox/ComposeMessage";
-import { DailyCheckInPopup } from "@/components/features/checkin/DailyCheckInPopup";
 import { ResetRequestOverlay } from "@/components/features/mailbox/ResetRequestOverlay";
-import { WhiteFlagOverlay } from "@/components/features/mailbox/WhiteFlagOverlay";
 import { useRouter } from "next/navigation";
 import { motion, AnimatePresence } from "framer-motion";
 import { useTabObserver } from "@/hooks/useTabObserver";
 import { Heart, Loader2, LogOut, MessageSquareHeart, User as UserIcon, Users, Settings } from "lucide-react";
 import { AmbientBackground } from "@/components/ui/AmbientBackground";
-import { EmpathyNudge } from "@/components/features/checkin/EmpathyNudge";
 import { NotificationToastManager } from "@/components/features/notifications/NotificationToastManager";
 import { NotificationCenter } from "@/components/features/notifications/NotificationCenter";
 import { Bell } from "lucide-react";
-import { LandingPage } from "@/components/features/auth/LandingPage";
 import { PENDING_INVITE_KEY } from "@/lib/constants";
+import dynamic from "next/dynamic";
+
+// Screens and dialogs that are not on the first screen load on demand, so opening the app
+// downloads and runs only what the home screen needs.
+const loadCompose = () => import("@/components/features/mailbox/ComposeMessage");
+const loadCheckIn = () => import("@/components/features/checkin/DailyCheckInPopup");
+const loadHistory = () => import("@/components/features/mailbox/MessageHistory");
+const loadArchive = () => import("@/components/features/archive/ArchiveDashboard");
+const loadSafeSpace = () => import("@/components/features/safespace/SafeSpaceSession");
+
+const ComposeMessage = dynamic(() => loadCompose().then(m => m.ComposeMessage));
+const DailyCheckInPopup = dynamic(() => loadCheckIn().then(m => m.DailyCheckInPopup));
+const MessageHistory = dynamic(() => loadHistory().then(m => m.MessageHistory));
+const ArchiveDashboard = dynamic(() => loadArchive().then(m => m.ArchiveDashboard));
+const SafeSpaceSession = dynamic(() => loadSafeSpace().then(m => m.SafeSpaceSession));
+const PartnerLeftOverlay = dynamic(() => import("@/components/features/mailbox/PartnerLeftOverlay").then(m => m.PartnerLeftOverlay));
+const WhiteFlagOverlay = dynamic(() => import("@/components/features/mailbox/WhiteFlagOverlay").then(m => m.WhiteFlagOverlay));
+const EmpathyNudge = dynamic(() => import("@/components/features/checkin/EmpathyNudge").then(m => m.EmpathyNudge));
+const SingleHub = dynamic(() => import("@/components/features/mailbox/SingleHub").then(m => m.SingleHub));
+const LandingPage = dynamic(() => import("@/components/features/auth/LandingPage").then(m => m.LandingPage));
 
 export default function Home() {
   const { 
@@ -178,6 +188,16 @@ export default function Home() {
   useEffect(() => {
     setMounted(true);
   }, []);
+
+  // Once the home screen has settled, fetch the on-demand pieces in the background so the first tap does not wait
+  useEffect(() => {
+    if (!isPaired) return;
+    const warm = () => { loadCompose(); loadCheckIn(); loadHistory(); loadArchive(); loadSafeSpace(); };
+    const idle = (window as unknown as { requestIdleCallback?: (cb: () => void, opts?: { timeout: number }) => number }).requestIdleCallback;
+    const timer = idle ? undefined : setTimeout(warm, 2500);
+    if (idle) idle(warm, { timeout: 4000 });
+    return () => { if (timer) clearTimeout(timer); };
+  }, [isPaired]);
 
   const [hasLoadedInitially, setHasLoadedInitially] = React.useState(false);
 

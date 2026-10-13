@@ -16,6 +16,7 @@ const outfit = Outfit({
 const inter = Inter({
   variable: "--font-inter",
   subsets: ["latin"],
+  preload: false, // only the legal pages use it
 });
 
 export const metadata: Metadata = {
