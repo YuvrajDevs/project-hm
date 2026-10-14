@@ -9,12 +9,14 @@ import { DECK_BY_ID, LEVEL_LABEL } from "@/lib/games/decks";
 import { answeredCount, getCard, nextUnanswered, roundKey } from "@/lib/games/engine";
 import { useSensoryFeedback } from "@/hooks/useSensoryFeedback";
 import { cn } from "@/lib/utils";
-import { DECK_ICONS } from "./deckIcons";
+import { DECK_ICONS, openQuestions } from "./deckIcons";
+import type { ActiveGame } from "@/lib/types";
 
 // Question decks: each person answers every card at their own pace.
 // Nothing of the other person's shows until both are done; then it's one list, question by question.
-export const QuestionDeckScreen = ({ onLeave }: { onLeave: () => void }) => {
-  const { user, partner, activeQuestions: game } = useMailbox();
+export const QuestionDeckScreen = ({ gameId, onLeave }: { gameId: string; onLeave: () => void }) => {
+  const { user, partner, questionGames } = useMailbox();
+  const game = questionGames.find(g => g.id === gameId) ?? null;
   const [confirmEnd, setConfirmEnd] = useState(false);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState("");
@@ -33,8 +35,8 @@ export const QuestionDeckScreen = ({ onLeave }: { onLeave: () => void }) => {
 
   const joined = !!game?.joined?.[uid];
   useEffect(() => {
-    if (coupleId && uid && game && !joined) joinGame(coupleId, uid, "questions").catch(console.error);
-  }, [coupleId, uid, game, joined]);
+    if (coupleId && uid && game && !joined) joinGame(coupleId, gameId, uid).catch(console.error);
+  }, [coupleId, gameId, uid, game, joined]);
 
   if (!game || !uid || !partnerUid) return null;
 
@@ -61,9 +63,12 @@ export const QuestionDeckScreen = ({ onLeave }: { onLeave: () => void }) => {
     }
   };
 
-  const handleEnd = () => run(async () => { await endGame(coupleId, "questions"); onLeave(); });
+  const handleEnd = () => run(async () => { await endGame(coupleId, gameId); onLeave(); });
+  // New questions as a new deck; this one goes to Past Games
   const handleNewDeck = () => run(async () => {
-    await startGame(coupleId, uid, partnerUid, game.deck, game.level, myName);
+    const newId = await startGame(coupleId, uid, partnerUid, game.deck, game.level, myName);
+    openQuestions(newId);
+    await endGame(coupleId, gameId);
     playPop();
   });
 
@@ -131,7 +136,7 @@ export const QuestionDeckScreen = ({ onLeave }: { onLeave: () => void }) => {
             partnerName={partnerName}
             isLast={mine === total - 1}
             onSave={(text) => run(async () => {
-              await submitQuestionAnswer(coupleId, current, uid, text, mine === total - 1, partnerUid, myName);
+              await submitQuestionAnswer(coupleId, gameId, current, uid, text, mine === total - 1, partnerUid, myName);
               playPop();
             })}
           />
@@ -255,7 +260,7 @@ const AnswerCard = ({ text, number, total, gradient, busy, partnerName, isLast, 
 
 // Both done: every question with both answers, one plain list
 const Results = ({ game, uid, partnerUid, partnerName, onChime }: {
-  game: NonNullable<ReturnType<typeof useMailbox>["activeQuestions"]>; uid: string; partnerUid: string; partnerName: string; onChime: () => void;
+  game: ActiveGame; uid: string; partnerUid: string; partnerName: string; onChime: () => void;
 }) => {
   useEffect(() => { onChime(); }, [onChime]);
   return (

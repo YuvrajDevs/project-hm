@@ -12,5 +12,6 @@ export const DECK_ICONS: Record<DeckId, LucideIcon> = {
   deep: Moon,
 };
 
-export const openGame = () => window.dispatchEvent(new CustomEvent("openGame"));
-export const openQuestions = () => window.dispatchEvent(new CustomEvent("openQuestions"));
+// Open a specific game on its full screen
+export const openGame = (id: string) => window.dispatchEvent(new CustomEvent("openGame", { detail: { id } }));
+export const openQuestions = (id: string) => window.dispatchEvent(new CustomEvent("openQuestions", { detail: { id } }));

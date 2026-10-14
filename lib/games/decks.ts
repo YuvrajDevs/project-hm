@@ -110,8 +110,11 @@ export const DECKS: DeckInfo[] = [
 export const LIVE_DECKS = DECKS.filter(d => d.mechanic !== "open");
 export const QUESTION_DECKS = DECKS.filter(d => d.mechanic === "open");
 
-// Each kind has its own slot, so a question deck can stay open while you play a live game
+// Live games and question decks are listed and counted separately
 export type GameSlot = "current" | "questions";
+
+// How many of each kind can be open at once
+export const MAX_OPEN_GAMES = 3;
 export const slotFor = (deck: DeckId): GameSlot => (DECK_BY_ID[deck].mechanic === "open" ? "questions" : "current");
 
 export const DECK_BY_ID = Object.fromEntries(DECKS.map(d => [d.id, d])) as Record<DeckId, DeckInfo>;

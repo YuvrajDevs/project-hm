@@ -1,7 +1,7 @@
 "use client";
 
 import React, { createContext, useContext, useState, useEffect, useMemo, useRef } from "react";
-import { MailboxMessage, User, Couple, QuickReact, DailyCheckIn, SafeSpaceSession, CoupleEvent, AppNotification, ReactionType, CoupleGame } from "@/lib/types";
+import { MailboxMessage, User, Couple, QuickReact, DailyCheckIn, SafeSpaceSession, CoupleEvent, AppNotification, ReactionType, ActiveGame } from "@/lib/types";
 import { db, auth, reauthenticate } from "@/lib/firebase";
 import { MotionConfig } from "framer-motion";
 import { 
@@ -34,7 +34,7 @@ import {
   unpairPartner, 
   clearLeftStatus,
   subscribeToEvents,
-  subscribeToGame,
+  subscribeToGames,
   saveCoupleEvent,
   deleteCoupleEvent,
   startSafeSpaceSession,
@@ -58,6 +58,7 @@ import {
   recordStreak,
   CapsuleContent
 } from "@/lib/firestore-helpers";
+import { slotFor } from "@/lib/games/decks";
 import { getCheckInDateId, addDays, countStreak } from "@/lib/utils";
 
 interface MailboxContextType {
@@ -72,8 +73,8 @@ interface MailboxContextType {
   unreadNotificationsCount: number;
   notificationsEnabled: boolean;
   activeSafeSpace: SafeSpaceSession | null;
-  activeGame: CoupleGame | null;
-  activeQuestions: CoupleGame | null;
+  liveGames: ActiveGame[];      // newest first
+  questionGames: ActiveGame[];  // newest first
   safeSpaceHasNew: boolean;
   checkins: DailyCheckIn[];
   historyCheckins: DailyCheckIn[];
@@ -139,8 +140,9 @@ export const MailboxProvider: React.FC<{ children: React.ReactNode }> = ({ child
   const [checkins, setCheckins] = useState<DailyCheckIn[]>([]);
   const [historyCheckins, setHistoryCheckins] = useState<DailyCheckIn[]>([]);
   const [activeSafeSpace, setActiveSafeSpace] = useState<SafeSpaceSession | null>(null);
-  const [activeGame, setActiveGame] = useState<CoupleGame | null>(null);
-  const [activeQuestions, setActiveQuestions] = useState<CoupleGame | null>(null);
+  const [games, setGames] = useState<ActiveGame[]>([]);
+  const liveGames = useMemo(() => games.filter(g => slotFor(g.deck) === "current"), [games]);
+  const questionGames = useMemo(() => games.filter(g => slotFor(g.deck) === "questions"), [games]);
   const [rawEvents, setRawEvents] = useState<CoupleEvent[]>([]);
   const [notifications, setNotifications] = useState<AppNotification[]>([]);
   const [hasLoadedCheckins, setHasLoadedCheckins] = useState(false);
@@ -355,8 +357,7 @@ export const MailboxProvider: React.FC<{ children: React.ReactNode }> = ({ child
     setHistoryCheckins([]);
     setRawEvents([]);
     setActiveSafeSpace(null);
-    setActiveGame(null);
-    setActiveQuestions(null);
+    setGames([]);
     setHasLoadedCheckins(false);
     setSealedContent({});
     setMailboxPageSize(MAILBOX_PAGE_SIZE);
@@ -537,8 +538,7 @@ export const MailboxProvider: React.FC<{ children: React.ReactNode }> = ({ child
     });
 
     // The game in progress, if any
-    const unsubGame = subscribeToGame(user.coupleId, "current", setActiveGame);
-    const unsubQuestions = subscribeToGame(user.coupleId, "questions", setActiveQuestions);
+    const unsubGames = subscribeToGames(user.coupleId, setGames);
 
     // Events
     const unsubEvents = subscribeToEvents(user.coupleId, (evts) => {
@@ -564,8 +564,7 @@ export const MailboxProvider: React.FC<{ children: React.ReactNode }> = ({ child
       unsubCheckins();
       unsubHistory();
       unsubSafeSpace();
-      unsubGame();
-      unsubQuestions();
+      unsubGames();
       unsubEvents();
       unsubNotis();
     };
@@ -784,8 +783,8 @@ export const MailboxProvider: React.FC<{ children: React.ReactNode }> = ({ child
     unreadNotificationsCount,
     notificationsEnabled,
     activeSafeSpace,
-    activeGame,
-    activeQuestions,
+    liveGames,
+    questionGames,
     safeSpaceHasNew,
     checkins,
     historyCheckins,
@@ -826,7 +825,7 @@ export const MailboxProvider: React.FC<{ children: React.ReactNode }> = ({ child
     isOverlayActive,
     setOverlayActive
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }), [fbUser, user, couple, partner, messages, reactions, checkins, events, notifications, unreadNotificationsCount, notificationsEnabled, activeSafeSpace, activeGame, activeQuestions, metrics, loading, hasOnboarded, isPaired, hasLoadedCheckins, isOverlayActive, now, hasOlderMessages, todayId, safeSpaceHasNew]);
+  }), [fbUser, user, couple, partner, messages, reactions, checkins, events, notifications, unreadNotificationsCount, notificationsEnabled, activeSafeSpace, liveGames, questionGames, metrics, loading, hasOnboarded, isPaired, hasLoadedCheckins, isOverlayActive, now, hasOlderMessages, todayId, safeSpaceHasNew]);
 
   return (
     <MailboxContext.Provider value={value}>

@@ -49,8 +49,8 @@ export default function Home() {
     hasOnboarded, 
     isPaired, 
     activeSafeSpace, 
-    activeGame,
-    activeQuestions,
+    liveGames,
+    questionGames,
     safeSpaceHasNew,
     logout, 
     clearPartnerLeftStatus,
@@ -77,16 +77,11 @@ export default function Home() {
   const [showAfterSafeSpace, setShowAfterSafeSpace] = React.useState(false);
   const inSafeSpace = safeSpaceOpen && !!activeSafeSpace;
   // Same for the game in progress
-  const [gameOpen, setGameOpen] = React.useState(false);
-  const inGame = gameOpen && !!activeGame;
-  useEffect(() => {
-    if (!activeGame) setGameOpen(false);
-  }, [activeGame]);
-  const [questionsOpen, setQuestionsOpen] = React.useState(false);
-  const inQuestions = questionsOpen && !!activeQuestions;
-  useEffect(() => {
-    if (!activeQuestions) setQuestionsOpen(false);
-  }, [activeQuestions]);
+  // Which game is on screen, if any. It closes by itself if the game is ended from the other side.
+  const [openGameId, setOpenGameId] = React.useState<string | null>(null);
+  const inGame = !!openGameId && liveGames.some(g => g.id === openGameId);
+  const [openQuestionsId, setOpenQuestionsId] = React.useState<string | null>(null);
+  const inQuestions = !!openQuestionsId && questionGames.some(g => g.id === openQuestionsId);
 
   // Signing out, or the space being closed by the partner, always leaves the room
   useEffect(() => {
@@ -190,8 +185,8 @@ export default function Home() {
     const handlePopup = (e: Event) => setIsAnyPopupOpen((e as CustomEvent<{ isOpen: boolean }>).detail.isOpen);
     const handleOpenSelector = () => setShowReactions(true);
     const handleOpenSafeSpace = () => setSafeSpaceOpen(true);
-    const handleOpenGame = () => setGameOpen(true);
-    const handleOpenQuestions = () => setQuestionsOpen(true);
+    const handleOpenGame = (e: Event) => setOpenGameId((e as CustomEvent<{ id: string }>).detail.id);
+    const handleOpenQuestions = (e: Event) => setOpenQuestionsId((e as CustomEvent<{ id: string }>).detail.id);
     window.addEventListener('openGame', handleOpenGame);
     window.addEventListener('openQuestions', handleOpenQuestions);
     
@@ -253,8 +248,8 @@ export default function Home() {
       setShowCheckInPopup(false);
       setShowEmpathyNudge(false);
       setShowCompose(false);
-      setGameOpen(false);
-      setQuestionsOpen(false);
+      setOpenGameId(null);
+      setOpenQuestionsId(null);
       setActiveView("mailbox");
     }
   }, [fbUser]);
@@ -467,10 +462,10 @@ export default function Home() {
         ) : null}
 
         {inGame ? (
-            <GameScreen key="game-screen" onLeave={() => setGameOpen(false)} />
+            <GameScreen key="game-screen" gameId={openGameId!} onLeave={() => setOpenGameId(null)} />
         ) : null}
         {inQuestions ? (
-            <QuestionDeckScreen key="question-deck" onLeave={() => setQuestionsOpen(false)} />
+            <QuestionDeckScreen key="question-deck" gameId={openQuestionsId!} onLeave={() => setOpenQuestionsId(null)} />
         ) : null}
 
         {/* After closing: a gentle nudge to put the outcome in writing */}

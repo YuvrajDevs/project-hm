@@ -218,3 +218,6 @@ export interface CoupleGame {
   answers?: Record<string, Record<string, GameAnswer>>;  // round key -> uid -> answer
   td?: Record<string, { choice?: "truth" | "dare"; result?: "done" | "skipped" }>;
 }
+
+// A game in progress, with its document id
+export type ActiveGame = CoupleGame & { id: string };

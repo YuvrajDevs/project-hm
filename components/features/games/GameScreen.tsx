@@ -13,11 +13,12 @@ import { getCard, isRoundComplete, roundKey, totalScores, truthDarePlayer, type 
 import type { CoupleGame } from "@/lib/types";
 import { useSensoryFeedback } from "@/hooks/useSensoryFeedback";
 import { cn } from "@/lib/utils";
-import { DECK_ICONS } from "./deckIcons";
+import { DECK_ICONS, openGame } from "./deckIcons";
 
 // Full-screen game. The game lives in Firestore, so either person can leave and come back to the same card.
-export const GameScreen = ({ onLeave }: { onLeave: () => void }) => {
-  const { user, partner, activeGame: game } = useMailbox();
+export const GameScreen = ({ gameId, onLeave }: { gameId: string; onLeave: () => void }) => {
+  const { user, partner, liveGames } = useMailbox();
+  const game = liveGames.find(g => g.id === gameId) ?? null;
   const [confirmEnd, setConfirmEnd] = useState(false);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState("");
@@ -36,8 +37,8 @@ export const GameScreen = ({ onLeave }: { onLeave: () => void }) => {
   // Opening the game counts as joining it
   const joined = !!game?.joined?.[uid];
   useEffect(() => {
-    if (coupleId && uid && game && !joined) joinGame(coupleId, uid).catch(console.error);
-  }, [coupleId, uid, game, joined]);
+    if (coupleId && uid && game && !joined) joinGame(coupleId, gameId, uid).catch(console.error);
+  }, [coupleId, gameId, uid, game, joined]);
 
   // A chime when the reveal arrives
   const round = game?.round ?? 0;
@@ -73,10 +74,13 @@ export const GameScreen = ({ onLeave }: { onLeave: () => void }) => {
     }
   };
 
-  const handleNext = () => run(async () => { playTick(); await advanceGame(coupleId, round); });
-  const handleEnd = () => run(async () => { await endGame(coupleId); onLeave(); });
+  const handleNext = () => run(async () => { playTick(); await advanceGame(coupleId, gameId, round); });
+  const handleEnd = () => run(async () => { await endGame(coupleId, gameId); onLeave(); });
+  // A fresh set of cards as a new game; this finished one goes to Past Games
   const handleReplay = () => run(async () => {
-    await startGame(coupleId, uid, partnerUid, game.deck, game.level, user?.displayName?.split(" ")[0]);
+    const newId = await startGame(coupleId, uid, partnerUid, game.deck, game.level, user?.displayName?.split(" ")[0]);
+    openGame(newId);
+    await endGame(coupleId, gameId);
     playPop();
   });
 
@@ -177,6 +181,7 @@ export const GameScreen = ({ onLeave }: { onLeave: () => void }) => {
                 busy={busy}
                 run={run}
                 coupleId={coupleId}
+                gameId={gameId}
                 next={<PrimaryButton onClick={handleNext} disabled={busy}>{nextLabel} <ArrowRight className="w-4 h-4" /></PrimaryButton>}
               />
             ) : null}
@@ -248,6 +253,7 @@ interface RoundProps {
   complete: boolean;
   busy: boolean;
   coupleId: string;
+  gameId: string;
   run: (action: () => Promise<unknown>) => Promise<void>;
   next: React.ReactNode; // the "Next card" button, shown once the round is done
 }
@@ -358,7 +364,7 @@ const AnswerButton = ({ label, selected, dimmed, onClick, disabled, badges }: {
 // ─── Rounds ─────────────────────────────────────────────────────────────────
 
 // Would you rather / This or that: the two options are the cards. Tap one; matching scores.
-const PairRound = ({ game, card, round, uid, partnerUid, partnerName, complete, busy, coupleId, run, next }: RoundProps & { card: Extract<GameCard, { kind: "choice" }> }) => {
+const PairRound = ({ game, card, round, uid, partnerUid, partnerName, complete, busy, coupleId, gameId, run, next }: RoundProps & { card: Extract<GameCard, { kind: "choice" }> }) => {
   const deck = DECK_BY_ID[game.deck];
   const answers = game.answers?.[roundKey(round)] || {};
   const mine = answers[uid]?.pick;
@@ -378,7 +384,7 @@ const PairRound = ({ game, card, round, uid, partnerUid, partnerName, complete, 
             <motion.button
               key={k}
               whileTap={!mine ? { scale: 0.97 } : undefined}
-              onClick={() => { if (!mine && !busy) run(() => submitGameAnswer(coupleId, round, uid, { pick: k })); }}
+              onClick={() => { if (!mine && !busy) run(() => submitGameAnswer(coupleId, gameId, round, uid, { pick: k })); }}
               disabled={busy || !!mine}
               className={cn("relative flex-1 min-h-0 text-left transition-opacity duration-300", dim && "opacity-35")}
             >
@@ -414,7 +420,7 @@ const PairRound = ({ game, card, round, uid, partnerUid, partnerName, complete, 
 };
 
 // One big card and two answer buttons: Never have I ever, Who's more likely
-const SingleChoiceRound = ({ game, prompt, options, round, uid, partnerUid, partnerName, complete, busy, coupleId, run, next }: RoundProps & { prompt: string; options: { id: string; label: string }[] }) => {
+const SingleChoiceRound = ({ game, prompt, options, round, uid, partnerUid, partnerName, complete, busy, coupleId, gameId, run, next }: RoundProps & { prompt: string; options: { id: string; label: string }[] }) => {
   const deck = DECK_BY_ID[game.deck];
   const answers = game.answers?.[roundKey(round)] || {};
   const mine = answers[uid]?.pick;
@@ -433,7 +439,7 @@ const SingleChoiceRound = ({ game, prompt, options, round, uid, partnerUid, part
               selected={!revealed && mine === o.id}
               dimmed={revealed ? mine !== o.id && theirs !== o.id : !!mine && mine !== o.id}
               disabled={busy}
-              onClick={!mine ? () => run(() => submitGameAnswer(coupleId, round, uid, { pick: o.id })) : undefined}
+              onClick={!mine ? () => run(() => submitGameAnswer(coupleId, gameId, round, uid, { pick: o.id })) : undefined}
               badges={revealed ? <>
                 {mine === o.id && <Badge tone="you">You</Badge>}
                 {theirs === o.id && <Badge tone="them">{partnerName}</Badge>}
@@ -450,7 +456,7 @@ const SingleChoiceRound = ({ game, prompt, options, round, uid, partnerUid, part
 };
 
 // Truth or dare: take turns. The player picks truth or dare, then marks it done or skipped.
-const TruthDareRound = ({ game, card, round, uid, partnerName, busy, coupleId, run, next }: RoundProps & { card: Extract<GameCard, { kind: "truthdare" }> }) => {
+const TruthDareRound = ({ game, card, round, uid, partnerName, busy, coupleId, gameId, run, next }: RoundProps & { card: Extract<GameCard, { kind: "truthdare" }> }) => {
   const deck = DECK_BY_ID[game.deck];
   const td = game.td?.[roundKey(round)];
   const player = truthDarePlayer(game, round);
@@ -462,8 +468,8 @@ const TruthDareRound = ({ game, card, round, uid, partnerName, busy, coupleId, r
 
   // The two buttons change meaning with the step, but never their size
   const buttons = !td?.choice
-    ? [{ label: "Truth", act: () => chooseTruthOrDare(coupleId, round, "truth") }, { label: "Dare", act: () => chooseTruthOrDare(coupleId, round, "dare") }]
-    : [{ label: "Skip", act: () => judgeTruthOrDare(coupleId, round, "skipped"), result: "skipped" }, { label: "Done", act: () => judgeTruthOrDare(coupleId, round, "done"), result: "done" }];
+    ? [{ label: "Truth", act: () => chooseTruthOrDare(coupleId, gameId, round, "truth") }, { label: "Dare", act: () => chooseTruthOrDare(coupleId, gameId, round, "dare") }]
+    : [{ label: "Skip", act: () => judgeTruthOrDare(coupleId, gameId, round, "skipped"), result: "skipped" }, { label: "Done", act: () => judgeTruthOrDare(coupleId, gameId, round, "done"), result: "done" }];
 
   return (
     <>

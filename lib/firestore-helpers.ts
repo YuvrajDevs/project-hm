@@ -35,9 +35,10 @@ import {
   PartnerNote,
   AppNotification,
   CoupleGame,
-  GameAnswer
+  GameAnswer,
+  ActiveGame
 } from "./types";
-import { DECK_BY_ID, LEVEL_LABEL, slotFor, type DeckId, type GameLevel, type GameSlot } from "./games/decks";
+import { DECK_BY_ID, LEVEL_LABEL, slotFor, type DeckId, type GameLevel } from "./games/decks";
 import type { User as FirebaseUser } from "firebase/auth";
 import { REACTION_ICONS } from "./constants";
 
@@ -375,12 +376,21 @@ export const endSafeSpaceSession = async (coupleId: string, sessionId: string, c
 };
 
 /**
- * Games: per couple, one live game at games/current and one question deck at games/questions
+ * Games: each game in progress is its own document in couples/{id}/games.
+ * Up to MAX_OPEN_GAMES live games and as many question decks can run side by side.
  */
-const gameRef = (coupleId: string, slot: GameSlot = "current") => doc(db, "couples", coupleId, "games", slot);
+const gameRef = (coupleId: string, gameId: string) => doc(db, "couples", coupleId, "games", gameId);
 
-export const subscribeToGame = (coupleId: string, slot: GameSlot, callback: (game: CoupleGame | null) => void) =>
-  onSnapshot(gameRef(coupleId, slot), (snap) => callback(snap.exists() ? (snap.data() as CoupleGame) : null), () => callback(null));
+export const subscribeToGames = (coupleId: string, callback: (games: ActiveGame[]) => void) =>
+  onSnapshot(
+    collection(db, "couples", coupleId, "games"),
+    (snap) => callback(
+      snap.docs
+        .map(d => ({ ...(d.data() as CoupleGame), id: d.id }))
+        .sort((a, b) => (b.startedAt || "").localeCompare(a.startedAt || ""))
+    ),
+    () => callback([])
+  );
 
 /** A game counts as finished when the last card is done, or for a question deck, when both have answered everything */
 const isFinished = (g: CoupleGame) =>
@@ -389,11 +399,11 @@ const isFinished = (g: CoupleGame) =>
     : g.round >= g.cards.length;
 
 /**
- * Keep a finished game before its slot is reused, so it can be read again later.
+ * Keep a finished game before it's removed, so it can be read again later.
  * The id comes from the game itself, so both partners tapping at once still store it once.
  */
-const archiveIfFinished = async (coupleId: string, slot: GameSlot) => {
-  const snap = await getDoc(gameRef(coupleId, slot));
+const archiveIfFinished = async (coupleId: string, gameId: string) => {
+  const snap = await getDoc(gameRef(coupleId, gameId));
   if (!snap.exists()) return;
   const game = snap.data() as CoupleGame;
   if (!isFinished(game)) return;
@@ -407,7 +417,7 @@ export const getGameHistory = async (coupleId: string) => {
   return snap.docs.map(d => ({ ...(d.data() as CoupleGame & { archivedAt: string }), id: d.id }));
 };
 
-/** Deal a new game, replacing any game that was in progress (a finished one is kept in the history first) */
+/** Deal a new game alongside the others. Returns its id. */
 export const startGame = async (coupleId: string, uid: string, partnerUid: string, deck: DeckId, level: GameLevel, starterName?: string) => {
   // The question lists are only downloaded when someone actually plays
   const { dealCards } = await import("./games/engine");
@@ -421,8 +431,8 @@ export const startGame = async (coupleId: string, uid: string, partnerUid: strin
     startedAt: new Date().toISOString(),
     joined: { [uid]: true },
   };
-  await archiveIfFinished(coupleId, slotFor(deck));
-  await setDoc(gameRef(coupleId, slotFor(deck)), game);
+  const ref = doc(collection(db, "couples", coupleId, "games"));
+  await setDoc(ref, game);
   const written = slotFor(deck) === "questions";
   await notifyPartner(partnerUid, {
     uid: partnerUid,
@@ -432,11 +442,12 @@ export const startGame = async (coupleId: string, uid: string, partnerUid: strin
       ? `${starterName || "Your partner"} started ${DECK_BY_ID[deck].title} (${LEVEL_LABEL[level]}). Answer whenever you're ready.`
       : `${starterName || "Your partner"} started ${DECK_BY_ID[deck].title} (${LEVEL_LABEL[level]}). Your move.`,
   });
+  return ref.id;
 };
 
 /** Question decks: save one written answer, and tell the partner once all of yours are in */
-export const submitQuestionAnswer = async (coupleId: string, round: number, uid: string, text: string, finished: boolean, partnerUid: string, name?: string) => {
-  await updateDoc(gameRef(coupleId, "questions"), { [`answers.r${round}.${uid}`]: { text } });
+export const submitQuestionAnswer = async (coupleId: string, gameId: string, round: number, uid: string, text: string, finished: boolean, partnerUid: string, name?: string) => {
+  await updateDoc(gameRef(coupleId, gameId), { [`answers.r${round}.${uid}`]: { text } });
   if (finished) {
     await notifyPartner(partnerUid, {
       uid: partnerUid,
@@ -447,30 +458,31 @@ export const submitQuestionAnswer = async (coupleId: string, round: number, uid:
   }
 };
 
-export const joinGame = (coupleId: string, uid: string, slot: GameSlot = "current") =>
-  updateDoc(gameRef(coupleId, slot), { [`joined.${uid}`]: true });
+export const joinGame = (coupleId: string, gameId: string, uid: string) =>
+  updateDoc(gameRef(coupleId, gameId), { [`joined.${uid}`]: true });
 
-export const submitGameAnswer = (coupleId: string, round: number, uid: string, answer: GameAnswer) =>
-  updateDoc(gameRef(coupleId), { [`answers.r${round}.${uid}`]: answer });
+export const submitGameAnswer = (coupleId: string, gameId: string, round: number, uid: string, answer: GameAnswer) =>
+  updateDoc(gameRef(coupleId, gameId), { [`answers.r${round}.${uid}`]: answer });
 
-export const chooseTruthOrDare = (coupleId: string, round: number, choice: "truth" | "dare") =>
-  updateDoc(gameRef(coupleId), { [`td.r${round}.choice`]: choice });
+export const chooseTruthOrDare = (coupleId: string, gameId: string, round: number, choice: "truth" | "dare") =>
+  updateDoc(gameRef(coupleId, gameId), { [`td.r${round}.choice`]: choice });
 
-export const judgeTruthOrDare = (coupleId: string, round: number, result: "done" | "skipped") =>
-  updateDoc(gameRef(coupleId), { [`td.r${round}.result`]: result });
+export const judgeTruthOrDare = (coupleId: string, gameId: string, round: number, result: "done" | "skipped") =>
+  updateDoc(gameRef(coupleId, gameId), { [`td.r${round}.result`]: result });
 
 /** Move to the next card. Both tapping "Next" at once still moves only one card. */
-export const advanceGame = async (coupleId: string, fromRound: number) => {
+export const advanceGame = async (coupleId: string, gameId: string, fromRound: number) => {
   await runTransaction(db, async (tx) => {
-    const snap = await tx.get(gameRef(coupleId));
+    const snap = await tx.get(gameRef(coupleId, gameId));
     if (!snap.exists() || snap.data().round !== fromRound) return;
-    tx.update(gameRef(coupleId), { round: fromRound + 1 });
+    tx.update(gameRef(coupleId, gameId), { round: fromRound + 1 });
   });
 };
 
-export const endGame = async (coupleId: string, slot: GameSlot = "current") => {
-  await archiveIfFinished(coupleId, slot);
-  await deleteDoc(gameRef(coupleId, slot));
+/** Close a game for both. A finished one is kept in the history first. */
+export const endGame = async (coupleId: string, gameId: string) => {
+  await archiveIfFinished(coupleId, gameId);
+  await deleteDoc(gameRef(coupleId, gameId));
 };
 
 export const updateUserMood = async (uid: string, mood: string, partnerUid?: string) => {

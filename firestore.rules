@@ -180,10 +180,9 @@ service cloud.firestore {
         allow delete: if isPartOfCouple(coupleId);
       }
 
-      // One live game and one question deck at a time, shared by both partners
+      // Games in progress, shared by both partners (the app keeps at most a few of each kind open)
       match /games/{gameId} {
-        allow read, delete: if isPartOfCouple(coupleId);
-        allow create, update: if isPartOfCouple(coupleId) && gameId in ['current', 'questions'];
+        allow read, create, update, delete: if isPartOfCouple(coupleId);
       }
 
       // Finished games, kept so the two of them can look back at them
