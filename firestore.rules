@@ -230,6 +230,17 @@ service cloud.firestore {
         );
       }
 
+      // Games in progress, shared by both partners (the app keeps at most a few of each kind open)
+      match /games/{gameId} {
+        allow read, create, update, delete: if isPartOfCouple(coupleId);
+      }
+
+      // Finished games, kept so the two of them can look back at them
+      match /game_history/{entryId} {
+        allow read, create, delete: if isPartOfCouple(coupleId);
+        allow update: if false;
+      }
+
       match /checkins/{checkinId} {
         allow read: if isPartOfCouple(coupleId);
         allow delete: if isPartOfCouple(coupleId) && canDeleteCoupleItem(coupleId, resource.data.userUid);

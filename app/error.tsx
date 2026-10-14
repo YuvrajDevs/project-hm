@@ -11,6 +11,17 @@ export default function Error({
 }) {
   useEffect(() => {
     console.error(error);
+    // A new version went live while this tab was open, so this screen's code no longer exists.
+    // Reloading picks up the new version. At most once a minute, so a real outage can't loop.
+    if (error?.name === "ChunkLoadError" || /Loading chunk|Failed to load chunk/i.test(error?.message || "")) {
+      try {
+        const last = Number(sessionStorage.getItem("hm_chunk_reload") || 0);
+        if (Date.now() - last > 60_000) {
+          sessionStorage.setItem("hm_chunk_reload", String(Date.now()));
+          window.location.reload();
+        }
+      } catch {}
+    }
   }, [error]);
 
   return (

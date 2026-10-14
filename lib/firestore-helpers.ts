@@ -33,8 +33,12 @@ import {
   QuickReact,
   SafeSpaceSession,
   PartnerNote,
-  AppNotification
+  AppNotification,
+  CoupleGame,
+  GameAnswer,
+  ActiveGame
 } from "./types";
+import { DECK_BY_ID, LEVEL_LABEL, slotFor, type DeckId, type GameLevel } from "./games/decks";
 import type { User as FirebaseUser } from "firebase/auth";
 import { REACTION_ICONS } from "./constants";
 
@@ -371,6 +375,116 @@ export const endSafeSpaceSession = async (coupleId: string, sessionId: string, c
   }
 };
 
+/**
+ * Games: each game in progress is its own document in couples/{id}/games.
+ * Up to MAX_OPEN_GAMES live games and as many question decks can run side by side.
+ */
+const gameRef = (coupleId: string, gameId: string) => doc(db, "couples", coupleId, "games", gameId);
+
+export const subscribeToGames = (coupleId: string, callback: (games: ActiveGame[]) => void) =>
+  onSnapshot(
+    collection(db, "couples", coupleId, "games"),
+    (snap) => callback(
+      snap.docs
+        .map(d => ({ ...(d.data() as CoupleGame), id: d.id }))
+        .sort((a, b) => (b.startedAt || "").localeCompare(a.startedAt || ""))
+    ),
+    () => callback([])
+  );
+
+/** A game counts as finished when the last card is done, or for a question deck, when both have answered everything */
+const isFinished = (g: CoupleGame) =>
+  slotFor(g.deck) === "questions"
+    ? g.players.every(u => g.cards.every((_, r) => !!g.answers?.[`r${r}`]?.[u]?.text))
+    : g.round >= g.cards.length;
+
+/**
+ * Keep a finished game before it's removed, so it can be read again later.
+ * The id comes from the game itself, so both partners tapping at once still store it once.
+ */
+const archiveIfFinished = async (coupleId: string, gameId: string) => {
+  const snap = await getDoc(gameRef(coupleId, gameId));
+  if (!snap.exists()) return;
+  const game = snap.data() as CoupleGame;
+  if (!isFinished(game)) return;
+  const id = `${game.startedAt}_${game.deck}`.replace(/[^\w-]/g, "_");
+  // If the partner already stored it, the copy is there and history entries can't be overwritten
+  await setDoc(doc(db, "couples", coupleId, "game_history", id), { ...game, archivedAt: new Date().toISOString() }).catch(() => {});
+};
+
+export const getGameHistory = async (coupleId: string) => {
+  const snap = await getDocs(query(collection(db, "couples", coupleId, "game_history"), orderBy("archivedAt", "desc"), limit(30)));
+  return snap.docs.map(d => ({ ...(d.data() as CoupleGame & { archivedAt: string }), id: d.id }));
+};
+
+/** Deal a new game alongside the others. Returns its id. */
+export const startGame = async (coupleId: string, uid: string, partnerUid: string, deck: DeckId, level: GameLevel, starterName?: string) => {
+  // The question lists are only downloaded when someone actually plays
+  const { dealCards } = await import("./games/engine");
+  const game: CoupleGame = {
+    deck,
+    level,
+    ...dealCards(deck, level),
+    round: 0,
+    players: [uid, partnerUid],
+    startedBy: uid,
+    startedAt: new Date().toISOString(),
+    joined: { [uid]: true },
+  };
+  const ref = doc(collection(db, "couples", coupleId, "games"));
+  await setDoc(ref, game);
+  const written = slotFor(deck) === "questions";
+  await notifyPartner(partnerUid, {
+    uid: partnerUid,
+    type: "GAME",
+    title: written ? "Questions for You" : "Come Play",
+    body: written
+      ? `${starterName || "Your partner"} started ${DECK_BY_ID[deck].title} (${LEVEL_LABEL[level]}). Answer whenever you're ready.`
+      : `${starterName || "Your partner"} started ${DECK_BY_ID[deck].title} (${LEVEL_LABEL[level]}). Your move.`,
+  });
+  return ref.id;
+};
+
+/** Question decks: save one written answer, and tell the partner once all of yours are in */
+export const submitQuestionAnswer = async (coupleId: string, gameId: string, round: number, uid: string, text: string, finished: boolean, partnerUid: string, name?: string) => {
+  await updateDoc(gameRef(coupleId, gameId), { [`answers.r${round}.${uid}`]: { text } });
+  if (finished) {
+    await notifyPartner(partnerUid, {
+      uid: partnerUid,
+      type: "GAME",
+      title: "Answers Are In",
+      body: `${name || "Your partner"} answered every question. Finish yours to read them together.`,
+    });
+  }
+};
+
+export const joinGame = (coupleId: string, gameId: string, uid: string) =>
+  updateDoc(gameRef(coupleId, gameId), { [`joined.${uid}`]: true });
+
+export const submitGameAnswer = (coupleId: string, gameId: string, round: number, uid: string, answer: GameAnswer) =>
+  updateDoc(gameRef(coupleId, gameId), { [`answers.r${round}.${uid}`]: answer });
+
+export const chooseTruthOrDare = (coupleId: string, gameId: string, round: number, choice: "truth" | "dare") =>
+  updateDoc(gameRef(coupleId, gameId), { [`td.r${round}.choice`]: choice });
+
+export const judgeTruthOrDare = (coupleId: string, gameId: string, round: number, result: "done" | "skipped") =>
+  updateDoc(gameRef(coupleId, gameId), { [`td.r${round}.result`]: result });
+
+/** Move to the next card. Both tapping "Next" at once still moves only one card. */
+export const advanceGame = async (coupleId: string, gameId: string, fromRound: number) => {
+  await runTransaction(db, async (tx) => {
+    const snap = await tx.get(gameRef(coupleId, gameId));
+    if (!snap.exists() || snap.data().round !== fromRound) return;
+    tx.update(gameRef(coupleId, gameId), { round: fromRound + 1 });
+  });
+};
+
+/** Close a game for both. A finished one is kept in the history first. */
+export const endGame = async (coupleId: string, gameId: string) => {
+  await archiveIfFinished(coupleId, gameId);
+  await deleteDoc(gameRef(coupleId, gameId));
+};
+
 export const updateUserMood = async (uid: string, mood: string, partnerUid?: string) => {
   const userRef = doc(db, "users", uid);
   await updateDoc(userRef, {
@@ -436,7 +550,7 @@ export const respondToMessage = async (coupleId: string, messageId: string, resp
   });
 };
 
-const COUPLE_SUBCOLLECTIONS = ["mailbox", "checkins", "reactions", "safe_space_sessions", "events"];
+const COUPLE_SUBCOLLECTIONS = ["mailbox", "checkins", "reactions", "safe_space_sessions", "events", "games", "game_history"];
 
 /**
  * Delete documents in chunks that fit inside a single batch

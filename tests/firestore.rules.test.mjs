@@ -152,8 +152,14 @@ test("an invite works only once", async () => {
 
 test("an expired invite cannot be accepted", async () => {
   await seedUsers();
-  await createInvite(ALICE, "OLD234", -1000);
+  // Invites can't be created already expired, so this one is written directly, as if it had aged
+  await seed((d) => setDoc(doc(d, "invites", "OLD234"), { createdBy: ALICE, createdAt: Timestamp.now(), expiresAt: Timestamp.fromMillis(Date.now() - 1000), used: false }));
   await assertFails(acceptInvite(BOB, "OLD234", "newcouple"));
+});
+
+test("an invite cannot be created already expired", async () => {
+  await seedUsers();
+  await assertFails(createInvite(ALICE, "OLD567", -1000));
 });
 
 test("nobody can pair with a person without that person's invite", async () => {
@@ -353,6 +359,35 @@ test("the contact form accepts well-formed messages and is not readable", async 
   await assertFails(getDocs(collection(db(ALICE), "contactMessages")));
 });
 
+// ─── Games ──────────────────────────────────────────────────────────────────
+test("partners share one game; outsiders cannot see or touch it", async () => {
+  await seedCouple();
+  const game = { deck: "wyr", level: "normal", cards: [0, 1], round: 0, players: [ALICE, BOB], startedBy: ALICE, startedAt: "2026-10-14T10:00:00Z", joined: { [ALICE]: true } };
+  await assertSucceeds(setDoc(doc(db(ALICE), "couples", COUPLE, "games", "current"), game));
+  await assertSucceeds(updateDoc(doc(db(BOB), "couples", COUPLE, "games", "current"), { [`joined.${BOB}`]: true, [`answers.r0.${BOB}`]: { pick: "a", guess: "b" } }));
+  await assertSucceeds(getDoc(doc(db(BOB), "couples", COUPLE, "games", "current")));
+  await assertFails(getDoc(doc(db(MALLORY), "couples", COUPLE, "games", "current")));
+  await assertFails(updateDoc(doc(db(MALLORY), "couples", COUPLE, "games", "current"), { round: 1 }));
+  await assertFails(deleteDoc(doc(db(MALLORY), "couples", COUPLE, "games", "current")));
+  await assertSucceeds(deleteDoc(doc(db(BOB), "couples", COUPLE, "games", "current")));
+});
+
+test("several games can be open at once, by the couple only", async () => {
+  await seedCouple();
+  await assertSucceeds(setDoc(doc(db(ALICE), "couples", COUPLE, "games", "g1"), { deck: "wyr" }));
+  await assertSucceeds(setDoc(doc(db(BOB), "couples", COUPLE, "games", "g2"), { deck: "deep" }));
+  await assertFails(setDoc(doc(db(MALLORY), "couples", COUPLE, "games", "g3"), { deck: "wyr" }));
+});
+
+test("finished games are kept for the couple only", async () => {
+  await seedCouple();
+  const entry = { deck: "wyr", level: "normal", cards: [0], round: 1, players: [ALICE, BOB], archivedAt: "2026-10-14T10:00:00Z" };
+  await assertSucceeds(setDoc(doc(db(ALICE), "couples", COUPLE, "game_history", "g1"), entry));
+  await assertSucceeds(getDocs(collection(db(BOB), "couples", COUPLE, "game_history")));
+  await assertFails(getDocs(collection(db(MALLORY), "couples", COUPLE, "game_history")));
+  await assertFails(setDoc(doc(db(MALLORY), "couples", COUPLE, "game_history", "g2"), entry));
+  await assertFails(updateDoc(doc(db(BOB), "couples", COUPLE, "game_history", "g1"), { round: 0 }));
+});
 // ─── Hardened Security Rules Tests ─────────────────────────────────────────
 test("a receiver cannot delete a locked capsule before it unlocks", async () => {
   await seedCouple();

@@ -292,6 +292,7 @@ export const StreakGrid: React.FC<StreakGridProps> = ({ history }) => {
                                         <label className="text-[10px] font-bebas tracking-widest text-neutral-600 uppercase ml-1">Day Title</label>
                                         <input 
                                             value={eventTitle}
+                                            maxLength={100}
                                             onChange={e => setEventTitle(e.target.value)}
                                             placeholder="E.g. Anniversary Dinner"
                                             className="w-full bg-white/5 border border-white/10 rounded-2xl px-4 py-3 text-sm text-white focus:outline-none focus:border-white/30"
@@ -301,6 +302,7 @@ export const StreakGrid: React.FC<StreakGridProps> = ({ history }) => {
                                         <label className="text-[10px] font-bebas tracking-widest text-neutral-600 uppercase ml-1">Notes</label>
                                         <textarea 
                                             value={eventNote}
+                                            maxLength={500}
                                             onChange={e => setEventNote(e.target.value)}
                                             placeholder="Small details here..."
                                             className="w-full bg-white/5 border border-white/10 rounded-2xl px-4 py-3 text-sm text-white h-24 focus:outline-none focus:border-white/30 resize-none"

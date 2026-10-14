@@ -51,6 +51,8 @@ Page padding is `px-6`. Cards use `p-6` (rows) or `p-8` (large). Sections are se
 - **Row (settings style):** `bg-white/5 border border-white/10 rounded-2xl p-5`, icon in a `p-3 bg-white/5 rounded-xl` tile, title in Bebas `text-lg`, one line of `text-xs text-neutral-400` underneath.
 - **Tappable card:** add `hover:bg-white/10 active:scale-[0.98] transition-all`, and always show where it goes (a short hint with an arrow). Never style something as clickable unless it does something.
 
+- **Game card:** square `w-40 h-40 rounded-[2rem] p-5 border border-white/10 bg-gradient-to-br` with the game's own gradient from `DECKS` in `lib/games/decks.ts` (about 40% → 20% → 10% opacity, never solid). Icon in a `w-10 h-10 rounded-xl bg-white/10` tile at the top, Bebas `text-xl` title and one `text-xs text-white/60` line at the bottom. Cards sit in a horizontal snap row under a section heading. The same gradient tints that game's dialog header and full-screen view.
+
 ## Buttons
 
 - **Primary:** `bg-white text-black font-bebas tracking-widest uppercase rounded-2xl py-4 hover:bg-neutral-200 active:scale-95 disabled:opacity-30`. One per screen or dialog.

@@ -24,12 +24,16 @@ const loadCheckIn = () => import("@/components/features/checkin/DailyCheckInPopu
 const loadHistory = () => import("@/components/features/mailbox/MessageHistory");
 const loadArchive = () => import("@/components/features/archive/ArchiveDashboard");
 const loadSafeSpace = () => import("@/components/features/safespace/SafeSpaceSession");
+const loadGame = () => import("@/components/features/games/GameScreen");
+const loadQuestions = () => import("@/components/features/games/QuestionDeckScreen");
 
 const ComposeMessage = dynamic(() => loadCompose().then(m => m.ComposeMessage));
 const DailyCheckInPopup = dynamic(() => loadCheckIn().then(m => m.DailyCheckInPopup));
 const MessageHistory = dynamic(() => loadHistory().then(m => m.MessageHistory));
 const ArchiveDashboard = dynamic(() => loadArchive().then(m => m.ArchiveDashboard));
 const SafeSpaceSession = dynamic(() => loadSafeSpace().then(m => m.SafeSpaceSession));
+const GameScreen = dynamic(() => loadGame().then(m => m.GameScreen));
+const QuestionDeckScreen = dynamic(() => loadQuestions().then(m => m.QuestionDeckScreen));
 const PartnerLeftOverlay = dynamic(() => import("@/components/features/mailbox/PartnerLeftOverlay").then(m => m.PartnerLeftOverlay));
 const WhiteFlagOverlay = dynamic(() => import("@/components/features/mailbox/WhiteFlagOverlay").then(m => m.WhiteFlagOverlay));
 const EmpathyNudge = dynamic(() => import("@/components/features/checkin/EmpathyNudge").then(m => m.EmpathyNudge));
@@ -45,6 +49,8 @@ export default function Home() {
     hasOnboarded, 
     isPaired, 
     activeSafeSpace, 
+    liveGames,
+    questionGames,
     safeSpaceHasNew,
     logout, 
     clearPartnerLeftStatus,
@@ -70,6 +76,12 @@ export default function Home() {
   const [safeSpaceOpen, setSafeSpaceOpen] = React.useState(false);
   const [showAfterSafeSpace, setShowAfterSafeSpace] = React.useState(false);
   const inSafeSpace = safeSpaceOpen && !!activeSafeSpace;
+  // Same for the game in progress
+  // Which game is on screen, if any. It closes by itself if the game is ended from the other side.
+  const [openGameId, setOpenGameId] = React.useState<string | null>(null);
+  const inGame = !!openGameId && liveGames.some(g => g.id === openGameId);
+  const [openQuestionsId, setOpenQuestionsId] = React.useState<string | null>(null);
+  const inQuestions = !!openQuestionsId && questionGames.some(g => g.id === openQuestionsId);
 
   // Signing out, or the space being closed by the partner, always leaves the room
   useEffect(() => {
@@ -173,6 +185,10 @@ export default function Home() {
     const handlePopup = (e: Event) => setIsAnyPopupOpen((e as CustomEvent<{ isOpen: boolean }>).detail.isOpen);
     const handleOpenSelector = () => setShowReactions(true);
     const handleOpenSafeSpace = () => setSafeSpaceOpen(true);
+    const handleOpenGame = (e: Event) => setOpenGameId((e as CustomEvent<{ id: string }>).detail.id);
+    const handleOpenQuestions = (e: Event) => setOpenQuestionsId((e as CustomEvent<{ id: string }>).detail.id);
+    window.addEventListener('openGame', handleOpenGame);
+    window.addEventListener('openQuestions', handleOpenQuestions);
     
     window.addEventListener('popupStateChange', handlePopup);
     window.addEventListener('openSignalSelector', handleOpenSelector);
@@ -182,6 +198,8 @@ export default function Home() {
         window.removeEventListener('popupStateChange', handlePopup);
         window.removeEventListener('openSignalSelector', handleOpenSelector);
         window.removeEventListener('openSafeSpace', handleOpenSafeSpace);
+        window.removeEventListener('openGame', handleOpenGame);
+        window.removeEventListener('openQuestions', handleOpenQuestions);
     };
   }, []);
 
@@ -192,7 +210,7 @@ export default function Home() {
   // Once the home screen has settled, fetch the on-demand pieces in the background so the first tap does not wait
   useEffect(() => {
     if (!isPaired) return;
-    const warm = () => { loadCompose(); loadCheckIn(); loadHistory(); loadArchive(); loadSafeSpace(); };
+    const warm = () => { loadCompose(); loadCheckIn(); loadHistory(); loadArchive(); loadSafeSpace(); loadGame(); loadQuestions(); };
     const idle = (window as unknown as { requestIdleCallback?: (cb: () => void, opts?: { timeout: number }) => number }).requestIdleCallback;
     const timer = idle ? undefined : setTimeout(warm, 2500);
     if (idle) idle(warm, { timeout: 4000 });
@@ -213,7 +231,7 @@ export default function Home() {
     return () => clearTimeout(timer);
   }, [loading, hasLoadedInitially]);
 
-  const effectivelyPopupOpen = isAnyPopupOpen || showCompose || showCheckInPopup || showEmpathyNudge || inSafeSpace || isOverlayActive || showAfterSafeSpace;
+  const effectivelyPopupOpen = isAnyPopupOpen || showCompose || showCheckInPopup || showEmpathyNudge || inSafeSpace || inGame || inQuestions || isOverlayActive || showAfterSafeSpace;
 
   useEffect(() => {
     if (!loading && user && hasOnboarded) {
@@ -230,6 +248,8 @@ export default function Home() {
       setShowCheckInPopup(false);
       setShowEmpathyNudge(false);
       setShowCompose(false);
+      setOpenGameId(null);
+      setOpenQuestionsId(null);
       setActiveView("mailbox");
     }
   }, [fbUser]);
@@ -439,6 +459,13 @@ export default function Home() {
                 onLeave={() => setSafeSpaceOpen(false)}
                 onClosed={() => { setSafeSpaceOpen(false); setShowAfterSafeSpace(true); }}
             />
+        ) : null}
+
+        {inGame ? (
+            <GameScreen key="game-screen" gameId={openGameId!} onLeave={() => setOpenGameId(null)} />
+        ) : null}
+        {inQuestions ? (
+            <QuestionDeckScreen key="question-deck" gameId={openQuestionsId!} onLeave={() => setOpenQuestionsId(null)} />
         ) : null}
 
         {/* After closing: a gentle nudge to put the outcome in writing */}

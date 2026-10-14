@@ -1,3 +1,5 @@
+import type { DeckId, GameLevel } from "./games/decks";
+
 export type UserRole = "PARTNER_A" | "PARTNER_B";
 
 export interface User {
@@ -171,7 +173,7 @@ export interface SafeSpaceSession {
 export interface AppNotification {
   id: string;
   uid: string; // recipient
-  type: "MAILBOX" | "CHECK_IN" | "REACTION" | "SAFE_SPACE";
+  type: "MAILBOX" | "CHECK_IN" | "REACTION" | "SAFE_SPACE" | "GAME";
   title: string;
   body: string;
   read: boolean;
@@ -196,3 +198,26 @@ export interface PartnerNote {
   text: string;    // The note itself (max 140 chars)
   createdAt: string;
 }
+
+// 🎲 Games: one game at a time per couple, stored at couples/{id}/games/current
+export interface GameAnswer {
+  pick?: string;  // "a" / "b" for two-option cards, a uid for "who's more likely"
+  text?: string;  // written answer for question decks
+}
+
+export interface CoupleGame {
+  deck: DeckId;
+  level: GameLevel;
+  cards: number[];      // card positions in the question list, in play order
+  dareCards?: number[]; // truth or dare: dares are dealt separately from truths
+  round: number;        // live games: the card on the table, equal to cards.length once finished. Unused by question decks.
+  players: [string, string]; // [who started, their partner]
+  startedBy: string;
+  startedAt: string;
+  joined: Record<string, boolean>;
+  answers?: Record<string, Record<string, GameAnswer>>;  // round key -> uid -> answer
+  td?: Record<string, { choice?: "truth" | "dare"; result?: "done" | "skipped" }>;
+}
+
+// A game in progress, with its document id
+export type ActiveGame = CoupleGame & { id: string };
