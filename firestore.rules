@@ -115,8 +115,7 @@ service cloud.firestore {
 
       allow create: if isAuthenticated()
         && request.resource.data.createdBy == request.auth.uid
-        && request.resource.data.used == false
-        && (!('expiresAt' in request.resource.data) || request.resource.data.expiresAt > request.time);
+        && request.resource.data.used == false;
 
       // One use, by someone other than the creator, before it expires
       allow update: if isAuthenticated()
