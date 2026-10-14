@@ -68,7 +68,7 @@ export const DECKS: DeckInfo[] = [
     id: "truthdare",
     title: "Truth or Dare",
     blurb: "Take turns, be brave",
-    howTo: "Take turns choosing truth or dare. Every one you do is a point.",
+    howTo: "Take turns choosing truth or dare. Your partner decides if you really did it, and every one done is a point.",
     mechanic: "truthdare",
     gradient: "from-orange-500/30 to-orange-600/20",
     cards: ["from-orange-500 to-orange-600", "from-red-500 to-red-600"],
