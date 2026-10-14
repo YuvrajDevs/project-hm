@@ -366,7 +366,19 @@ test("partners share one game; outsiders cannot see or touch it", async () => {
   await assertSucceeds(deleteDoc(doc(db(BOB), "couples", COUPLE, "games", "current")));
 });
 
-test("only the single current game can be created", async () => {
+test("only the live game and the question deck slots can be created", async () => {
   await seedCouple();
+  await assertSucceeds(setDoc(doc(db(ALICE), "couples", COUPLE, "games", "questions"), { deck: "deep" }));
+  await assertFails(setDoc(doc(db(MALLORY), "couples", COUPLE, "games", "questions"), { deck: "deep" }));
   await assertFails(setDoc(doc(db(ALICE), "couples", COUPLE, "games", "second"), { deck: "wyr" }));
+});
+
+test("finished games are kept for the couple only", async () => {
+  await seedCouple();
+  const entry = { deck: "wyr", level: "normal", cards: [0], round: 1, players: [ALICE, BOB], archivedAt: "2026-10-14T10:00:00Z" };
+  await assertSucceeds(setDoc(doc(db(ALICE), "couples", COUPLE, "game_history", "g1"), entry));
+  await assertSucceeds(getDocs(collection(db(BOB), "couples", COUPLE, "game_history")));
+  await assertFails(getDocs(collection(db(MALLORY), "couples", COUPLE, "game_history")));
+  await assertFails(setDoc(doc(db(MALLORY), "couples", COUPLE, "game_history", "g2"), entry));
+  await assertFails(updateDoc(doc(db(BOB), "couples", COUPLE, "game_history", "g1"), { round: 0 }));
 });

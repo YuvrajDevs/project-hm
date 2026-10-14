@@ -210,12 +210,11 @@ export interface CoupleGame {
   level: GameLevel;
   cards: number[];      // card positions in the question list, in play order
   dareCards?: number[]; // truth or dare: dares are dealt separately from truths
-  round: number;        // the card on the table; equal to cards.length once finished
+  round: number;        // live games: the card on the table, equal to cards.length once finished. Unused by question decks.
   players: [string, string]; // [who started, their partner]
   startedBy: string;
   startedAt: string;
   joined: Record<string, boolean>;
   answers?: Record<string, Record<string, GameAnswer>>;  // round key -> uid -> answer
-  hearts?: Record<string, Record<string, boolean>>;      // round key -> uid who gave the heart
   td?: Record<string, { choice?: "truth" | "dare"; result?: "done" | "skipped" }>;
 }

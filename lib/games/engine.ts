@@ -88,11 +88,6 @@ export const roundPoints = (game: CoupleGame, round: number, [me, them]: [string
   if (mechanic === "choice" || mechanic === "who") {
     // Same answer: a point each
     if (answers[me]?.pick && answers[me]?.pick === answers[them]?.pick) { points[me] += 1; points[them] += 1; }
-  } else if (mechanic === "open") {
-    // A heart from one person is a point for the other
-    const hearts = game.hearts?.[key] || {};
-    if (hearts[me]) points[them] += 1;
-    if (hearts[them]) points[me] += 1;
   } else if (playerUid && game.td?.[key]?.result === "done") {
     points[playerUid] += 1;
   }
@@ -109,3 +104,12 @@ export const totalScores = (game: CoupleGame, uids: [string, string]) => {
   }
   return totals;
 };
+
+// Question decks: each person works through the cards at their own pace
+
+export const answeredCount = (game: CoupleGame, uid: string) =>
+  game.cards.filter((_, r) => !!game.answers?.[roundKey(r)]?.[uid]?.text).length;
+
+/** The first card this person hasn't answered, or -1 when they're done */
+export const nextUnanswered = (game: CoupleGame, uid: string) =>
+  game.cards.findIndex((_, r) => !game.answers?.[roundKey(r)]?.[uid]?.text);

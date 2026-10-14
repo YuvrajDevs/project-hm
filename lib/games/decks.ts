@@ -6,7 +6,7 @@ export type GameLevel = "normal" | "medium" | "spicy";
 // How a card is answered:
 // choice  – both pick one of two; matching scores
 // who     – point at yourself or your partner
-// open    – both write an answer, revealed together
+// open    – written answers, at each person's own pace; all revealed at the end
 // truthdare – take turns; doing it scores
 export type GameMechanic = "choice" | "who" | "open" | "truthdare";
 
@@ -19,7 +19,7 @@ export interface DeckInfo {
   howTo: string;    // one sentence in the lobby
   mechanic: GameMechanic;
   gradient: string; // soft tint for the home card and screen wash
-  cards: [string, string]; // vivid faces for the playing cards: main, and the second option or the card behind
+  cards: [string, string]; // playing card faces: one colour into a slightly darker tone. Main, then the second option or the card behind
   accent: string;   // text colour for small highlights
 }
 
@@ -30,8 +30,8 @@ export const DECKS: DeckInfo[] = [
     blurb: "Pick one, hope you match",
     howTo: "You both pick one. Pick the same and you each get a point.",
     mechanic: "choice",
-    gradient: "from-pink-500/40 via-fuchsia-500/20 to-violet-600/10",
-    cards: ["from-pink-500 via-rose-500 to-fuchsia-600", "from-violet-600 via-purple-600 to-indigo-700"],
+    gradient: "from-pink-500/30 to-pink-600/20",
+    cards: ["from-pink-500 to-pink-600", "from-violet-500 to-violet-600"],
     accent: "text-pink-300",
   },
   {
@@ -40,8 +40,8 @@ export const DECKS: DeckInfo[] = [
     blurb: "Quick picks, no overthinking",
     howTo: "Go with your gut. Pick the same and you each get a point.",
     mechanic: "choice",
-    gradient: "from-amber-400/40 via-orange-500/20 to-rose-500/10",
-    cards: ["from-amber-400 via-orange-500 to-rose-500", "from-rose-500 via-pink-600 to-purple-700"],
+    gradient: "from-amber-500/30 to-amber-600/20",
+    cards: ["from-amber-600 to-amber-700", "from-rose-500 to-rose-600"],
     accent: "text-amber-300",
   },
   {
@@ -50,8 +50,8 @@ export const DECKS: DeckInfo[] = [
     blurb: "Confess everything",
     howTo: "Say whether you have or haven't. Same answer, a point each. The reveal is the fun part.",
     mechanic: "choice",
-    gradient: "from-sky-400/40 via-indigo-500/20 to-violet-600/10",
-    cards: ["from-sky-500 via-blue-600 to-indigo-700", "from-indigo-500 via-violet-600 to-purple-700"],
+    gradient: "from-sky-500/30 to-sky-600/20",
+    cards: ["from-sky-500 to-sky-600", "from-indigo-500 to-indigo-600"],
     accent: "text-sky-300",
   },
   {
@@ -60,8 +60,8 @@ export const DECKS: DeckInfo[] = [
     blurb: "Point at each other",
     howTo: "Tap who's more likely, you or your partner. You both score when you point at the same person.",
     mechanic: "who",
-    gradient: "from-emerald-400/40 via-teal-500/20 to-cyan-600/10",
-    cards: ["from-emerald-500 via-teal-600 to-cyan-700", "from-teal-500 via-cyan-600 to-sky-700"],
+    gradient: "from-emerald-500/30 to-emerald-600/20",
+    cards: ["from-emerald-500 to-emerald-600", "from-teal-500 to-teal-600"],
     accent: "text-emerald-300",
   },
   {
@@ -70,41 +70,49 @@ export const DECKS: DeckInfo[] = [
     blurb: "Take turns, be brave",
     howTo: "Take turns choosing truth or dare. Every one you do is a point.",
     mechanic: "truthdare",
-    gradient: "from-orange-400/40 via-red-500/20 to-rose-700/10",
-    cards: ["from-orange-500 via-red-500 to-rose-600", "from-red-600 via-rose-700 to-purple-800"],
+    gradient: "from-orange-500/30 to-orange-600/20",
+    cards: ["from-orange-500 to-orange-600", "from-red-500 to-red-600"],
     accent: "text-orange-300",
   },
   {
     id: "spicy",
     title: "Spicy Questions",
     blurb: "Turn up the heat",
-    howTo: "Both answer, then both answers show together. Tap the heart on an answer you loved to give a point.",
+    howTo: "Answer at your own pace. Once you've both finished, you'll see every question with both answers.",
     mechanic: "open",
-    gradient: "from-rose-500/45 via-red-600/20 to-orange-500/10",
-    cards: ["from-rose-600 via-red-600 to-orange-600", "from-red-700 via-rose-800 to-pink-900"],
+    gradient: "from-rose-500/30 to-rose-600/20",
+    cards: ["from-rose-500 to-rose-600", "from-red-500 to-red-600"],
     accent: "text-rose-300",
   },
   {
     id: "intimacy",
     title: "Intimacy Questions",
     blurb: "Get a little closer",
-    howTo: "Both answer, then both answers show together. Tap the heart on an answer you loved to give a point.",
+    howTo: "Answer at your own pace. Once you've both finished, you'll see every question with both answers.",
     mechanic: "open",
-    gradient: "from-purple-500/40 via-pink-500/20 to-rose-400/10",
-    cards: ["from-fuchsia-500 via-pink-500 to-rose-500", "from-purple-600 via-fuchsia-700 to-pink-700"],
+    gradient: "from-fuchsia-500/30 to-fuchsia-600/20",
+    cards: ["from-fuchsia-500 to-fuchsia-600", "from-purple-500 to-purple-600"],
     accent: "text-purple-300",
   },
   {
     id: "deep",
     title: "Deep Questions",
     blurb: "The real stuff",
-    howTo: "Both answer, then both answers show together. Tap the heart on an answer you loved to give a point.",
+    howTo: "Answer at your own pace. Once you've both finished, you'll see every question with both answers.",
     mechanic: "open",
-    gradient: "from-indigo-500/40 via-slate-500/20 to-blue-900/10",
-    cards: ["from-indigo-600 via-blue-800 to-slate-900", "from-slate-700 via-indigo-800 to-violet-900"],
+    gradient: "from-indigo-500/30 to-indigo-600/20",
+    cards: ["from-indigo-500 to-indigo-600", "from-slate-500 to-slate-600"],
     accent: "text-indigo-300",
   },
 ];
+
+// Live games are played card by card together; question decks are answered separately and read together at the end
+export const LIVE_DECKS = DECKS.filter(d => d.mechanic !== "open");
+export const QUESTION_DECKS = DECKS.filter(d => d.mechanic === "open");
+
+// Each kind has its own slot, so a question deck can stay open while you play a live game
+export type GameSlot = "current" | "questions";
+export const slotFor = (deck: DeckId): GameSlot => (DECK_BY_ID[deck].mechanic === "open" ? "questions" : "current");
 
 export const DECK_BY_ID = Object.fromEntries(DECKS.map(d => [d.id, d])) as Record<DeckId, DeckInfo>;
 

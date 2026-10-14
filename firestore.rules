@@ -180,10 +180,16 @@ service cloud.firestore {
         allow delete: if isPartOfCouple(coupleId);
       }
 
-      // One game at a time, shared by both partners
+      // One live game and one question deck at a time, shared by both partners
       match /games/{gameId} {
         allow read, delete: if isPartOfCouple(coupleId);
-        allow create, update: if isPartOfCouple(coupleId) && gameId == 'current';
+        allow create, update: if isPartOfCouple(coupleId) && gameId in ['current', 'questions'];
+      }
+
+      // Finished games, kept so the two of them can look back at them
+      match /game_history/{entryId} {
+        allow read, create, delete: if isPartOfCouple(coupleId);
+        allow update: if false;
       }
 
       match /checkins/{checkinId} {

@@ -2,11 +2,11 @@
 
 import React, { useEffect, useRef, useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { ArrowRight, Heart, Sparkle, X } from "lucide-react";
+import { ArrowRight, X } from "lucide-react";
 import { useMailbox } from "@/context/MailboxContext";
 import {
   advanceGame, chooseTruthOrDare, endGame, joinGame, judgeTruthOrDare,
-  setGameHeart, startGame, submitGameAnswer,
+  startGame, submitGameAnswer,
 } from "@/lib/firestore-helpers";
 import { DECK_BY_ID, LEVEL_LABEL, type DeckInfo } from "@/lib/games/decks";
 import { getCard, isRoundComplete, roundKey, totalScores, truthDarePlayer, type GameCard } from "@/lib/games/engine";
@@ -258,7 +258,7 @@ const RoundView = (props: RoundProps) => {
       ? <SingleChoiceRound {...props} prompt={props.card.prompt} options={[{ id: "a", label: props.card.a }, { id: "b", label: props.card.b }]} />
       : <PairRound {...props} card={props.card} />;
     case "who": return <SingleChoiceRound {...props} prompt={props.card.prompt} options={[{ id: props.uid, label: "Me" }, { id: props.partnerUid, label: props.partnerName }]} />;
-    case "open": return <OpenRound {...props} card={props.card} />;
+    case "open": return null; // question decks have their own screen
     case "truthdare": return <TruthDareRound {...props} card={props.card} />;
   }
 };
@@ -298,23 +298,13 @@ const StatusText = ({ children, pulse }: { children: React.ReactNode; pulse?: bo
 
 // ─── Card pieces ────────────────────────────────────────────────────────────
 
-const Sparkles = () => (
-  <>
-    <Sparkle className="absolute top-6 right-8 w-5 h-5 text-white/30 fill-white/30" />
-    <Sparkle className="absolute bottom-10 left-7 w-3.5 h-3.5 text-white/25 fill-white/25" />
-    <Sparkle className="absolute bottom-16 right-10 w-7 h-7 text-white/15 fill-white/15" />
-  </>
-);
-
-// Shared face: gradient, a soft top light, sparkles
+// Shared face: one colour easing into a slightly darker tone
 const CardFace = ({ gradient, className, children }: { gradient: string; className?: string; children: React.ReactNode }) => (
   <div className={cn(
-    "relative overflow-hidden rounded-[2.5rem] bg-gradient-to-br border border-white/15 shadow-[0_24px_60px_rgba(0,0,0,0.45)]",
+    "relative overflow-hidden rounded-[2.5rem] bg-gradient-to-br shadow-[0_20px_50px_rgba(0,0,0,0.4)]",
     gradient,
     className
   )}>
-    <div className="pointer-events-none absolute inset-0 bg-gradient-to-b from-white/15 via-transparent to-black/10" />
-    <Sparkles />
     <div className="relative h-full">{children}</div>
   </div>
 );
@@ -330,7 +320,7 @@ const StackCard = ({ deck, text, eyebrow, children }: { deck: DeckInfo; text: st
       {children ?? (
         <div className="h-full flex flex-col justify-center gap-3 px-8 py-10 overflow-y-auto">
           {eyebrow && <p className="text-[10px] text-white/80 font-bebas tracking-[0.4em] uppercase">{eyebrow}</p>}
-          <h2 className={cn("font-bebas uppercase tracking-wide text-white drop-shadow-sm", cardTextSize(text), "leading-[1.05]")}>{text}</h2>
+          <h2 className={cn("font-bebas uppercase tracking-wide text-white ", cardTextSize(text), "leading-[1.05]")}>{text}</h2>
         </div>
       )}
     </CardFace>
@@ -394,7 +384,7 @@ const PairRound = ({ game, card, round, uid, partnerUid, partnerName, complete, 
             >
               <CardFace gradient={deck.cards[i]} className={cn("h-full", isMine && !revealed && "ring-4 ring-white/90")}>
                 <div className="h-full flex items-center justify-center px-8 py-6 text-center">
-                  <span className={cn("block font-bebas uppercase tracking-wide text-white drop-shadow-sm", card.a.length > 30 || card.b.length > 30 ? "text-[2rem]" : "text-[2.6rem]", "leading-[1.05]")}>
+                  <span className={cn("block font-bebas uppercase tracking-wide text-white ", card.a.length > 30 || card.b.length > 30 ? "text-[2rem]" : "text-[2.6rem]", "leading-[1.05]")}>
                     {k === "a" ? card.a : card.b}
                   </span>
                 </div>
@@ -459,79 +449,6 @@ const SingleChoiceRound = ({ game, prompt, options, round, uid, partnerUid, part
   );
 };
 
-// Question decks: both write; once both have answered, the answers appear on the card
-const OpenRound = ({ game, card, round, uid, partnerUid, partnerName, complete, busy, coupleId, run, next }: RoundProps & { card: Extract<GameCard, { kind: "open" }> }) => {
-  const deck = DECK_BY_ID[game.deck];
-  const key = roundKey(round);
-  const answers = game.answers?.[key] || {};
-  const mine = answers[uid]?.text;
-  const theirs = answers[partnerUid]?.text;
-  const hearts = game.hearts?.[key] || {};
-  const [draft, setDraft] = useState("");
-  const revealed = complete && !!mine && !!theirs;
-
-  return (
-    <>
-      {revealed ? (
-        <StackCard deck={deck} text={card.text}>
-          <div className="h-full flex flex-col gap-4 px-7 py-8 overflow-y-auto">
-            <p className="font-bebas text-xl uppercase tracking-wide leading-tight text-white/85">{card.text}</p>
-            <div className="rounded-2xl bg-black/20 p-4 space-y-2">
-              <div className="flex items-center justify-between">
-                <Badge tone="them">{partnerName}</Badge>
-                <button
-                  aria-label={hearts[uid] ? "Take back your heart" : `Give ${partnerName} a heart`}
-                  disabled={busy}
-                  onClick={() => run(() => setGameHeart(coupleId, round, uid, !hearts[uid]))}
-                  className="w-9 h-9 rounded-full flex items-center justify-center hover:bg-white/10 active:scale-90 transition-all"
-                >
-                  <Heart className={cn("w-5 h-5", hearts[uid] ? "text-white fill-white" : "text-white/60")} />
-                </button>
-              </div>
-              <p className="font-outfit text-sm text-white leading-relaxed whitespace-pre-wrap break-words">{theirs}</p>
-            </div>
-            <div className="rounded-2xl bg-black/20 p-4 space-y-2">
-              <div className="flex items-center justify-between">
-                <Badge tone="you">You</Badge>
-                {hearts[partnerUid] && <Heart className="w-5 h-5 text-white fill-white" />}
-              </div>
-              <p className="font-outfit text-sm text-white/90 leading-relaxed whitespace-pre-wrap break-words">{mine}</p>
-            </div>
-          </div>
-        </StackCard>
-      ) : (
-        <StackCard deck={deck} text={card.text} />
-      )}
-      <Footer>
-        <div className="h-[6.5rem]">
-          {revealed ? (
-            <div className="h-full flex items-center justify-center text-center text-white/60 font-outfit text-xs px-6">
-              {`Loved ${partnerName}'s answer? Tap the heart on the card to give them a point.`}
-            </div>
-          ) : mine ? (
-            <div className="h-full rounded-2xl bg-white/5 border border-white/10 px-5 py-3 overflow-y-auto">
-              <p className="font-outfit text-sm text-white/80 leading-relaxed whitespace-pre-wrap break-words">{mine}</p>
-            </div>
-          ) : (
-            <textarea
-              value={draft}
-              onChange={(e) => setDraft(e.target.value)}
-              maxLength={500}
-              placeholder={`Your answer. ${partnerName} sees it once they've answered too.`}
-              className="w-full h-full bg-white/5 border border-white/10 rounded-2xl px-5 py-4 font-outfit text-sm text-white focus:outline-none focus:border-white/30 placeholder:text-neutral-500 resize-none"
-            />
-          )}
-        </div>
-        <StatusRow>
-          {revealed ? next
-            : mine ? <StatusText pulse>{`Waiting for ${partnerName}`}</StatusText>
-            : <PrimaryButton disabled={busy || !draft.trim()} onClick={() => run(() => submitGameAnswer(coupleId, round, uid, { text: draft.trim() }))}>Lock In Answer</PrimaryButton>}
-        </StatusRow>
-      </Footer>
-    </>
-  );
-};
-
 // Truth or dare: take turns. The player picks truth or dare, then marks it done or skipped.
 const TruthDareRound = ({ game, card, round, uid, partnerName, busy, coupleId, run, next }: RoundProps & { card: Extract<GameCard, { kind: "truthdare" }> }) => {
   const deck = DECK_BY_ID[game.deck];
@@ -590,7 +507,7 @@ const Summary = ({ game, uid, partnerUid, partnerName, scores }: {
   const headline = matches !== null
     ? `In sync on ${matches} of ${game.cards.length}`
     : mine === theirs ? "It's a tie" : mine > theirs ? "You win this one" : `${partnerName} wins this one`;
-  const line = matches !== null ? "Game over" : mechanic === "open" ? "Game over · every answer stays between you two" : "Game over · brave of you both";
+  const line = matches !== null ? "Game over" : "Game over · brave of you both";
 
   return <StackCard deck={deck} text={headline} eyebrow={line} />;
 };

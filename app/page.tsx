@@ -25,6 +25,7 @@ const loadHistory = () => import("@/components/features/mailbox/MessageHistory")
 const loadArchive = () => import("@/components/features/archive/ArchiveDashboard");
 const loadSafeSpace = () => import("@/components/features/safespace/SafeSpaceSession");
 const loadGame = () => import("@/components/features/games/GameScreen");
+const loadQuestions = () => import("@/components/features/games/QuestionDeckScreen");
 
 const ComposeMessage = dynamic(() => loadCompose().then(m => m.ComposeMessage));
 const DailyCheckInPopup = dynamic(() => loadCheckIn().then(m => m.DailyCheckInPopup));
@@ -32,6 +33,7 @@ const MessageHistory = dynamic(() => loadHistory().then(m => m.MessageHistory));
 const ArchiveDashboard = dynamic(() => loadArchive().then(m => m.ArchiveDashboard));
 const SafeSpaceSession = dynamic(() => loadSafeSpace().then(m => m.SafeSpaceSession));
 const GameScreen = dynamic(() => loadGame().then(m => m.GameScreen));
+const QuestionDeckScreen = dynamic(() => loadQuestions().then(m => m.QuestionDeckScreen));
 const PartnerLeftOverlay = dynamic(() => import("@/components/features/mailbox/PartnerLeftOverlay").then(m => m.PartnerLeftOverlay));
 const WhiteFlagOverlay = dynamic(() => import("@/components/features/mailbox/WhiteFlagOverlay").then(m => m.WhiteFlagOverlay));
 const EmpathyNudge = dynamic(() => import("@/components/features/checkin/EmpathyNudge").then(m => m.EmpathyNudge));
@@ -48,6 +50,7 @@ export default function Home() {
     isPaired, 
     activeSafeSpace, 
     activeGame,
+    activeQuestions,
     safeSpaceHasNew,
     logout, 
     clearPartnerLeftStatus,
@@ -79,6 +82,11 @@ export default function Home() {
   useEffect(() => {
     if (!activeGame) setGameOpen(false);
   }, [activeGame]);
+  const [questionsOpen, setQuestionsOpen] = React.useState(false);
+  const inQuestions = questionsOpen && !!activeQuestions;
+  useEffect(() => {
+    if (!activeQuestions) setQuestionsOpen(false);
+  }, [activeQuestions]);
 
   // Signing out, or the space being closed by the partner, always leaves the room
   useEffect(() => {
@@ -183,7 +191,9 @@ export default function Home() {
     const handleOpenSelector = () => setShowReactions(true);
     const handleOpenSafeSpace = () => setSafeSpaceOpen(true);
     const handleOpenGame = () => setGameOpen(true);
+    const handleOpenQuestions = () => setQuestionsOpen(true);
     window.addEventListener('openGame', handleOpenGame);
+    window.addEventListener('openQuestions', handleOpenQuestions);
     
     window.addEventListener('popupStateChange', handlePopup);
     window.addEventListener('openSignalSelector', handleOpenSelector);
@@ -194,6 +204,7 @@ export default function Home() {
         window.removeEventListener('openSignalSelector', handleOpenSelector);
         window.removeEventListener('openSafeSpace', handleOpenSafeSpace);
         window.removeEventListener('openGame', handleOpenGame);
+        window.removeEventListener('openQuestions', handleOpenQuestions);
     };
   }, []);
 
@@ -204,7 +215,7 @@ export default function Home() {
   // Once the home screen has settled, fetch the on-demand pieces in the background so the first tap does not wait
   useEffect(() => {
     if (!isPaired) return;
-    const warm = () => { loadCompose(); loadCheckIn(); loadHistory(); loadArchive(); loadSafeSpace(); loadGame(); };
+    const warm = () => { loadCompose(); loadCheckIn(); loadHistory(); loadArchive(); loadSafeSpace(); loadGame(); loadQuestions(); };
     const idle = (window as unknown as { requestIdleCallback?: (cb: () => void, opts?: { timeout: number }) => number }).requestIdleCallback;
     const timer = idle ? undefined : setTimeout(warm, 2500);
     if (idle) idle(warm, { timeout: 4000 });
@@ -225,7 +236,7 @@ export default function Home() {
     return () => clearTimeout(timer);
   }, [loading, hasLoadedInitially]);
 
-  const effectivelyPopupOpen = isAnyPopupOpen || showCompose || showCheckInPopup || showEmpathyNudge || inSafeSpace || inGame || isOverlayActive || showAfterSafeSpace;
+  const effectivelyPopupOpen = isAnyPopupOpen || showCompose || showCheckInPopup || showEmpathyNudge || inSafeSpace || inGame || inQuestions || isOverlayActive || showAfterSafeSpace;
 
   useEffect(() => {
     if (!loading && user && hasOnboarded) {
@@ -243,6 +254,7 @@ export default function Home() {
       setShowEmpathyNudge(false);
       setShowCompose(false);
       setGameOpen(false);
+      setQuestionsOpen(false);
       setActiveView("mailbox");
     }
   }, [fbUser]);
@@ -456,6 +468,9 @@ export default function Home() {
 
         {inGame ? (
             <GameScreen key="game-screen" onLeave={() => setGameOpen(false)} />
+        ) : null}
+        {inQuestions ? (
+            <QuestionDeckScreen key="question-deck" onLeave={() => setQuestionsOpen(false)} />
         ) : null}
 
         {/* After closing: a gentle nudge to put the outcome in writing */}

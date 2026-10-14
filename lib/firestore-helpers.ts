@@ -37,7 +37,7 @@ import {
   CoupleGame,
   GameAnswer
 } from "./types";
-import { DECK_BY_ID, LEVEL_LABEL, type DeckId, type GameLevel } from "./games/decks";
+import { DECK_BY_ID, LEVEL_LABEL, slotFor, type DeckId, type GameLevel, type GameSlot } from "./games/decks";
 import type { User as FirebaseUser } from "firebase/auth";
 import { REACTION_ICONS } from "./constants";
 
@@ -375,14 +375,39 @@ export const endSafeSpaceSession = async (coupleId: string, sessionId: string, c
 };
 
 /**
- * Games: a single game per couple at couples/{id}/games/current
+ * Games: per couple, one live game at games/current and one question deck at games/questions
  */
-const gameRef = (coupleId: string) => doc(db, "couples", coupleId, "games", "current");
+const gameRef = (coupleId: string, slot: GameSlot = "current") => doc(db, "couples", coupleId, "games", slot);
 
-export const subscribeToGame = (coupleId: string, callback: (game: CoupleGame | null) => void) =>
-  onSnapshot(gameRef(coupleId), (snap) => callback(snap.exists() ? (snap.data() as CoupleGame) : null), () => callback(null));
+export const subscribeToGame = (coupleId: string, slot: GameSlot, callback: (game: CoupleGame | null) => void) =>
+  onSnapshot(gameRef(coupleId, slot), (snap) => callback(snap.exists() ? (snap.data() as CoupleGame) : null), () => callback(null));
 
-/** Deal a new game, replacing any game that was in progress */
+/** A game counts as finished when the last card is done, or for a question deck, when both have answered everything */
+const isFinished = (g: CoupleGame) =>
+  slotFor(g.deck) === "questions"
+    ? g.players.every(u => g.cards.every((_, r) => !!g.answers?.[`r${r}`]?.[u]?.text))
+    : g.round >= g.cards.length;
+
+/**
+ * Keep a finished game before its slot is reused, so it can be read again later.
+ * The id comes from the game itself, so both partners tapping at once still store it once.
+ */
+const archiveIfFinished = async (coupleId: string, slot: GameSlot) => {
+  const snap = await getDoc(gameRef(coupleId, slot));
+  if (!snap.exists()) return;
+  const game = snap.data() as CoupleGame;
+  if (!isFinished(game)) return;
+  const id = `${game.startedAt}_${game.deck}`.replace(/[^\w-]/g, "_");
+  // If the partner already stored it, the copy is there and history entries can't be overwritten
+  await setDoc(doc(db, "couples", coupleId, "game_history", id), { ...game, archivedAt: new Date().toISOString() }).catch(() => {});
+};
+
+export const getGameHistory = async (coupleId: string) => {
+  const snap = await getDocs(query(collection(db, "couples", coupleId, "game_history"), orderBy("archivedAt", "desc"), limit(30)));
+  return snap.docs.map(d => ({ ...(d.data() as CoupleGame & { archivedAt: string }), id: d.id }));
+};
+
+/** Deal a new game, replacing any game that was in progress (a finished one is kept in the history first) */
 export const startGame = async (coupleId: string, uid: string, partnerUid: string, deck: DeckId, level: GameLevel, starterName?: string) => {
   // The question lists are only downloaded when someone actually plays
   const { dealCards } = await import("./games/engine");
@@ -396,23 +421,37 @@ export const startGame = async (coupleId: string, uid: string, partnerUid: strin
     startedAt: new Date().toISOString(),
     joined: { [uid]: true },
   };
-  await setDoc(gameRef(coupleId), game);
+  await archiveIfFinished(coupleId, slotFor(deck));
+  await setDoc(gameRef(coupleId, slotFor(deck)), game);
+  const written = slotFor(deck) === "questions";
   await notifyPartner(partnerUid, {
     uid: partnerUid,
     type: "GAME",
-    title: "Come Play",
-    body: `${starterName || "Your partner"} started ${DECK_BY_ID[deck].title} (${LEVEL_LABEL[level]}). Your move.`,
+    title: written ? "Questions for You" : "Come Play",
+    body: written
+      ? `${starterName || "Your partner"} started ${DECK_BY_ID[deck].title} (${LEVEL_LABEL[level]}). Answer whenever you're ready.`
+      : `${starterName || "Your partner"} started ${DECK_BY_ID[deck].title} (${LEVEL_LABEL[level]}). Your move.`,
   });
 };
 
-export const joinGame = (coupleId: string, uid: string) =>
-  updateDoc(gameRef(coupleId), { [`joined.${uid}`]: true });
+/** Question decks: save one written answer, and tell the partner once all of yours are in */
+export const submitQuestionAnswer = async (coupleId: string, round: number, uid: string, text: string, finished: boolean, partnerUid: string, name?: string) => {
+  await updateDoc(gameRef(coupleId, "questions"), { [`answers.r${round}.${uid}`]: { text } });
+  if (finished) {
+    await notifyPartner(partnerUid, {
+      uid: partnerUid,
+      type: "GAME",
+      title: "Answers Are In",
+      body: `${name || "Your partner"} answered every question. Finish yours to read them together.`,
+    });
+  }
+};
+
+export const joinGame = (coupleId: string, uid: string, slot: GameSlot = "current") =>
+  updateDoc(gameRef(coupleId, slot), { [`joined.${uid}`]: true });
 
 export const submitGameAnswer = (coupleId: string, round: number, uid: string, answer: GameAnswer) =>
   updateDoc(gameRef(coupleId), { [`answers.r${round}.${uid}`]: answer });
-
-export const setGameHeart = (coupleId: string, round: number, uid: string, on: boolean) =>
-  updateDoc(gameRef(coupleId), { [`hearts.r${round}.${uid}`]: on });
 
 export const chooseTruthOrDare = (coupleId: string, round: number, choice: "truth" | "dare") =>
   updateDoc(gameRef(coupleId), { [`td.r${round}.choice`]: choice });
@@ -429,7 +468,10 @@ export const advanceGame = async (coupleId: string, fromRound: number) => {
   });
 };
 
-export const endGame = (coupleId: string) => deleteDoc(gameRef(coupleId));
+export const endGame = async (coupleId: string, slot: GameSlot = "current") => {
+  await archiveIfFinished(coupleId, slot);
+  await deleteDoc(gameRef(coupleId, slot));
+};
 
 export const updateUserMood = async (uid: string, mood: string, partnerUid?: string) => {
   const userRef = doc(db, "users", uid);
@@ -496,7 +538,7 @@ export const respondToMessage = async (coupleId: string, messageId: string, resp
   });
 };
 
-const COUPLE_SUBCOLLECTIONS = ["mailbox", "checkins", "reactions", "safe_space_sessions", "events", "games"];
+const COUPLE_SUBCOLLECTIONS = ["mailbox", "checkins", "reactions", "safe_space_sessions", "events", "games", "game_history"];
 
 /**
  * Delete documents in chunks that fit inside a single batch

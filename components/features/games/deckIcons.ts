@@ -13,3 +13,4 @@ export const DECK_ICONS: Record<DeckId, LucideIcon> = {
 };
 
 export const openGame = () => window.dispatchEvent(new CustomEvent("openGame"));
+export const openQuestions = () => window.dispatchEvent(new CustomEvent("openQuestions"));
