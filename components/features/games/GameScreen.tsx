@@ -455,7 +455,7 @@ const SingleChoiceRound = ({ game, prompt, options, round, uid, partnerUid, part
   );
 };
 
-// Truth or dare: take turns. The player picks truth or dare, then marks it done or skipped.
+// Truth or dare: take turns. The player picks truth or dare; the other person says whether it was done.
 const TruthDareRound = ({ game, card, round, uid, partnerName, busy, coupleId, gameId, run, next }: RoundProps & { card: Extract<GameCard, { kind: "truthdare" }> }) => {
   const deck = DECK_BY_ID[game.deck];
   const td = game.td?.[roundKey(round)];
@@ -465,6 +465,9 @@ const TruthDareRound = ({ game, card, round, uid, partnerName, busy, coupleId, g
 
   const text = !td?.choice ? "Truth or dare?" : td.choice === "truth" ? card.truth : card.dare;
   const eyebrow = !td?.choice ? (myTurn ? "Your turn" : `${partnerName}'s turn`) : `${who} chose ${td.choice}`;
+
+  // Whose move it is: the player chooses, then the partner judges
+  const myMove = !td?.choice ? myTurn : !myTurn;
 
   // The two buttons change meaning with the step, but never their size
   const buttons = !td?.choice
@@ -482,15 +485,18 @@ const TruthDareRound = ({ game, card, round, uid, partnerName, busy, coupleId, g
               label={b.label}
               disabled={busy}
               selected={!!td?.result && td.result === ("result" in b ? b.result : undefined)}
-              dimmed={!myTurn || (!!td?.result && td.result !== ("result" in b ? b.result : undefined))}
-              onClick={myTurn && !td?.result ? () => run(b.act) : undefined}
+              dimmed={td?.result ? td.result !== ("result" in b ? b.result : undefined) : !myMove}
+              onClick={myMove && !td?.result ? () => run(b.act) : undefined}
             />
           ))}
         </div>
         <StatusRow>
           {td?.result ? next
-            : myTurn ? <StatusText>{!td?.choice ? "Your pick" : td.choice === "truth" ? "Answer out loud, then tap Done" : "Do it, then tap Done"}</StatusText>
-            : <StatusText pulse>{!td?.choice ? `${partnerName} is choosing` : `${partnerName} is on it`}</StatusText>}
+            : !td?.choice
+              ? (myTurn ? <StatusText>Your pick</StatusText> : <StatusText pulse>{`${partnerName} is choosing`}</StatusText>)
+              : myTurn
+                ? <StatusText pulse>{td.choice === "truth" ? `Answer out loud · ${partnerName} decides` : `Do it · ${partnerName} decides`}</StatusText>
+                : <StatusText>{`Did ${partnerName} do it?`}</StatusText>}
         </StatusRow>
       </Footer>
     </>
