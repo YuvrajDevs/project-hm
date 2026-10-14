@@ -50,7 +50,7 @@ export const PastGames = ({ onClose }: { onClose: () => void }) => {
         exit={{ opacity: 0, y: 20 }}
         transition={{ type: "spring", damping: 20, stiffness: 100 }}
         onClick={(e) => e.stopPropagation()}
-        className="w-full max-w-md max-h-[85vh] overlay-panel rounded-[2.5rem] p-6 flex flex-col gap-5"
+        className="w-full max-w-md h-[75vh] max-h-[680px] overlay-panel rounded-[2.5rem] p-6 flex flex-col gap-5"
       >
         <div className="flex items-center justify-between gap-3 shrink-0">
           {open ? (
@@ -92,18 +92,21 @@ export const PastGames = ({ onClose }: { onClose: () => void }) => {
                   <button
                     key={e.id}
                     onClick={() => setOpen(e)}
-                    className="w-full flex items-center gap-4 rounded-2xl bg-white/5 border border-white/10 p-4 text-left hover:bg-white/10 active:scale-[0.98] transition-all"
+                    className="w-full flex items-center gap-3 rounded-2xl bg-white/5 border border-white/10 p-4 text-left hover:bg-white/10 active:scale-[0.98] transition-all"
                   >
                     <div className={cn("w-10 h-10 rounded-xl bg-gradient-to-br flex items-center justify-center shrink-0", deck.cards[0])}>
                       <Icon className="w-5 h-5 text-white" />
                     </div>
                     <div className="flex-1 min-w-0">
-                      <p className="font-bebas text-lg tracking-widest uppercase leading-none truncate">{deck.title}</p>
+                      <p className="font-bebas text-lg tracking-wider uppercase leading-none truncate">{deck.title}</p>
                       <p className="font-outfit text-xs text-neutral-400 mt-1 truncate">
-                        {`${LEVEL_LABEL[e.level]} · ${summaryLine(e, uid, partnerUid, partnerName)} · ${new Date(e.archivedAt).toLocaleDateString(undefined, { day: "numeric", month: "short" })}`}
+                        {`${LEVEL_LABEL[e.level]} · ${summaryLine(e, uid, partnerUid, partnerName)}`}
                       </p>
                     </div>
-                    <ChevronRight className="w-4 h-4 text-neutral-500 shrink-0" />
+                    <span className="font-outfit text-xs text-neutral-500 shrink-0">
+                      {new Date(e.archivedAt).toLocaleDateString(undefined, { day: "numeric", month: "short" })}
+                    </span>
+                    <ChevronRight className="w-4 h-4 text-neutral-500 shrink-0 -ml-2" />
                   </button>
                 );
               })}
@@ -117,7 +120,7 @@ export const PastGames = ({ onClose }: { onClose: () => void }) => {
 
 const summaryLine = (g: CoupleGame, uid: string, partnerUid: string, partnerName: string) => {
   const mechanic = DECK_BY_ID[g.deck].mechanic;
-  if (mechanic === "open") return `${g.cards.length} questions answered`;
+  if (mechanic === "open") return `${g.cards.length} questions`;
   if (mechanic === "choice" || mechanic === "who") {
     const matches = g.cards.filter((_, r) => {
       const a = g.answers?.[roundKey(r)] || {};
