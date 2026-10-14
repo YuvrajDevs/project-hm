@@ -25,13 +25,29 @@ service cloud.firestore {
       return request.resource.data.diff(resource.data).affectedKeys().hasOnly(fields);
     }
 
+    // Safe couple item deletion: allows deletion if the caller created it, OR if an approved mutual reset
+    // is in progress (accepted by the other partner), OR if the couple is actively unpairing.
+    function canDeleteCoupleItem(coupleId, authorUid) {
+      let couple = get(/databases/$(database)/documents/couples/$(coupleId)).data;
+      return isMember(couple) && (
+        request.auth.uid == authorUid
+        || (couple.get('resetStatus', null) == 'pending' && couple.get('resetBy', null) != request.auth.uid)
+        || couple.get('unpairingBy', null) == request.auth.uid
+      );
+    }
+
     // ─── User profiles ───────────────────────────────────────────────────────
     match /users/{userId} {
       // Your own profile, or the profile of the person currently paired with you
       allow read: if isOwner(userId)
         || (isAuthenticated() && resource.data.get('partnerId', null) == request.auth.uid);
 
-      allow create, delete: if isOwner(userId);
+      allow create: if isOwner(userId)
+        && request.resource.data.get('coupleId', null) == null
+        && request.resource.data.get('partnerId', null) == null
+        && request.resource.data.get('role', null) == null;
+
+      allow delete: if isOwner(userId);
 
       // Your own profile, except the pairing fields (see below)
       allow update: if isOwner(userId) && (
@@ -73,7 +89,10 @@ service cloud.firestore {
 
       // Private notes: never visible to the partner
       match /notes/{noteId} {
-        allow read, write: if isOwner(userId);
+        allow read, delete: if isOwner(userId);
+        allow create, update: if isOwner(userId)
+          && request.resource.data.text is string
+          && request.resource.data.text.size() <= 280;
       }
 
       // In-app notifications: written by the partner, read and cleared by the owner
@@ -82,6 +101,8 @@ service cloud.firestore {
         allow create: if isAuthenticated()
           && request.resource.data.uid == userId
           && request.resource.data.read == false
+          && request.resource.data.title is string && request.resource.data.title.size() <= 100
+          && request.resource.data.body is string && request.resource.data.body.size() <= 300
           && get(/databases/$(database)/documents/users/$(userId)).data.get('partnerId', null) == request.auth.uid;
       }
     }
@@ -94,7 +115,8 @@ service cloud.firestore {
 
       allow create: if isAuthenticated()
         && request.resource.data.createdBy == request.auth.uid
-        && request.resource.data.used == false;
+        && request.resource.data.used == false
+        && (!('expiresAt' in request.resource.data) || request.resource.data.expiresAt > request.time);
 
       // One use, by someone other than the creator, before it expires
       allow update: if isAuthenticated()
@@ -129,24 +151,45 @@ service cloud.firestore {
           && after.usedBy == request.auth.uid;
       }
 
-      // Members can change settings, never who the members are
+      // Members can change settings, never who the members are.
+      // State machine validation prevents UI lockout and flag/reset spoofing.
       allow update: if isMember(resource.data)
-        && !request.resource.data.diff(resource.data).affectedKeys().hasAny(['partnerA_uid', 'partnerB_uid', 'id', 'inviteCode']);
+        && !request.resource.data.diff(resource.data).affectedKeys().hasAny(['partnerA_uid', 'partnerB_uid', 'id', 'inviteCode'])
+        && (!request.resource.data.diff(resource.data).affectedKeys().hasAny(['whiteFlagBy'])
+            || request.resource.data.whiteFlagBy == null
+            || request.resource.data.whiteFlagBy == request.auth.uid)
+        && (!request.resource.data.diff(resource.data).affectedKeys().hasAny(['resetStatus'])
+            || request.resource.data.resetStatus == null
+            || request.resource.data.resetStatus in ['pending', 'declined'])
+        && (!request.resource.data.diff(resource.data).affectedKeys().hasAny(['resetBy'])
+            || request.resource.data.resetBy == null
+            || request.resource.data.resetBy == request.auth.uid
+            || (resource.data.get('resetStatus', null) == 'pending' && request.resource.data.resetStatus == null))
+        && (!request.resource.data.diff(resource.data).affectedKeys().hasAny(['unpairingBy'])
+            || request.resource.data.unpairingBy == null
+            || request.resource.data.unpairingBy == request.auth.uid);
 
       match /mailbox/{messageId} {
         allow read: if isPartOfCouple(coupleId);
-        allow create: if isPartOfCouple(coupleId) && request.resource.data.senderUid == request.auth.uid;
+        allow create: if isPartOfCouple(coupleId)
+          && request.resource.data.senderUid == request.auth.uid
+          && (!('note' in request.resource.data) || (request.resource.data.note is string && request.resource.data.note.size() <= 140));
 
         // The sender edits their own words (only until the note is answered).
         // The receiver can only respond and mark as read.
-        // Either one can hide it for themselves, or open an unlocked time capsule.
+        // Either one can hide it for themselves (restricted to adding own uid).
+        // Opening an unlocked time capsule is verified against capsule doc.
         allow update: if isPartOfCouple(coupleId) && (
           (resource.data.senderUid == request.auth.uid
             && !('response' in resource.data)
-            && changedOnly(['status', 'intent', 'note', 'updatedAt']))
+            && changedOnly(['status', 'intent', 'note', 'updatedAt'])
+            && (!('note' in request.resource.data) || (request.resource.data.note is string && request.resource.data.note.size() <= 140)))
           || (resource.data.senderUid != request.auth.uid
             && changedOnly(['response', 'readAt']))
-          || changedOnly(['hiddenFor'])
+          || (changedOnly(['hiddenFor'])
+            && request.resource.data.hiddenFor is list
+            && request.resource.data.hiddenFor.hasAll(resource.data.get('hiddenFor', []))
+            && request.resource.data.hiddenFor.toSet().difference(resource.data.get('hiddenFor', []).toSet()).hasOnly([request.auth.uid]))
           || (resource.data.get('sealed', false) == true
             && request.resource.data.sealed == false
             && changedOnly(['status', 'intent', 'note', 'sealed'])
@@ -162,22 +205,29 @@ service cloud.firestore {
             && request.resource.data.note == capsule.note;
         }
 
-        // Either member can delete: reset and unpair remove the whole history
-        allow delete: if isPartOfCouple(coupleId);
+        // Only the sender or an approved reset/unpair flow can delete notes
+        allow delete: if isPartOfCouple(coupleId) && canDeleteCoupleItem(coupleId, resource.data.senderUid);
       }
 
       // Time capsule contents: only the sender can read them before the unlock time.
-      // Never listable, so a partner cannot browse what is waiting for them.
+      // Receiver CANNOT delete a capsule before the unlock time.
       match /capsules/{messageId} {
         allow get: if isPartOfCouple(coupleId)
           && (resource.data.senderUid == request.auth.uid || resource.data.unlockAtTs <= request.time);
         allow list: if false;
-        allow create: if isPartOfCouple(coupleId) && request.resource.data.senderUid == request.auth.uid;
+        allow create: if isPartOfCouple(coupleId)
+          && request.resource.data.senderUid == request.auth.uid
+          && (!('note' in request.resource.data) || (request.resource.data.note is string && request.resource.data.note.size() <= 140));
         allow update: if isPartOfCouple(coupleId)
           && resource.data.senderUid == request.auth.uid
           && request.resource.data.senderUid == resource.data.senderUid
-          && request.resource.data.unlockAtTs == resource.data.unlockAtTs;
-        allow delete: if isPartOfCouple(coupleId);
+          && request.resource.data.unlockAtTs == resource.data.unlockAtTs
+          && (!('note' in request.resource.data) || (request.resource.data.note is string && request.resource.data.note.size() <= 140));
+        allow delete: if isPartOfCouple(coupleId) && (
+          resource.data.senderUid == request.auth.uid
+          || resource.data.unlockAtTs <= request.time
+          || canDeleteCoupleItem(coupleId, resource.data.senderUid)
+        );
       }
 
       // Games in progress, shared by both partners (the app keeps at most a few of each kind open)
@@ -192,30 +242,51 @@ service cloud.firestore {
       }
 
       match /checkins/{checkinId} {
-        allow read, delete: if isPartOfCouple(coupleId);
-        // One document per person per day, and only that person can write it
+        allow read: if isPartOfCouple(coupleId);
+        allow delete: if isPartOfCouple(coupleId) && canDeleteCoupleItem(coupleId, resource.data.userUid);
+        // One document per person per day, bounded ratings 1-10
         allow create, update: if isPartOfCouple(coupleId)
           && request.resource.data.userUid == request.auth.uid
-          && checkinId == request.resource.data.dateId + '_' + request.auth.uid;
+          && checkinId == request.resource.data.dateId + '_' + request.auth.uid
+          && request.resource.data.mood is number && request.resource.data.mood >= 1 && request.resource.data.mood <= 10
+          && request.resource.data.connection is number && request.resource.data.connection >= 1 && request.resource.data.connection <= 10
+          && (!('reason' in request.resource.data) || (request.resource.data.reason is string && request.resource.data.reason.size() <= 280))
+          && (!('joyReason' in request.resource.data) || (request.resource.data.joyReason is string && request.resource.data.joyReason.size() <= 280));
       }
 
       match /reactions/{reactionId} {
-        allow read, delete: if isPartOfCouple(coupleId);
-        allow create, update: if isPartOfCouple(coupleId) && request.resource.data.senderUid == request.auth.uid;
+        allow read: if isPartOfCouple(coupleId);
+        allow delete: if isPartOfCouple(coupleId) && canDeleteCoupleItem(coupleId, resource.data.senderUid);
+        allow create, update: if isPartOfCouple(coupleId)
+          && request.resource.data.senderUid == request.auth.uid
+          && (!('note' in request.resource.data) || (request.resource.data.note is string && request.resource.data.note.size() <= 50));
       }
 
       match /events/{eventId} {
-        allow read, delete: if isPartOfCouple(coupleId);
-        allow create: if isPartOfCouple(coupleId) && request.resource.data.createdBy == request.auth.uid;
-        allow update: if isPartOfCouple(coupleId);
+        allow read: if isPartOfCouple(coupleId);
+        allow delete: if isPartOfCouple(coupleId) && canDeleteCoupleItem(coupleId, resource.data.createdBy);
+        allow create: if isPartOfCouple(coupleId)
+          && request.resource.data.createdBy == request.auth.uid
+          && request.resource.data.title is string && request.resource.data.title.size() <= 100
+          && (!('note' in request.resource.data) || (request.resource.data.note is string && request.resource.data.note.size() <= 500));
+        allow update: if isPartOfCouple(coupleId)
+          && (!('title' in request.resource.data) || (request.resource.data.title is string && request.resource.data.title.size() <= 100))
+          && (!('note' in request.resource.data) || (request.resource.data.note is string && request.resource.data.note.size() <= 500));
       }
 
       match /safe_space_sessions/{sessionId} {
-        allow read, write: if isPartOfCouple(coupleId);
+        allow read: if isPartOfCouple(coupleId);
+        allow create, update: if isPartOfCouple(coupleId);
+        allow delete: if isPartOfCouple(coupleId) && canDeleteCoupleItem(coupleId, resource.data.get('startedBy', request.auth.uid));
 
         match /messages/{messageId} {
-          allow read, delete: if isPartOfCouple(coupleId);
-          allow create: if isPartOfCouple(coupleId) && request.resource.data.senderUid == request.auth.uid;
+          allow read: if isPartOfCouple(coupleId);
+          allow delete: if isPartOfCouple(coupleId) && canDeleteCoupleItem(coupleId, resource.data.senderUid);
+          allow create: if isPartOfCouple(coupleId)
+            && request.resource.data.senderUid == request.auth.uid
+            && request.resource.data.text is string
+            && request.resource.data.text.size() > 0
+            && request.resource.data.text.size() <= 2000;
         }
       }
     }

@@ -23,7 +23,7 @@ import {
   limit,
   limitToLast
 } from "firebase/firestore";
-import { db } from "./firebase";
+import { db, auth } from "./firebase";
 import { 
   SafeSpaceMessage,
   EmotionalProfile,
@@ -586,6 +586,10 @@ export const resetCoupleHistory = async (coupleId: string) => {
 };
 
 export const destroyCoupleData = async (coupleId: string) => {
+  const currentUid = auth.currentUser?.uid;
+  if (currentUid) {
+    await updateDoc(doc(db, "couples", coupleId), { unpairingBy: currentUid }).catch(() => {});
+  }
   await resetCoupleHistory(coupleId);
   await deleteDoc(doc(db, "couples", coupleId));
 };
