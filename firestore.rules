@@ -180,6 +180,12 @@ service cloud.firestore {
         allow delete: if isPartOfCouple(coupleId);
       }
 
+      // One game at a time, shared by both partners
+      match /games/{gameId} {
+        allow read, delete: if isPartOfCouple(coupleId);
+        allow create, update: if isPartOfCouple(coupleId) && gameId == 'current';
+      }
+
       match /checkins/{checkinId} {
         allow read, delete: if isPartOfCouple(coupleId);
         // One document per person per day, and only that person can write it

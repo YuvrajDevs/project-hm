@@ -1,0 +1,114 @@
+// Game catalogue: what each game is called, how it plays, and how its card looks.
+// The questions themselves live in ./questions and load only when a game starts.
+
+export type GameLevel = "normal" | "medium" | "spicy";
+
+// How a card is answered:
+// choice  – pick one of two, then guess what your partner picked
+// who     – point at yourself or your partner
+// open    – both write an answer, revealed together
+// truthdare – take turns; the other person decides if it was done
+export type GameMechanic = "choice" | "who" | "open" | "truthdare";
+
+export type DeckId = "wyr" | "thisorthat" | "nhie" | "likely" | "truthdare" | "spicy" | "intimacy" | "deep";
+
+export interface DeckInfo {
+  id: DeckId;
+  title: string;
+  blurb: string;    // one short line on the card
+  howTo: string;    // one sentence in the lobby
+  mechanic: GameMechanic;
+  gradient: string; // tailwind classes for the card face
+  accent: string;   // text colour for small highlights
+}
+
+export const DECKS: DeckInfo[] = [
+  {
+    id: "wyr",
+    title: "Would You Rather",
+    blurb: "Pick one, guess theirs",
+    howTo: "Choose for yourself, then guess what your partner chose. Points for every right guess, and both of you score when you match.",
+    mechanic: "choice",
+    gradient: "from-pink-500/40 via-fuchsia-500/20 to-violet-600/10",
+    accent: "text-pink-300",
+  },
+  {
+    id: "thisorthat",
+    title: "This or That",
+    blurb: "Quick picks, no overthinking",
+    howTo: "Go with your gut, then guess your partner's pick. Points for right guesses and for matching.",
+    mechanic: "choice",
+    gradient: "from-amber-400/40 via-orange-500/20 to-rose-500/10",
+    accent: "text-amber-300",
+  },
+  {
+    id: "nhie",
+    title: "Never Have I Ever",
+    blurb: "Confess, then guess",
+    howTo: "Say whether you have or haven't, then guess your partner's answer. The reveal is the fun part.",
+    mechanic: "choice",
+    gradient: "from-sky-400/40 via-indigo-500/20 to-violet-600/10",
+    accent: "text-sky-300",
+  },
+  {
+    id: "likely",
+    title: "Who's More Likely",
+    blurb: "Point at each other",
+    howTo: "Tap who's more likely, you or your partner. You both score when you point at the same person.",
+    mechanic: "who",
+    gradient: "from-emerald-400/40 via-teal-500/20 to-cyan-600/10",
+    accent: "text-emerald-300",
+  },
+  {
+    id: "truthdare",
+    title: "Truth or Dare",
+    blurb: "Take turns, be brave",
+    howTo: "Take turns choosing truth or dare. Your partner decides if you really did it, and every one done is a point.",
+    mechanic: "truthdare",
+    gradient: "from-orange-400/40 via-red-500/20 to-rose-700/10",
+    accent: "text-orange-300",
+  },
+  {
+    id: "spicy",
+    title: "Spicy Questions",
+    blurb: "Turn up the heat",
+    howTo: "Both answer, then both answers show together. Tap the heart on an answer you loved to give a point.",
+    mechanic: "open",
+    gradient: "from-rose-500/45 via-red-600/20 to-orange-500/10",
+    accent: "text-rose-300",
+  },
+  {
+    id: "intimacy",
+    title: "Intimacy Questions",
+    blurb: "Get a little closer",
+    howTo: "Both answer, then both answers show together. Tap the heart on an answer you loved to give a point.",
+    mechanic: "open",
+    gradient: "from-purple-500/40 via-pink-500/20 to-rose-400/10",
+    accent: "text-purple-300",
+  },
+  {
+    id: "deep",
+    title: "Deep Questions",
+    blurb: "The real stuff",
+    howTo: "Both answer, then both answers show together. Tap the heart on an answer you loved to give a point.",
+    mechanic: "open",
+    gradient: "from-indigo-500/40 via-slate-500/20 to-blue-900/10",
+    accent: "text-indigo-300",
+  },
+];
+
+export const DECK_BY_ID = Object.fromEntries(DECKS.map(d => [d.id, d])) as Record<DeckId, DeckInfo>;
+
+export const LEVELS: { id: GameLevel; label: string; hint: string }[] = [
+  { id: "normal", label: "Normal", hint: "Light and fun" },
+  { id: "medium", label: "Medium", hint: "A little more personal" },
+  { id: "spicy", label: "Spicy", hint: "18+, no holding back" },
+];
+
+export const LEVEL_LABEL: Record<GameLevel, string> = { normal: "Normal", medium: "Medium", spicy: "Spicy" };
+
+// Cards per game
+export const ROUND_SIZE = 10;
+
+// Answer labels for the two-option games that don't carry their own
+export const NHIE_OPTIONS = { a: "I have", b: "I haven't" };

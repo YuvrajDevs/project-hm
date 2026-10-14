@@ -352,3 +352,21 @@ test("the contact form accepts well-formed messages and is not readable", async 
   await assertFails(addDoc(collection(db(null), "contactMessages"), { email: "a@example.com", message: "x".repeat(5000) }));
   await assertFails(getDocs(collection(db(ALICE), "contactMessages")));
 });
+
+// ─── Games ──────────────────────────────────────────────────────────────────
+test("partners share one game; outsiders cannot see or touch it", async () => {
+  await seedCouple();
+  const game = { deck: "wyr", level: "normal", cards: [0, 1], round: 0, players: [ALICE, BOB], startedBy: ALICE, startedAt: "2026-10-14T10:00:00Z", joined: { [ALICE]: true } };
+  await assertSucceeds(setDoc(doc(db(ALICE), "couples", COUPLE, "games", "current"), game));
+  await assertSucceeds(updateDoc(doc(db(BOB), "couples", COUPLE, "games", "current"), { [`joined.${BOB}`]: true, [`answers.r0.${BOB}`]: { pick: "a", guess: "b" } }));
+  await assertSucceeds(getDoc(doc(db(BOB), "couples", COUPLE, "games", "current")));
+  await assertFails(getDoc(doc(db(MALLORY), "couples", COUPLE, "games", "current")));
+  await assertFails(updateDoc(doc(db(MALLORY), "couples", COUPLE, "games", "current"), { round: 1 }));
+  await assertFails(deleteDoc(doc(db(MALLORY), "couples", COUPLE, "games", "current")));
+  await assertSucceeds(deleteDoc(doc(db(BOB), "couples", COUPLE, "games", "current")));
+});
+
+test("only the single current game can be created", async () => {
+  await seedCouple();
+  await assertFails(setDoc(doc(db(ALICE), "couples", COUPLE, "games", "second"), { deck: "wyr" }));
+});

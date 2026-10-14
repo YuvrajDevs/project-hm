@@ -33,8 +33,11 @@ import {
   QuickReact,
   SafeSpaceSession,
   PartnerNote,
-  AppNotification
+  AppNotification,
+  CoupleGame,
+  GameAnswer
 } from "./types";
+import { DECK_BY_ID, LEVEL_LABEL, type DeckId, type GameLevel } from "./games/decks";
 import type { User as FirebaseUser } from "firebase/auth";
 import { REACTION_ICONS } from "./constants";
 
@@ -371,6 +374,63 @@ export const endSafeSpaceSession = async (coupleId: string, sessionId: string, c
   }
 };
 
+/**
+ * Games: a single game per couple at couples/{id}/games/current
+ */
+const gameRef = (coupleId: string) => doc(db, "couples", coupleId, "games", "current");
+
+export const subscribeToGame = (coupleId: string, callback: (game: CoupleGame | null) => void) =>
+  onSnapshot(gameRef(coupleId), (snap) => callback(snap.exists() ? (snap.data() as CoupleGame) : null), () => callback(null));
+
+/** Deal a new game, replacing any game that was in progress */
+export const startGame = async (coupleId: string, uid: string, partnerUid: string, deck: DeckId, level: GameLevel, starterName?: string) => {
+  // The question lists are only downloaded when someone actually plays
+  const { dealCards } = await import("./games/engine");
+  const game: CoupleGame = {
+    deck,
+    level,
+    ...dealCards(deck, level),
+    round: 0,
+    players: [uid, partnerUid],
+    startedBy: uid,
+    startedAt: new Date().toISOString(),
+    joined: { [uid]: true },
+  };
+  await setDoc(gameRef(coupleId), game);
+  await notifyPartner(partnerUid, {
+    uid: partnerUid,
+    type: "GAME",
+    title: "Come Play",
+    body: `${starterName || "Your partner"} started ${DECK_BY_ID[deck].title} (${LEVEL_LABEL[level]}). Your move.`,
+  });
+};
+
+export const joinGame = (coupleId: string, uid: string) =>
+  updateDoc(gameRef(coupleId), { [`joined.${uid}`]: true });
+
+export const submitGameAnswer = (coupleId: string, round: number, uid: string, answer: GameAnswer) =>
+  updateDoc(gameRef(coupleId), { [`answers.r${round}.${uid}`]: answer });
+
+export const setGameHeart = (coupleId: string, round: number, uid: string, on: boolean) =>
+  updateDoc(gameRef(coupleId), { [`hearts.r${round}.${uid}`]: on });
+
+export const chooseTruthOrDare = (coupleId: string, round: number, choice: "truth" | "dare") =>
+  updateDoc(gameRef(coupleId), { [`td.r${round}.choice`]: choice });
+
+export const judgeTruthOrDare = (coupleId: string, round: number, result: "done" | "skipped") =>
+  updateDoc(gameRef(coupleId), { [`td.r${round}.result`]: result });
+
+/** Move to the next card. Both tapping "Next" at once still moves only one card. */
+export const advanceGame = async (coupleId: string, fromRound: number) => {
+  await runTransaction(db, async (tx) => {
+    const snap = await tx.get(gameRef(coupleId));
+    if (!snap.exists() || snap.data().round !== fromRound) return;
+    tx.update(gameRef(coupleId), { round: fromRound + 1 });
+  });
+};
+
+export const endGame = (coupleId: string) => deleteDoc(gameRef(coupleId));
+
 export const updateUserMood = async (uid: string, mood: string, partnerUid?: string) => {
   const userRef = doc(db, "users", uid);
   await updateDoc(userRef, {
@@ -436,7 +496,7 @@ export const respondToMessage = async (coupleId: string, messageId: string, resp
   });
 };
 
-const COUPLE_SUBCOLLECTIONS = ["mailbox", "checkins", "reactions", "safe_space_sessions", "events"];
+const COUPLE_SUBCOLLECTIONS = ["mailbox", "checkins", "reactions", "safe_space_sessions", "events", "games"];
 
 /**
  * Delete documents in chunks that fit inside a single batch
