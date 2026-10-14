@@ -352,3 +352,47 @@ test("the contact form accepts well-formed messages and is not readable", async 
   await assertFails(addDoc(collection(db(null), "contactMessages"), { email: "a@example.com", message: "x".repeat(5000) }));
   await assertFails(getDocs(collection(db(ALICE), "contactMessages")));
 });
+
+// ─── Hardened Security Rules Tests ─────────────────────────────────────────
+test("a receiver cannot delete a locked capsule before it unlocks", async () => {
+  await seedCouple();
+  const future = Timestamp.fromMillis(Date.now() + 3_600_000);
+  await setDoc(doc(db(ALICE), "couples", COUPLE, "capsules", "locked_test"), {
+    senderUid: ALICE,
+    status: "LOVE_NOTE",
+    intent: "SAY_IT",
+    note: "secret",
+    unlockAtTs: future
+  });
+  // Bob (receiver) must not be able to delete Alice's locked capsule
+  await assertFails(deleteDoc(doc(db(BOB), "couples", COUPLE, "capsules", "locked_test")));
+  // Alice (sender) can unsend her own capsule
+  await assertSucceeds(deleteDoc(doc(db(ALICE), "couples", COUPLE, "capsules", "locked_test")));
+});
+
+test("a partner cannot delete another partner's note unless approved reset or unpairing", async () => {
+  await seedCouple();
+  // m1 was created by ALICE. BOB cannot delete it.
+  await assertFails(deleteDoc(doc(db(BOB), "couples", COUPLE, "mailbox", "m1")));
+  // ALICE (author) can delete it
+  await assertSucceeds(deleteDoc(doc(db(ALICE), "couples", COUPLE, "mailbox", "m1")));
+});
+
+test("whiteFlagBy cannot be spoofed to another user or an arbitrary string", async () => {
+  await seedCouple();
+  // ALICE cannot set whiteFlagBy to BOB or invalid
+  await assertFails(updateDoc(doc(db(ALICE), "couples", COUPLE), { whiteFlagBy: BOB }));
+  await assertFails(updateDoc(doc(db(ALICE), "couples", COUPLE), { whiteFlagBy: "invalid_hacker" }));
+  // ALICE can set whiteFlagBy to herself, and BOB can clear it
+  await assertSucceeds(updateDoc(doc(db(ALICE), "couples", COUPLE), { whiteFlagBy: ALICE }));
+  await assertSucceeds(updateDoc(doc(db(BOB), "couples", COUPLE), { whiteFlagBy: null }));
+});
+
+test("a user cannot hide a note for their partner", async () => {
+  await seedCouple();
+  // ALICE cannot set hiddenFor: [BOB]
+  await assertFails(updateDoc(doc(db(ALICE), "couples", COUPLE, "mailbox", "m1"), { hiddenFor: [BOB] }));
+  // ALICE can hide it for herself
+  await assertSucceeds(updateDoc(doc(db(ALICE), "couples", COUPLE, "mailbox", "m1"), { hiddenFor: [ALICE] }));
+});
+
