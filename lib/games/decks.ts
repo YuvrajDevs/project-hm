@@ -4,10 +4,10 @@
 export type GameLevel = "normal" | "medium" | "spicy";
 
 // How a card is answered:
-// choice  – pick one of two, then guess what your partner picked
+// choice  – both pick one of two; matching scores
 // who     – point at yourself or your partner
 // open    – both write an answer, revealed together
-// truthdare – take turns; the other person decides if it was done
+// truthdare – take turns; doing it scores
 export type GameMechanic = "choice" | "who" | "open" | "truthdare";
 
 export type DeckId = "wyr" | "thisorthat" | "nhie" | "likely" | "truthdare" | "spicy" | "intimacy" | "deep";
@@ -27,8 +27,8 @@ export const DECKS: DeckInfo[] = [
   {
     id: "wyr",
     title: "Would You Rather",
-    blurb: "Pick one, guess theirs",
-    howTo: "Choose for yourself, then guess what your partner chose. Points for every right guess, and both of you score when you match.",
+    blurb: "Pick one, hope you match",
+    howTo: "You both pick one. Pick the same and you each get a point.",
     mechanic: "choice",
     gradient: "from-pink-500/40 via-fuchsia-500/20 to-violet-600/10",
     cards: ["from-pink-500 via-rose-500 to-fuchsia-600", "from-violet-600 via-purple-600 to-indigo-700"],
@@ -38,7 +38,7 @@ export const DECKS: DeckInfo[] = [
     id: "thisorthat",
     title: "This or That",
     blurb: "Quick picks, no overthinking",
-    howTo: "Go with your gut, then guess your partner's pick. Points for right guesses and for matching.",
+    howTo: "Go with your gut. Pick the same and you each get a point.",
     mechanic: "choice",
     gradient: "from-amber-400/40 via-orange-500/20 to-rose-500/10",
     cards: ["from-amber-400 via-orange-500 to-rose-500", "from-rose-500 via-pink-600 to-purple-700"],
@@ -47,8 +47,8 @@ export const DECKS: DeckInfo[] = [
   {
     id: "nhie",
     title: "Never Have I Ever",
-    blurb: "Confess, then guess",
-    howTo: "Say whether you have or haven't, then guess your partner's answer. The reveal is the fun part.",
+    blurb: "Confess everything",
+    howTo: "Say whether you have or haven't. Same answer, a point each. The reveal is the fun part.",
     mechanic: "choice",
     gradient: "from-sky-400/40 via-indigo-500/20 to-violet-600/10",
     cards: ["from-sky-500 via-blue-600 to-indigo-700", "from-indigo-500 via-violet-600 to-purple-700"],
@@ -68,7 +68,7 @@ export const DECKS: DeckInfo[] = [
     id: "truthdare",
     title: "Truth or Dare",
     blurb: "Take turns, be brave",
-    howTo: "Take turns choosing truth or dare. Your partner decides if you really did it, and every one done is a point.",
+    howTo: "Take turns choosing truth or dare. Every one you do is a point.",
     mechanic: "truthdare",
     gradient: "from-orange-400/40 via-red-500/20 to-rose-700/10",
     cards: ["from-orange-500 via-red-500 to-rose-600", "from-red-600 via-rose-700 to-purple-800"],

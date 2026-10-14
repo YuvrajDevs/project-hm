@@ -202,7 +202,6 @@ export interface PartnerNote {
 // 🎲 Games: one game at a time per couple, stored at couples/{id}/games/current
 export interface GameAnswer {
   pick?: string;  // "a" / "b" for two-option cards, a uid for "who's more likely"
-  guess?: string; // what they think their partner picked
   text?: string;  // written answer for question decks
 }
 

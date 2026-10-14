@@ -2,14 +2,14 @@
 
 import React, { useEffect, useRef, useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { ArrowRight, Check, Heart, Sparkle, X } from "lucide-react";
+import { ArrowRight, Heart, Sparkle, X } from "lucide-react";
 import { useMailbox } from "@/context/MailboxContext";
 import {
   advanceGame, chooseTruthOrDare, endGame, joinGame, judgeTruthOrDare,
   setGameHeart, startGame, submitGameAnswer,
 } from "@/lib/firestore-helpers";
 import { DECK_BY_ID, LEVEL_LABEL, type DeckInfo } from "@/lib/games/decks";
-import { getCard, isRoundComplete, roundKey, roundPoints, totalScores, truthDarePlayer, type GameCard } from "@/lib/games/engine";
+import { getCard, isRoundComplete, roundKey, totalScores, truthDarePlayer, type GameCard } from "@/lib/games/engine";
 import type { CoupleGame } from "@/lib/types";
 import { useSensoryFeedback } from "@/hooks/useSensoryFeedback";
 import { cn } from "@/lib/utils";
@@ -80,6 +80,8 @@ export const GameScreen = ({ onLeave }: { onLeave: () => void }) => {
     playPop();
   });
 
+  const nextLabel = round + 1 >= game.cards.length ? "See Results" : "Next Card";
+
   return (
     <motion.div
       initial={{ opacity: 0 }}
@@ -114,27 +116,27 @@ export const GameScreen = ({ onLeave }: { onLeave: () => void }) => {
           </button>
         </div>
 
-        {/* Score and progress */}
+        {/* Score and progress. Fixed height, so nothing below it moves. */}
         <div className="space-y-3 shrink-0">
           <div className="grid grid-cols-2 gap-3">
             <ScorePill label="You" score={scores[uid]} tone="text-pink-300" />
             <ScorePill label={partnerName} score={scores[partnerUid]} tone="text-blue-300" />
           </div>
-          {!finished && (
-            <div className="flex items-center gap-3">
-              <div className="flex-1 flex gap-1">
-                {game.cards.map((_, i) => (
-                  <span key={i} className={cn("h-1 flex-1 rounded-full", i < round ? "bg-white/70" : i === round ? "bg-white" : "bg-white/15")} />
-                ))}
-              </div>
-              <span className="font-bebas text-xs tracking-widest text-white/60 shrink-0">{`${round + 1} / ${game.cards.length}`}</span>
-            </div>
-          )}
-          {!game.joined?.[partnerUid] && !finished && (
-            <p className="text-white/60 font-outfit text-xs">
-              {`${partnerName} hasn't joined yet. You can answer now; the reveal waits for them.`}
-            </p>
-          )}
+          <div className="flex items-center gap-3 h-4">
+            {!finished && (
+              <>
+                <div className="flex-1 flex gap-1">
+                  {game.cards.map((_, i) => (
+                    <span key={i} className={cn("h-1 flex-1 rounded-full", i < round ? "bg-white/70" : i === round ? "bg-white" : "bg-white/15")} />
+                  ))}
+                </div>
+                <span className="font-bebas text-xs tracking-widest text-white/60 shrink-0">{`${round + 1} / ${game.cards.length}`}</span>
+              </>
+            )}
+          </div>
+          <p className="h-4 text-white/60 font-outfit text-xs truncate">
+            {!game.joined?.[partnerUid] && !finished ? `${partnerName} hasn't joined yet. The reveal waits for them.` : ""}
+          </p>
         </div>
 
         {/* The card, dealt in fresh for every round */}
@@ -148,7 +150,21 @@ export const GameScreen = ({ onLeave }: { onLeave: () => void }) => {
             className="flex-1 min-h-0 flex flex-col gap-3"
           >
             {finished ? (
-              <Summary game={game} uid={uid} partnerUid={partnerUid} partnerName={partnerName} scores={scores} />
+              <>
+                <Summary game={game} uid={uid} partnerUid={partnerUid} partnerName={partnerName} scores={scores} />
+                <Footer>
+                  <div className="h-[6.5rem] flex flex-col justify-end">
+                    <button
+                      onClick={handleEnd}
+                      disabled={busy}
+                      className="w-full text-white/60 font-bebas text-sm tracking-widest uppercase hover:text-white transition-all py-3"
+                    >
+                      Pick Another Game
+                    </button>
+                  </div>
+                  <PrimaryButton onClick={handleReplay} disabled={busy}>Play 10 More</PrimaryButton>
+                </Footer>
+              </>
             ) : card ? (
               <RoundView
                 game={game}
@@ -161,40 +177,18 @@ export const GameScreen = ({ onLeave }: { onLeave: () => void }) => {
                 busy={busy}
                 run={run}
                 coupleId={coupleId}
+                next={<PrimaryButton onClick={handleNext} disabled={busy}>{nextLabel} <ArrowRight className="w-4 h-4" /></PrimaryButton>}
               />
             ) : null}
           </motion.div>
         </AnimatePresence>
 
-        {error && <p className="text-rose-400 font-outfit text-xs text-center shrink-0">{error}</p>}
-
-        {/* Bottom action */}
-        {finished ? (
-          <div className="space-y-2 shrink-0">
-            <button
-              onClick={handleReplay}
-              disabled={busy}
-              className="w-full bg-white text-black font-bebas tracking-widest uppercase rounded-2xl py-4 hover:bg-neutral-200 active:scale-95 disabled:opacity-30 transition-all"
-            >
-              Play 10 More
-            </button>
-            <button
-              onClick={handleEnd}
-              disabled={busy}
-              className="w-full text-white/60 font-bebas text-sm tracking-widest uppercase hover:text-white transition-all py-2"
-            >
-              Pick Another Game
-            </button>
-          </div>
-        ) : complete ? (
-          <button
-            onClick={handleNext}
-            disabled={busy}
-            className="w-full shrink-0 bg-white text-black font-bebas tracking-widest uppercase rounded-2xl py-4 hover:bg-neutral-200 active:scale-95 disabled:opacity-30 transition-all flex items-center justify-center gap-2"
-          >
-            {round + 1 >= game.cards.length ? "See Results" : "Next Card"} <ArrowRight className="w-4 h-4" />
-          </button>
-        ) : null}
+        {/* Errors float above the footer instead of pushing the cards around */}
+        {error && (
+          <p className="absolute left-5 right-5 bottom-24 z-10 rounded-xl bg-black/80 border border-rose-500/30 px-4 py-2 text-rose-300 font-outfit text-xs text-center">
+            {error}
+          </p>
+        )}
       </div>
 
       {/* Ending is for both, so it asks first */}
@@ -255,22 +249,55 @@ interface RoundProps {
   busy: boolean;
   coupleId: string;
   run: (action: () => Promise<unknown>) => Promise<void>;
+  next: React.ReactNode; // the "Next card" button, shown once the round is done
 }
 
 const RoundView = (props: RoundProps) => {
   switch (props.card.kind) {
     case "choice": return props.card.prompt
-      ? <PromptChoiceRound {...props} card={props.card} />
+      ? <SingleChoiceRound {...props} prompt={props.card.prompt} options={[{ id: "a", label: props.card.a }, { id: "b", label: props.card.b }]} />
       : <PairRound {...props} card={props.card} />;
-    case "who": return <WhoRound {...props} card={props.card} />;
+    case "who": return <SingleChoiceRound {...props} prompt={props.card.prompt} options={[{ id: props.uid, label: "Me" }, { id: props.partnerUid, label: props.partnerName }]} />;
     case "open": return <OpenRound {...props} card={props.card} />;
     case "truthdare": return <TruthDareRound {...props} card={props.card} />;
   }
 };
 
+// ─── Layout pieces ──────────────────────────────────────────────────────────
+// Every round is the same shape: the card(s) fill the space, and a footer of fixed height sits underneath.
+// The footer is a row of answer buttons plus one row for status or "Next", so the cards never resize.
+
+const Footer = ({ children }: { children: React.ReactNode }) => (
+  <div className="shrink-0 flex flex-col gap-3">{children}</div>
+);
+
+// The status-or-next row: always the same height
+const StatusRow = ({ children }: { children: React.ReactNode }) => (
+  <div className="h-14 flex items-center justify-center">{children}</div>
+);
+
+const PrimaryButton = ({ children, onClick, disabled }: { children: React.ReactNode; onClick: () => void; disabled?: boolean }) => (
+  <button
+    onClick={onClick}
+    disabled={disabled}
+    className="w-full h-14 bg-white text-black font-bebas tracking-widest uppercase rounded-2xl hover:bg-neutral-200 active:scale-95 disabled:opacity-30 transition-all flex items-center justify-center gap-2"
+  >
+    {children}
+  </button>
+);
+
+const StatusText = ({ children, pulse }: { children: React.ReactNode; pulse?: boolean }) => (
+  <motion.p
+    animate={pulse ? { opacity: [0.5, 1, 0.5] } : undefined}
+    transition={pulse ? { duration: 2.4, repeat: Infinity } : undefined}
+    className="text-center text-white/70 font-bebas text-sm tracking-widest uppercase"
+  >
+    {children}
+  </motion.p>
+);
+
 // ─── Card pieces ────────────────────────────────────────────────────────────
 
-// A few soft sparkles, the same on every card
 const Sparkles = () => (
   <>
     <Sparkle className="absolute top-6 right-8 w-5 h-5 text-white/30 fill-white/30" />
@@ -279,7 +306,7 @@ const Sparkles = () => (
   </>
 );
 
-// Shared face: gradient, a soft top light, sparkles, big Bebas text
+// Shared face: gradient, a soft top light, sparkles
 const CardFace = ({ gradient, className, children }: { gradient: string; className?: string; children: React.ReactNode }) => (
   <div className={cn(
     "relative overflow-hidden rounded-[2.5rem] bg-gradient-to-br border border-white/15 shadow-[0_24px_60px_rgba(0,0,0,0.45)]",
@@ -296,40 +323,28 @@ const cardTextSize = (text: string) =>
   text.length > 90 ? "text-[1.9rem]" : text.length > 55 ? "text-[2.2rem]" : "text-[2.6rem]";
 
 // The main card for single-question games, with a second card peeking out behind it
-const StackCard = ({ deck, text, eyebrow, className }: { deck: DeckInfo; text: string; eyebrow?: string; className?: string }) => (
-  <div className={cn("relative min-h-0", className)}>
+const StackCard = ({ deck, text, eyebrow, children }: { deck: DeckInfo; text: string; eyebrow?: string; children?: React.ReactNode }) => (
+  <div className="relative flex-1 min-h-0">
     <div className={cn("absolute inset-0 rounded-[2.5rem] bg-gradient-to-br opacity-50 -rotate-[4deg] scale-[0.97] translate-x-1", deck.cards[1])} />
     <CardFace gradient={deck.cards[0]} className="h-full">
-      <div className="h-full flex flex-col justify-center gap-3 px-8 py-10 overflow-y-auto">
-        {eyebrow && <p className="text-[10px] text-white/80 font-bebas tracking-[0.4em] uppercase">{eyebrow}</p>}
-        <h2 className={cn("font-bebas uppercase tracking-wide leading-[0.9] text-white drop-shadow-sm", cardTextSize(text))}>{text}</h2>
-      </div>
+      {children ?? (
+        <div className="h-full flex flex-col justify-center gap-3 px-8 py-10 overflow-y-auto">
+          {eyebrow && <p className="text-[10px] text-white/80 font-bebas tracking-[0.4em] uppercase">{eyebrow}</p>}
+          <h2 className={cn("font-bebas uppercase tracking-wide text-white drop-shadow-sm", cardTextSize(text), "leading-[1.05]")}>{text}</h2>
+        </div>
+      )}
     </CardFace>
   </div>
 );
 
-const Status = ({ children }: { children: React.ReactNode }) => (
-  <p className="text-[10px] text-white/60 font-bebas tracking-[0.4em] uppercase text-center shrink-0">{children}</p>
-);
-
-const Waiting = ({ name }: { name: string }) => (
-  <motion.p
-    animate={{ opacity: [0.5, 1, 0.5] }}
-    transition={{ duration: 2.4, repeat: Infinity }}
-    className="text-center text-white/70 font-bebas text-sm tracking-widest uppercase shrink-0"
-  >
-    {`Waiting for ${name}`}
-  </motion.p>
-);
-
 const Badge = ({ children, tone }: { children: React.ReactNode; tone: "you" | "them" }) => (
   <span className={cn(
-    "px-2.5 py-1 rounded-full font-bebas text-xs tracking-widest uppercase shadow",
-    tone === "you" ? "bg-white text-pink-600" : "bg-white text-blue-600"
+    "px-2.5 py-1 rounded-full font-bebas text-xs tracking-widest uppercase shadow bg-white",
+    tone === "you" ? "text-pink-600" : "text-blue-600"
   )}>{children}</span>
 );
 
-// The answer buttons under a single card: about a quarter of the screen
+// Answer button under a single card. Same size in every state.
 const AnswerButton = ({ label, selected, dimmed, onClick, disabled, badges }: {
   label: string; selected?: boolean; dimmed?: boolean; onClick?: () => void; disabled?: boolean; badges?: React.ReactNode;
 }) => (
@@ -337,381 +352,224 @@ const AnswerButton = ({ label, selected, dimmed, onClick, disabled, badges }: {
     onClick={onClick}
     disabled={disabled || !onClick}
     className={cn(
-      "relative min-h-[7.5rem] rounded-[1.75rem] border px-4 py-5 flex flex-col items-center justify-center gap-2 transition-all",
+      "relative h-[6.5rem] rounded-[1.75rem] border px-4 flex flex-col items-center justify-center gap-2 transition-all",
       "font-bebas text-2xl tracking-widest uppercase leading-none text-center",
       selected ? "bg-white text-black border-white" : "bg-white/[0.06] border-white/10 text-white",
-      dimmed && "opacity-40",
+      dimmed && "opacity-35",
       onClick && !disabled && "hover:bg-white/10 active:scale-95",
       selected && onClick && "hover:bg-white"
     )}
   >
     <span className="truncate max-w-full">{label}</span>
-    {badges && <span className="flex gap-1">{badges}</span>}
+    {badges && <span className="absolute bottom-3 left-0 right-0 flex justify-center gap-1">{badges}</span>}
   </button>
-);
-
-const ResultLine = ({ ok, children }: { ok: boolean; children: React.ReactNode }) => (
-  <p className={cn("font-outfit text-sm flex items-center gap-2", ok ? "text-white" : "text-white/50")}>
-    {ok ? <Check className="w-4 h-4 text-emerald-300 shrink-0" /> : <X className="w-4 h-4 text-white/30 shrink-0" />}
-    {children}
-  </p>
-);
-
-const ResultBox = ({ children }: { children: React.ReactNode }) => (
-  <div className="rounded-2xl bg-white/5 border border-white/10 px-5 py-4 space-y-1.5 shrink-0">{children}</div>
 );
 
 // ─── Rounds ─────────────────────────────────────────────────────────────────
 
-// Would you rather / This or that: the two options are the cards, half the space each
-const PairRound = ({ game, card, round, uid, partnerUid, partnerName, complete, busy, coupleId, run }: RoundProps & { card: Extract<GameCard, { kind: "choice" }> }) => {
+// Would you rather / This or that: the two options are the cards. Tap one; matching scores.
+const PairRound = ({ game, card, round, uid, partnerUid, partnerName, complete, busy, coupleId, run, next }: RoundProps & { card: Extract<GameCard, { kind: "choice" }> }) => {
   const deck = DECK_BY_ID[game.deck];
   const answers = game.answers?.[roundKey(round)] || {};
-  const mine = answers[uid];
-  const theirs = answers[partnerUid];
-  const [draftPick, setDraftPick] = useState<string | null>(null);
+  const mine = answers[uid]?.pick;
+  const theirs = answers[partnerUid]?.pick;
   const revealed = complete && !!mine && !!theirs;
-  const guessing = !mine && draftPick !== null;
-
-  const pick = (k: "a" | "b") => {
-    if (mine || busy) return;
-    if (!guessing) setDraftPick(k);
-    else run(() => submitGameAnswer(coupleId, round, uid, { pick: draftPick!, guess: k }));
-  };
-
-  const status = revealed ? null
-    : mine ? null
-    : guessing ? `Now guess: what did ${partnerName} pick?`
-    : "Tap your pick";
+  const matched = revealed && mine === theirs;
 
   return (
     <>
-      {status && <Status>{status}</Status>}
       <div className="relative flex-1 min-h-0 flex flex-col gap-3">
         {(["a", "b"] as const).map((k, i) => {
-          const isMine = (mine?.pick ?? draftPick) === k;
-          const isTheirs = revealed && theirs?.pick === k;
-          // While waiting, the card you picked stays bright; on reveal both picks show
-          const dim = !revealed && !!mine && mine.pick !== k;
+          const isMine = mine === k;
+          const isTheirs = revealed && theirs === k;
+          // Waiting: your card stays bright. Revealed: cards nobody picked fade.
+          const dim = revealed ? !isMine && !isTheirs : !!mine && !isMine;
           return (
             <motion.button
               key={k}
               whileTap={!mine ? { scale: 0.97 } : undefined}
-              onClick={() => pick(k)}
+              onClick={() => { if (!mine && !busy) run(() => submitGameAnswer(coupleId, round, uid, { pick: k })); }}
               disabled={busy || !!mine}
-              className={cn("relative flex-1 min-h-0 text-left transition-opacity", dim && "opacity-40")}
+              className={cn("relative flex-1 min-h-0 text-left transition-opacity duration-300", dim && "opacity-35")}
             >
-              <CardFace gradient={deck.cards[i]} className={cn("h-full", isMine && !guessing && !revealed && "ring-4 ring-white/90")}>
+              <CardFace gradient={deck.cards[i]} className={cn("h-full", isMine && !revealed && "ring-4 ring-white/90")}>
                 <div className="h-full flex items-center justify-center px-8 py-6 text-center">
-                  <span className={cn("block font-bebas uppercase tracking-wide leading-[0.95] text-white drop-shadow-sm", card.a.length > 30 || card.b.length > 30 ? "text-[2rem]" : "text-[2.6rem]")}>
+                  <span className={cn("block font-bebas uppercase tracking-wide text-white drop-shadow-sm", card.a.length > 30 || card.b.length > 30 ? "text-[2rem]" : "text-[2.6rem]", "leading-[1.05]")}>
                     {k === "a" ? card.a : card.b}
                   </span>
                 </div>
-                {(isMine || isTheirs) && (
-                  <div className="absolute top-4 left-5 flex gap-1.5">
-                    {isMine && <Badge tone="you">{revealed || mine ? "You" : "Your pick"}</Badge>}
-                    {isTheirs && <Badge tone="them">{partnerName}</Badge>}
-                  </div>
-                )}
+                <div className="absolute top-4 left-5 flex gap-1.5">
+                  {isMine && <Badge tone="you">You</Badge>}
+                  {isTheirs && <Badge tone="them">{partnerName}</Badge>}
+                </div>
               </CardFace>
             </motion.button>
           );
         })}
-        {/* "or" between the two cards */}
-        <span className="pointer-events-none absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 w-11 h-11 rounded-full bg-[#0a0a0a] border border-white/15 flex items-center justify-center font-bebas text-sm tracking-widest text-white/80">
-          OR
+        {/* Between the cards: "or", and "+1" once you've matched */}
+        <span className={cn(
+          "pointer-events-none absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 w-12 h-12 rounded-full border flex items-center justify-center font-bebas text-sm tracking-widest transition-colors",
+          matched ? "bg-white text-black border-white" : "bg-[#0a0a0a] text-white/80 border-white/15"
+        )}>
+          {matched ? "+1" : "OR"}
         </span>
       </div>
-      {guessing && (
-        <button
-          onClick={() => setDraftPick(null)}
-          className="w-full text-white/50 font-bebas text-xs tracking-widest uppercase hover:text-white transition-all py-1 shrink-0"
-        >
-          Change my pick
-        </button>
-      )}
-      {mine && !revealed && (
-        <>
-          <p className="text-center font-outfit text-xs text-white/60 shrink-0">
-            {`You guessed ${partnerName} picked "${mine.guess === "a" ? card.a : card.b}"`}
-          </p>
-          <Waiting name={partnerName} />
-        </>
-      )}
-      {revealed && <ChoiceResult game={game} round={round} uid={uid} partnerUid={partnerUid} partnerName={partnerName} />}
+      <Footer>
+        <StatusRow>
+          {revealed ? next : mine ? <StatusText pulse>{`Waiting for ${partnerName}`}</StatusText> : <StatusText>Tap your pick</StatusText>}
+        </StatusRow>
+      </Footer>
     </>
   );
 };
 
-const ChoiceResult = ({ game, round, uid, partnerUid, partnerName }: { game: CoupleGame; round: number; uid: string; partnerUid: string; partnerName: string }) => {
-  const answers = game.answers?.[roundKey(round)] || {};
-  const mine = answers[uid], theirs = answers[partnerUid];
-  const pts = roundPoints(game, round, [uid, partnerUid]);
-  const matched = mine.pick === theirs.pick;
-  return (
-    <ResultBox>
-      <ResultLine ok={mine.guess === theirs.pick}>{`You ${mine.guess === theirs.pick ? "guessed right" : "guessed wrong"}`}</ResultLine>
-      <ResultLine ok={theirs.guess === mine.pick}>{`${partnerName} ${theirs.guess === mine.pick ? "guessed right" : "guessed wrong"}`}</ResultLine>
-      <ResultLine ok={matched}>{matched ? "Same answer, a point each" : "Different answers"}</ResultLine>
-      <p className="pt-1 font-bebas text-sm tracking-widest uppercase text-white/70">{`You +${pts[uid]} · ${partnerName} +${pts[partnerUid]}`}</p>
-    </ResultBox>
-  );
-};
-
-// Never have I ever: one big card, answer buttons underneath
-const PromptChoiceRound = ({ game, card, round, uid, partnerUid, partnerName, complete, busy, coupleId, run }: RoundProps & { card: Extract<GameCard, { kind: "choice" }> }) => {
+// One big card and two answer buttons: Never have I ever, Who's more likely
+const SingleChoiceRound = ({ game, prompt, options, round, uid, partnerUid, partnerName, complete, busy, coupleId, run, next }: RoundProps & { prompt: string; options: { id: string; label: string }[] }) => {
   const deck = DECK_BY_ID[game.deck];
   const answers = game.answers?.[roundKey(round)] || {};
-  const mine = answers[uid];
-  const theirs = answers[partnerUid];
-  const [draftPick, setDraftPick] = useState<string | null>(null);
-  const revealed = complete && !!mine && !!theirs;
-  const guessing = !mine && draftPick !== null;
-  const label = (k?: string) => (k === "a" ? card.a : k === "b" ? card.b : "");
-
-  return (
-    <>
-      <StackCard deck={deck} text={card.prompt!} className="flex-1" />
-      {revealed ? (
-        <>
-          <div className="grid grid-cols-2 gap-3 shrink-0">
-            {(["a", "b"] as const).map(k => (
-              <AnswerButton
-                key={k}
-                label={label(k)}
-                badges={(mine.pick === k || theirs.pick === k) ? <>
-                  {mine.pick === k && <Badge tone="you">You</Badge>}
-                  {theirs.pick === k && <Badge tone="them">{partnerName}</Badge>}
-                </> : undefined}
-              />
-            ))}
-          </div>
-          <ChoiceResult game={game} round={round} uid={uid} partnerUid={partnerUid} partnerName={partnerName} />
-        </>
-      ) : mine ? (
-        <>
-          <p className="text-center font-outfit text-xs text-white/60 shrink-0">
-            {`You said "${label(mine.pick)}" and guessed ${partnerName} said "${label(mine.guess)}"`}
-          </p>
-          <Waiting name={partnerName} />
-        </>
-      ) : (
-        <div className="space-y-3 shrink-0">
-          <Status>{guessing ? `Now guess what ${partnerName} said` : "Your answer"}</Status>
-          <div className="grid grid-cols-2 gap-3">
-            {(["a", "b"] as const).map(k => (
-              <AnswerButton
-                key={k}
-                label={label(k)}
-                disabled={busy}
-                selected={!guessing && draftPick === k}
-                badges={guessing && draftPick === k ? <Badge tone="you">You</Badge> : undefined}
-                onClick={() => {
-                  if (!guessing) setDraftPick(k);
-                  else run(() => submitGameAnswer(coupleId, round, uid, { pick: draftPick!, guess: k }));
-                }}
-              />
-            ))}
-          </div>
-          {guessing && (
-            <button
-              onClick={() => setDraftPick(null)}
-              className="w-full text-white/50 font-bebas text-xs tracking-widest uppercase hover:text-white transition-all"
-            >
-              Change my answer
-            </button>
-          )}
-        </div>
-      )}
-    </>
-  );
-};
-
-// Who's more likely: point at yourself or your partner
-const WhoRound = ({ game, card, round, uid, partnerUid, partnerName, complete, busy, coupleId, run }: RoundProps & { card: Extract<GameCard, { kind: "who" }> }) => {
-  const deck = DECK_BY_ID[game.deck];
-  const answers = game.answers?.[roundKey(round)] || {};
-  const mine = answers[uid];
-  const theirs = answers[partnerUid];
-  const options = [{ id: uid, label: "Me" }, { id: partnerUid, label: partnerName }];
+  const mine = answers[uid]?.pick;
+  const theirs = answers[partnerUid]?.pick;
   const revealed = complete && !!mine && !!theirs;
 
   return (
     <>
-      <StackCard deck={deck} text={card.prompt} className="flex-1" />
-      {revealed ? (
-        <>
-          <div className="grid grid-cols-2 gap-3 shrink-0">
-            {options.map(o => (
-              <AnswerButton
-                key={o.id}
-                label={o.id === uid ? "You" : partnerName}
-                badges={(mine.pick === o.id || theirs.pick === o.id) ? <>
-                  {mine.pick === o.id && <Badge tone="you">You said</Badge>}
-                  {theirs.pick === o.id && <Badge tone="them">{partnerName}</Badge>}
-                </> : undefined}
-              />
-            ))}
-          </div>
-          <ResultBox>
-            <ResultLine ok={mine.pick === theirs.pick}>
-              {mine.pick === theirs.pick
-                ? `You agree: it's ${mine.pick === uid ? "you" : partnerName}. A point each`
-                : "You each picked someone different"}
-            </ResultLine>
-          </ResultBox>
-        </>
-      ) : mine ? (
-        <>
-          <p className="text-center font-outfit text-xs text-white/60 shrink-0">{`You said ${mine.pick === uid ? "you" : partnerName}`}</p>
-          <Waiting name={partnerName} />
-        </>
-      ) : (
-        <div className="space-y-3 shrink-0">
-          <Status>Tap who</Status>
-          <div className="grid grid-cols-2 gap-3">
-            {options.map(o => (
-              <AnswerButton
-                key={o.id}
-                label={o.label}
-                disabled={busy}
-                onClick={() => run(() => submitGameAnswer(coupleId, round, uid, { pick: o.id }))}
-              />
-            ))}
-          </div>
+      <StackCard deck={deck} text={prompt} />
+      <Footer>
+        <div className="grid grid-cols-2 gap-3">
+          {options.map(o => (
+            <AnswerButton
+              key={o.id}
+              label={o.label}
+              selected={!revealed && mine === o.id}
+              dimmed={revealed ? mine !== o.id && theirs !== o.id : !!mine && mine !== o.id}
+              disabled={busy}
+              onClick={!mine ? () => run(() => submitGameAnswer(coupleId, round, uid, { pick: o.id })) : undefined}
+              badges={revealed ? <>
+                {mine === o.id && <Badge tone="you">You</Badge>}
+                {theirs === o.id && <Badge tone="them">{partnerName}</Badge>}
+              </> : null}
+            />
+          ))}
         </div>
-      )}
+        <StatusRow>
+          {revealed ? next : mine ? <StatusText pulse>{`Waiting for ${partnerName}`}</StatusText> : <StatusText>Tap your answer</StatusText>}
+        </StatusRow>
+      </Footer>
     </>
   );
 };
 
-// Question decks: both write, both answers appear together
-const OpenRound = ({ game, card, round, uid, partnerUid, partnerName, complete, busy, coupleId, run }: RoundProps & { card: Extract<GameCard, { kind: "open" }> }) => {
+// Question decks: both write; once both have answered, the answers appear on the card
+const OpenRound = ({ game, card, round, uid, partnerUid, partnerName, complete, busy, coupleId, run, next }: RoundProps & { card: Extract<GameCard, { kind: "open" }> }) => {
   const deck = DECK_BY_ID[game.deck];
   const key = roundKey(round);
   const answers = game.answers?.[key] || {};
-  const mine = answers[uid];
-  const theirs = answers[partnerUid];
+  const mine = answers[uid]?.text;
+  const theirs = answers[partnerUid]?.text;
   const hearts = game.hearts?.[key] || {};
   const [draft, setDraft] = useState("");
-  const revealed = complete && !!mine?.text && !!theirs?.text;
-
-  if (revealed) {
-    return (
-      <>
-        <StackCard deck={deck} text={card.text} className="flex-[0.9]" />
-        <div className="flex-1 min-h-0 overflow-y-auto space-y-3 pt-1">
-          <div className="rounded-2xl bg-white/5 border border-white/10 p-5 space-y-2">
-            <div className="flex items-center justify-between">
-              <Badge tone="them">{partnerName}</Badge>
-              <button
-                aria-label={hearts[uid] ? "Take back your heart" : `Give ${partnerName} a heart`}
-                disabled={busy}
-                onClick={() => run(() => setGameHeart(coupleId, round, uid, !hearts[uid]))}
-                className="w-9 h-9 rounded-full flex items-center justify-center hover:bg-white/10 active:scale-90 transition-all"
-              >
-                <Heart className={cn("w-5 h-5", hearts[uid] ? "text-pink-400 fill-pink-400" : "text-white/40")} />
-              </button>
-            </div>
-            <p className="font-outfit text-sm text-white leading-relaxed whitespace-pre-wrap break-words">{theirs.text}</p>
-          </div>
-          <div className="rounded-2xl bg-white/5 border border-white/10 p-5 space-y-2">
-            <div className="flex items-center justify-between">
-              <Badge tone="you">You</Badge>
-              {hearts[partnerUid] && <Heart className="w-5 h-5 text-pink-400 fill-pink-400" />}
-            </div>
-            <p className="font-outfit text-sm text-white/80 leading-relaxed whitespace-pre-wrap break-words">{mine.text}</p>
-          </div>
-          <p className="text-center text-white/50 font-outfit text-xs">{`Tap the heart if you loved ${partnerName}'s answer. It's a point for them.`}</p>
-        </div>
-      </>
-    );
-  }
+  const revealed = complete && !!mine && !!theirs;
 
   return (
     <>
-      <StackCard deck={deck} text={card.text} className="flex-1" />
-      {mine?.text ? (
-        <div className="space-y-3 shrink-0">
-          <div className="rounded-2xl bg-white/5 border border-white/10 p-4 space-y-2 max-h-28 overflow-y-auto">
-            <Badge tone="you">Your answer</Badge>
-            <p className="font-outfit text-sm text-white/80 leading-relaxed whitespace-pre-wrap break-words">{mine.text}</p>
+      {revealed ? (
+        <StackCard deck={deck} text={card.text}>
+          <div className="h-full flex flex-col gap-4 px-7 py-8 overflow-y-auto">
+            <p className="font-bebas text-xl uppercase tracking-wide leading-tight text-white/85">{card.text}</p>
+            <div className="rounded-2xl bg-black/20 p-4 space-y-2">
+              <div className="flex items-center justify-between">
+                <Badge tone="them">{partnerName}</Badge>
+                <button
+                  aria-label={hearts[uid] ? "Take back your heart" : `Give ${partnerName} a heart`}
+                  disabled={busy}
+                  onClick={() => run(() => setGameHeart(coupleId, round, uid, !hearts[uid]))}
+                  className="w-9 h-9 rounded-full flex items-center justify-center hover:bg-white/10 active:scale-90 transition-all"
+                >
+                  <Heart className={cn("w-5 h-5", hearts[uid] ? "text-white fill-white" : "text-white/60")} />
+                </button>
+              </div>
+              <p className="font-outfit text-sm text-white leading-relaxed whitespace-pre-wrap break-words">{theirs}</p>
+            </div>
+            <div className="rounded-2xl bg-black/20 p-4 space-y-2">
+              <div className="flex items-center justify-between">
+                <Badge tone="you">You</Badge>
+                {hearts[partnerUid] && <Heart className="w-5 h-5 text-white fill-white" />}
+              </div>
+              <p className="font-outfit text-sm text-white/90 leading-relaxed whitespace-pre-wrap break-words">{mine}</p>
+            </div>
           </div>
-          <Waiting name={partnerName} />
-        </div>
+        </StackCard>
       ) : (
-        <div className="space-y-3 shrink-0">
-          <textarea
-            value={draft}
-            onChange={(e) => setDraft(e.target.value)}
-            maxLength={500}
-            rows={2}
-            placeholder={`Your answer. ${partnerName} sees it once they've answered too.`}
-            className="w-full bg-white/5 border border-white/10 rounded-2xl px-5 py-4 font-outfit text-sm text-white focus:outline-none focus:border-white/30 placeholder:text-neutral-500 resize-none"
-          />
-          <button
-            disabled={busy || !draft.trim()}
-            onClick={() => run(() => submitGameAnswer(coupleId, round, uid, { text: draft.trim() }))}
-            className="w-full bg-white text-black font-bebas tracking-widest uppercase rounded-2xl py-4 hover:bg-neutral-200 active:scale-95 disabled:opacity-30 transition-all"
-          >
-            Lock In Answer
-          </button>
-        </div>
+        <StackCard deck={deck} text={card.text} />
       )}
+      <Footer>
+        <div className="h-[6.5rem]">
+          {revealed ? (
+            <div className="h-full flex items-center justify-center text-center text-white/60 font-outfit text-xs px-6">
+              {`Loved ${partnerName}'s answer? Tap the heart on the card to give them a point.`}
+            </div>
+          ) : mine ? (
+            <div className="h-full rounded-2xl bg-white/5 border border-white/10 px-5 py-3 overflow-y-auto">
+              <p className="font-outfit text-sm text-white/80 leading-relaxed whitespace-pre-wrap break-words">{mine}</p>
+            </div>
+          ) : (
+            <textarea
+              value={draft}
+              onChange={(e) => setDraft(e.target.value)}
+              maxLength={500}
+              placeholder={`Your answer. ${partnerName} sees it once they've answered too.`}
+              className="w-full h-full bg-white/5 border border-white/10 rounded-2xl px-5 py-4 font-outfit text-sm text-white focus:outline-none focus:border-white/30 placeholder:text-neutral-500 resize-none"
+            />
+          )}
+        </div>
+        <StatusRow>
+          {revealed ? next
+            : mine ? <StatusText pulse>{`Waiting for ${partnerName}`}</StatusText>
+            : <PrimaryButton disabled={busy || !draft.trim()} onClick={() => run(() => submitGameAnswer(coupleId, round, uid, { text: draft.trim() }))}>Lock In Answer</PrimaryButton>}
+        </StatusRow>
+      </Footer>
     </>
   );
 };
 
-// Truth or dare: take turns; the other person says whether it was done
-const TruthDareRound = ({ game, card, round, uid, partnerName, busy, coupleId, run }: RoundProps & { card: Extract<GameCard, { kind: "truthdare" }> }) => {
+// Truth or dare: take turns. The player picks truth or dare, then marks it done or skipped.
+const TruthDareRound = ({ game, card, round, uid, partnerName, busy, coupleId, run, next }: RoundProps & { card: Extract<GameCard, { kind: "truthdare" }> }) => {
   const deck = DECK_BY_ID[game.deck];
   const td = game.td?.[roundKey(round)];
   const player = truthDarePlayer(game, round);
   const myTurn = player === uid;
+  const who = myTurn ? "You" : partnerName;
 
-  if (!td?.choice) {
-    return (
-      <>
-        <StackCard deck={deck} text="Truth or dare?" eyebrow={myTurn ? "Your turn" : `${partnerName}'s turn`} className="flex-1" />
-        {myTurn ? (
-          <div className="grid grid-cols-2 gap-3 shrink-0">
-            {(["truth", "dare"] as const).map(c => (
-              <AnswerButton key={c} label={c} disabled={busy} onClick={() => run(() => chooseTruthOrDare(coupleId, round, c))} />
-            ))}
-          </div>
-        ) : (
-          <Waiting name={partnerName} />
-        )}
-      </>
-    );
-  }
+  const text = !td?.choice ? "Truth or dare?" : td.choice === "truth" ? card.truth : card.dare;
+  const eyebrow = !td?.choice ? (myTurn ? "Your turn" : `${partnerName}'s turn`) : `${who} chose ${td.choice}`;
 
-  const text = td.choice === "truth" ? card.truth : card.dare;
+  // The two buttons change meaning with the step, but never their size
+  const buttons = !td?.choice
+    ? [{ label: "Truth", act: () => chooseTruthOrDare(coupleId, round, "truth") }, { label: "Dare", act: () => chooseTruthOrDare(coupleId, round, "dare") }]
+    : [{ label: "Skip", act: () => judgeTruthOrDare(coupleId, round, "skipped"), result: "skipped" }, { label: "Done", act: () => judgeTruthOrDare(coupleId, round, "done"), result: "done" }];
+
   return (
     <>
-      <StackCard deck={deck} text={text} eyebrow={`${myTurn ? "You" : partnerName} chose ${td.choice}`} className="flex-1" />
-      {td.result ? (
-        <ResultBox>
-          <ResultLine ok={td.result === "done"}>
-            {td.result === "done" ? `${myTurn ? "You" : partnerName} did it. +1` : `${myTurn ? "You" : partnerName} skipped this one`}
-          </ResultLine>
-        </ResultBox>
-      ) : myTurn ? (
-        <div className="space-y-2 shrink-0">
-          <p className="text-center font-outfit text-xs text-white/60 leading-relaxed">
-            {`${td.choice === "truth" ? "Answer out loud, on a call, or in a voice note." : "Go for it."} ${partnerName} decides if it counts.`}
-          </p>
-          <Waiting name={partnerName} />
+      <StackCard deck={deck} text={text} eyebrow={eyebrow} />
+      <Footer>
+        <div className="grid grid-cols-2 gap-3">
+          {buttons.map(b => (
+            <AnswerButton
+              key={b.label}
+              label={b.label}
+              disabled={busy}
+              selected={!!td?.result && td.result === ("result" in b ? b.result : undefined)}
+              dimmed={!myTurn || (!!td?.result && td.result !== ("result" in b ? b.result : undefined))}
+              onClick={myTurn && !td?.result ? () => run(b.act) : undefined}
+            />
+          ))}
         </div>
-      ) : (
-        <div className="space-y-3 shrink-0">
-          <Status>{`Did ${partnerName} do it?`}</Status>
-          <div className="grid grid-cols-2 gap-3">
-            <AnswerButton label="Skipped" disabled={busy} onClick={() => run(() => judgeTruthOrDare(coupleId, round, "skipped"))} />
-            <AnswerButton label="Done" selected disabled={busy} onClick={() => run(() => judgeTruthOrDare(coupleId, round, "done"))} />
-          </div>
-        </div>
-      )}
+        <StatusRow>
+          {td?.result ? next
+            : myTurn ? <StatusText>{!td?.choice ? "Your pick" : td.choice === "truth" ? "Answer out loud, then tap Done" : "Do it, then tap Done"}</StatusText>
+            : <StatusText pulse>{!td?.choice ? `${partnerName} is choosing` : `${partnerName} is on it`}</StatusText>}
+        </StatusRow>
+      </Footer>
     </>
   );
 };
@@ -721,7 +579,6 @@ const Summary = ({ game, uid, partnerUid, partnerName, scores }: {
 }) => {
   const deck = DECK_BY_ID[game.deck];
   const mechanic = deck.mechanic;
-  // Matches are the heart of the two-option games, so they get their own line
   const matches = mechanic === "choice" || mechanic === "who"
     ? game.cards.filter((_, r) => {
         const a = game.answers?.[roundKey(r)] || {};
@@ -730,10 +587,10 @@ const Summary = ({ game, uid, partnerUid, partnerName, scores }: {
     : null;
 
   const mine = scores[uid], theirs = scores[partnerUid];
-  const headline = mine === theirs ? "It's a tie" : mine > theirs ? "You win this one" : `${partnerName} wins this one`;
-  const line = matches !== null
-    ? `You matched on ${matches} of ${game.cards.length} cards`
-    : mechanic === "open" ? "Every answer stays between you two" : "Brave of you both";
+  const headline = matches !== null
+    ? `In sync on ${matches} of ${game.cards.length}`
+    : mine === theirs ? "It's a tie" : mine > theirs ? "You win this one" : `${partnerName} wins this one`;
+  const line = matches !== null ? "Game over" : mechanic === "open" ? "Game over · every answer stays between you two" : "Game over · brave of you both";
 
-  return <StackCard deck={deck} text={headline} eyebrow={`Game over · ${line}`} className="flex-1" />;
+  return <StackCard deck={deck} text={headline} eyebrow={line} />;
 };

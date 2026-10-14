@@ -73,7 +73,6 @@ export const isRoundComplete = (game: CoupleGame, round: number, uids: [string, 
   return uids.every(u => {
     const a = answers[u];
     if (!a) return false;
-    if (DECK_BY_ID[game.deck].mechanic === "choice") return !!a.pick && !!a.guess;
     if (DECK_BY_ID[game.deck].mechanic === "open") return !!a.text;
     return !!a.pick;
   });
@@ -86,13 +85,8 @@ export const roundPoints = (game: CoupleGame, round: number, [me, them]: [string
   const mechanic = DECK_BY_ID[game.deck].mechanic;
   const answers = game.answers?.[key] || {};
 
-  if (mechanic === "choice") {
-    const mine = answers[me], theirs = answers[them];
-    if (!mine?.pick || !theirs?.pick) return points;
-    if (mine.guess === theirs.pick) points[me] += 1;
-    if (theirs.guess === mine.pick) points[them] += 1;
-    if (mine.pick === theirs.pick) { points[me] += 1; points[them] += 1; }
-  } else if (mechanic === "who") {
+  if (mechanic === "choice" || mechanic === "who") {
+    // Same answer: a point each
     if (answers[me]?.pick && answers[me]?.pick === answers[them]?.pick) { points[me] += 1; points[them] += 1; }
   } else if (mechanic === "open") {
     // A heart from one person is a point for the other
