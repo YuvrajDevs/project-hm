@@ -4,6 +4,7 @@ import React, { useEffect, useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { ArrowRight, History, X } from "lucide-react";
 import dynamic from "next/dynamic";
+import { createPortal } from "react-dom";
 import { useMailbox } from "@/context/MailboxContext";
 import { endGame, startGame } from "@/lib/firestore-helpers";
 import { DECK_BY_ID, LEVELS, LEVEL_LABEL, LIVE_DECKS, MAX_OPEN_GAMES, QUESTION_DECKS, slotFor, type DeckInfo, type GameLevel } from "@/lib/games/decks";
@@ -72,11 +73,16 @@ export const GamesShelf = () => {
           Read your answers again <ArrowRight className="w-4 h-4" />
         </span>
       </button>
-      <AnimatePresence>
-        {picked && <GameLobby key={picked.id} deck={picked} onClose={() => setPicked(null)} />}
-        {showPast && <PastGames key="past-games" onClose={() => setShowPast(false)} />}
-        {pending && <PendingDialog key="pending" kind={pending} onClose={() => setPending(null)} />}
-      </AnimatePresence>
+      {/* Dialogs go straight into <body>: the home screen slides in with a transform,
+          and inside a transformed parent a "fixed" backdrop only covers part of the screen */}
+      {typeof document !== "undefined" && createPortal(
+        <AnimatePresence>
+          {picked && <GameLobby key={picked.id} deck={picked} onClose={() => setPicked(null)} />}
+          {showPast && <PastGames key="past-games" onClose={() => setShowPast(false)} />}
+          {pending && <PendingDialog key="pending" kind={pending} onClose={() => setPending(null)} />}
+        </AnimatePresence>,
+        document.body
+      )}
     </>
   );
 };

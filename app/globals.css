@@ -69,6 +69,8 @@ h1, h2, h3, h4, h5, h6 {
 
 /* Dialog backdrop: the page stays visible but blurred behind any popup (never a black wall) */
 .overlay-backdrop {
+  /* Always the full screen: a parent's spacing utilities (space-y-*) must not add margins to it */
+  margin: 0;
   background: rgba(10, 10, 10, 0.35);
   -webkit-backdrop-filter: blur(24px) saturate(120%);
   backdrop-filter: blur(24px) saturate(120%);
