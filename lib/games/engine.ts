@@ -5,8 +5,8 @@ import type { CoupleGame } from "@/lib/types";
 // Pure game rules: which card is showing, when a card is finished, and who scored.
 
 export type GameCard =
-  | { kind: "choice"; eyebrow: string; prompt?: string; a: string; b: string }
-  | { kind: "who"; eyebrow: string; prompt: string }
+  | { kind: "choice"; prompt?: string; a: string; b: string } // no prompt: the two options are the cards
+  | { kind: "who"; prompt: string }
   | { kind: "open"; text: string }
   | { kind: "truthdare"; truth: string; dare: string };
 
@@ -42,16 +42,16 @@ export const getCard = (game: CoupleGame, round: number): GameCard | null => {
   switch (deck) {
     case "wyr": {
       const [a, b] = CHOICE_QUESTIONS.wyr[level][index];
-      return { kind: "choice", eyebrow: "Would you rather", a, b };
+      return { kind: "choice", a, b };
     }
     case "thisorthat": {
       const [a, b] = CHOICE_QUESTIONS.thisorthat[level][index];
-      return { kind: "choice", eyebrow: "This or that", a, b };
+      return { kind: "choice", a, b };
     }
     case "nhie":
-      return { kind: "choice", eyebrow: "Never have I ever", prompt: NEVER_HAVE_I_EVER[level][index], ...NHIE_OPTIONS };
+      return { kind: "choice", prompt: `Never have I ever ${NEVER_HAVE_I_EVER[level][index]}.`, ...NHIE_OPTIONS };
     case "likely":
-      return { kind: "who", eyebrow: "Who's more likely to", prompt: MORE_LIKELY[level][index] };
+      return { kind: "who", prompt: `Who's more likely to ${MORE_LIKELY[level][index]}?` };
     case "truthdare":
       return {
         kind: "truthdare",
