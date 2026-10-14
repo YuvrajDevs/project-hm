@@ -38,6 +38,7 @@ export const GamesShelf = () => {
   const { liveGames, questionGames } = useMailbox();
   const [picked, setPicked] = useState<DeckInfo | null>(null);
   const [showPast, setShowPast] = useState(false);
+  const [pending, setPending] = useState<"game" | "deck" | null>(null);
 
   return (
     <>
@@ -46,14 +47,18 @@ export const GamesShelf = () => {
         subtitle="Little games for the two of you"
         decks={LIVE_DECKS}
         active={liveGames}
+        noun="game"
         onPick={setPicked}
+        onOpenPending={() => setPending("game")}
       />
       <DeckSection
         title="Ask Each Other"
         subtitle="Answer at your own pace, read them together"
         decks={QUESTION_DECKS}
         active={questionGames}
+        noun="deck"
         onPick={setPicked}
+        onOpenPending={() => setPending("deck")}
       />
       <button
         onClick={() => setShowPast(true)}
@@ -70,48 +75,158 @@ export const GamesShelf = () => {
       <AnimatePresence>
         {picked && <GameLobby key={picked.id} deck={picked} onClose={() => setPicked(null)} />}
         {showPast && <PastGames key="past-games" onClose={() => setShowPast(false)} />}
+        {pending && <PendingDialog key="pending" kind={pending} onClose={() => setPending(null)} />}
       </AnimatePresence>
     </>
   );
 };
 
-const GameBanner = ({ game }: { game: ActiveGame }) => {
+// One row per section on the home screen: how many are going, and whether anything is waiting on you
+const PendingRow = ({ games, noun, onOpen }: { games: ActiveGame[]; noun: string; onOpen: () => void }) => {
   const { user, partner } = useMailbox();
   const { playTick, vibrateTick } = useSensoryFeedback();
-  const deck = DECK_BY_ID[game.deck];
-  const Icon = DECK_ICONS[game.deck];
-  const { status, action } = describe(game, user?.uid || "", partner?.uid || "", partner?.displayName?.split(" ")[0] || "your partner");
+  const uid = user?.uid || "";
+  const partnerName = partner?.displayName?.split(" ")[0] || "your partner";
+  const waitingOnYou = games.filter(g => ["Join", "Answer"].includes(describe(g, uid, partner?.uid || "", partnerName).action)).length;
+  const newest = DECK_BY_ID[games[0].deck];
 
   return (
-    <motion.button
-      layout
-      initial={{ opacity: 0, y: -8 }}
-      animate={{ opacity: 1, y: 0 }}
-      exit={{ opacity: 0, height: 0 }}
-      onClick={() => { playTick(); vibrateTick(); openAny(game); }}
+    <button
+      onClick={() => { playTick(); vibrateTick(); onOpen(); }}
       className={cn(
-        "w-full rounded-[2rem] p-5 flex items-center justify-between gap-4 border border-white/10 bg-gradient-to-br text-left active:scale-[0.98] transition-colors",
-        deck.gradient
+        "w-full rounded-[2rem] p-5 flex items-center justify-between gap-4 border border-white/10 bg-gradient-to-br text-left active:scale-[0.98] transition-all",
+        newest.gradient
       )}
     >
       <div className="flex items-center gap-4 min-w-0">
-        <div className="w-11 h-11 rounded-2xl bg-white/10 flex items-center justify-center shrink-0">
-          <Icon className="w-5 h-5 text-white" />
+        {/* The open games' icons, overlapping */}
+        <div className="flex -space-x-3 shrink-0">
+          {games.slice(0, 3).map(g => {
+            const Icon = DECK_ICONS[g.deck];
+            return (
+              <div key={g.id} className={cn("w-10 h-10 rounded-xl bg-gradient-to-br flex items-center justify-center ring-2 ring-[#1a1a1a]", DECK_BY_ID[g.deck].cards[0])}>
+                <Icon className="w-4 h-4 text-white" />
+              </div>
+            );
+          })}
         </div>
         <div className="min-w-0">
-          <h3 className="text-lg font-bebas text-white tracking-widest uppercase leading-none truncate">{deck.title}</h3>
-          <p className="text-white/70 font-outfit text-xs mt-1 truncate">{`${LEVEL_LABEL[game.level]} · ${status}`}</p>
+          <h3 className="text-lg font-bebas text-white tracking-widest uppercase leading-none truncate">{`Pending ${noun}s`}</h3>
+          <p className="text-white/70 font-outfit text-xs mt-1 truncate">
+            {`${games.length} in progress${waitingOnYou ? ` · ${waitingOnYou} waiting on you` : ""}`}
+          </p>
         </div>
       </div>
       <span className="shrink-0 flex items-center gap-1 font-bebas text-sm tracking-widest uppercase text-white">
-        {action} <ArrowRight className="w-4 h-4" />
+        View <ArrowRight className="w-4 h-4" />
       </span>
-    </motion.button>
+    </button>
   );
 };
 
-const DeckSection = ({ title, subtitle, decks, active, onPick }: {
-  title: string; subtitle: string; decks: DeckInfo[]; active: ActiveGame[]; onPick: (deck: DeckInfo) => void;
+// The open games as rows: tap one to go back to it, or close it for both
+const PendingList = ({ games, busy, onClose, onOpen }: { games: ActiveGame[]; busy: boolean; onClose: (g: ActiveGame) => void; onOpen: () => void }) => {
+  const { user, partner } = useMailbox();
+  const uid = user?.uid || "";
+  const partnerName = partner?.displayName?.split(" ")[0] || "your partner";
+  return (
+    <div className="space-y-2">
+      {games.map((g, i) => {
+        const gDeck = DECK_BY_ID[g.deck];
+        const GIcon = DECK_ICONS[g.deck];
+        const oldest = games.length > 1 && i === games.length - 1;
+        return (
+          <div key={g.id} className="flex items-center gap-3 rounded-2xl bg-white/5 border border-white/10 p-3">
+            <button onClick={() => { onOpen(); openAny(g); }} className="flex-1 min-w-0 flex items-center gap-3 text-left">
+              <div className={cn("w-9 h-9 rounded-xl bg-gradient-to-br flex items-center justify-center shrink-0", gDeck.cards[0])}>
+                <GIcon className="w-4 h-4 text-white" />
+              </div>
+              <div className="flex-1 min-w-0">
+                <p className="font-bebas text-base tracking-wider uppercase leading-none truncate">{gDeck.title}</p>
+                <p className="font-outfit text-xs text-neutral-400 mt-1 truncate">
+                  {`${LEVEL_LABEL[g.level]} · ${describe(g, uid, partner?.uid || "", partnerName).status}`}
+                </p>
+                {oldest && <p className="font-outfit text-[11px] text-amber-300/80 mt-0.5">Waiting longest</p>}
+              </div>
+            </button>
+            <button
+              onClick={() => onClose(g)}
+              disabled={busy}
+              className="shrink-0 px-3 py-2 rounded-xl border border-white/10 text-neutral-300 font-bebas text-xs tracking-widest uppercase hover:bg-white/10 disabled:opacity-30 transition-all"
+            >
+              Close
+            </button>
+          </div>
+        );
+      })}
+    </div>
+  );
+};
+
+// Tapping the pending row: the same panel as the "already going" prompt, without the new-game part
+const PendingDialog = ({ kind, onClose }: { kind: "game" | "deck"; onClose: () => void }) => {
+  const { user, liveGames, questionGames } = useMailbox();
+  const games = kind === "deck" ? questionGames : liveGames;
+  const [busy, setBusy] = useState(false);
+  const [error, setError] = useState("");
+
+  useEffect(() => {
+    window.dispatchEvent(new CustomEvent("popupStateChange", { detail: { isOpen: true } }));
+    return () => { window.dispatchEvent(new CustomEvent("popupStateChange", { detail: { isOpen: false } })); };
+  }, []);
+  // Nothing left to show once the last one is closed
+  useEffect(() => { if (games.length === 0) onClose(); }, [games.length, onClose]);
+
+  const closeOne = async (g: ActiveGame) => {
+    if (busy || !user?.coupleId) return;
+    setBusy(true);
+    setError("");
+    try { await endGame(user.coupleId, g.id); }
+    catch (err) { console.error(err); setError(`Couldn't close that ${kind}. Try again.`); }
+    finally { setBusy(false); }
+  };
+
+  return (
+    <motion.div
+      initial={{ opacity: 0 }}
+      animate={{ opacity: 1 }}
+      exit={{ opacity: 0 }}
+      onClick={onClose}
+      className="fixed inset-0 z-[100] flex items-center justify-center p-6 overlay-backdrop"
+    >
+      <motion.div
+        initial={{ opacity: 0, y: 20 }}
+        animate={{ opacity: 1, y: 0 }}
+        exit={{ opacity: 0, y: 20 }}
+        transition={{ type: "spring", damping: 20, stiffness: 100 }}
+        onClick={(e) => e.stopPropagation()}
+        className="relative w-full max-w-sm max-h-[90vh] overflow-y-auto overlay-panel rounded-[2.5rem] p-8 space-y-5"
+      >
+        <div className="flex items-start justify-between gap-4">
+          <div className="space-y-1">
+            <p className="font-bebas text-xl tracking-widest uppercase">{`${games.length} ${kind}${games.length === 1 ? "" : "s"} going`}</p>
+            <p className="text-neutral-400 font-outfit text-xs leading-relaxed">
+              {`Tap one to pick up where you left off, or close it for both of you. Finished ones are kept in Past Games.`}
+            </p>
+          </div>
+          <button
+            aria-label="Close"
+            onClick={onClose}
+            className="w-10 h-10 shrink-0 rounded-full bg-white/5 border border-white/5 flex items-center justify-center text-neutral-400 hover:text-white transition-all"
+          >
+            <X className="w-4 h-4" />
+          </button>
+        </div>
+        <PendingList games={games} busy={busy} onClose={closeOne} onOpen={onClose} />
+        {error && <p className="text-rose-500 font-outfit text-xs">{error}</p>}
+      </motion.div>
+    </motion.div>
+  );
+};
+
+const DeckSection = ({ title, subtitle, decks, active, noun, onPick, onOpenPending }: {
+  title: string; subtitle: string; decks: DeckInfo[]; active: ActiveGame[]; noun: string;
+  onPick: (deck: DeckInfo) => void; onOpenPending: () => void;
 }) => {
   const { playTick, vibrateTick } = useSensoryFeedback();
   return (
@@ -121,14 +236,8 @@ const DeckSection = ({ title, subtitle, decks, active, onPick }: {
         <p className="text-[10px] text-neutral-500 font-bebas tracking-[0.2em] uppercase">{subtitle}</p>
       </div>
 
-      {/* Everything in progress, newest on top, so nobody has to hunt for it */}
-      {active.length > 0 && (
-        <div className="space-y-3">
-          <AnimatePresence initial={false}>
-            {active.map(g => <GameBanner key={g.id} game={g} />)}
-          </AnimatePresence>
-        </div>
-      )}
+      {/* Everything in progress sits behind one row, so nobody has to hunt for it */}
+      {active.length > 0 && <PendingRow games={active} noun={noun} onOpen={onOpenPending} />}
 
       <div className="flex gap-4 overflow-x-auto snap-x snap-mandatory scroll-px-6 -mx-6 px-6 pb-2 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
         {decks.map((deck) => {
@@ -265,34 +374,7 @@ const GameLobby = ({ deck, onClose }: { deck: DeckInfo; onClose: () => void }) =
                 {`Close one to make room, or continue and the one waiting longest closes for both of you. Finished ones are kept in Past Games.`}
               </p>
             </div>
-            <div className="space-y-2">
-              {kindGames.map((g, i) => {
-                const gDeck = DECK_BY_ID[g.deck];
-                const GIcon = DECK_ICONS[g.deck];
-                const oldest = i === kindGames.length - 1;
-                return (
-                  <div key={g.id} className="flex items-center gap-3 rounded-2xl bg-white/5 border border-white/10 p-3">
-                    <div className={cn("w-9 h-9 rounded-xl bg-gradient-to-br flex items-center justify-center shrink-0", gDeck.cards[0])}>
-                      <GIcon className="w-4 h-4 text-white" />
-                    </div>
-                    <div className="flex-1 min-w-0">
-                      <p className="font-bebas text-base tracking-wider uppercase leading-none truncate">{gDeck.title}</p>
-                      <p className="font-outfit text-xs text-neutral-400 mt-1 truncate">
-                        {`${LEVEL_LABEL[g.level]} · ${describe(g, uid, partnerUid, partnerName).status}`}
-                      </p>
-                      {oldest && <p className="font-outfit text-[11px] text-amber-300/80 mt-0.5">Waiting longest</p>}
-                    </div>
-                    <button
-                      onClick={() => handleCloseOne(g)}
-                      disabled={busy}
-                      className="shrink-0 px-3 py-2 rounded-xl border border-white/10 text-neutral-300 font-bebas text-xs tracking-widest uppercase hover:bg-white/10 disabled:opacity-30 transition-all"
-                    >
-                      Close
-                    </button>
-                  </div>
-                );
-              })}
-            </div>
+            <PendingList games={kindGames} busy={busy} onClose={handleCloseOne} onOpen={onClose} />
             {error && <p className="text-rose-500 font-outfit text-xs">{error}</p>}
             <div className="space-y-2">
               <button
