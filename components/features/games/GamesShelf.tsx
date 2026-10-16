@@ -99,15 +99,14 @@ const ScoreTally = () => {
   const theirs = partner?.uid ? scores[partner.uid] ?? 0 : 0;
   const partnerName = partner?.displayName?.split(" ")[0] || "Partner";
   return (
-    <div className="shrink-0 rounded-2xl bg-white/5 border border-white/10 px-3 py-2 text-right" aria-label={`Score: you ${mine}, ${partnerName} ${theirs}`}>
-      <p className="text-[10px] text-neutral-500 font-bebas tracking-[0.2em] uppercase leading-none">Score</p>
-      {/* One line each, so a long name never pushes the title around */}
-      <p className="mt-1.5 font-bebas text-base tracking-wider leading-none flex justify-end gap-2">
-        <span className="text-pink-300">You</span><span className="text-white">{mine}</span>
+    <div className="shrink-0 rounded-2xl bg-white/5 border border-white/10 px-3.5 py-2 text-center" aria-label={`Score: you ${mine}, ${partnerName} ${theirs}`}>
+      {/* Yours first in pink, theirs in blue: "1:2" */}
+      <p className="font-bebas text-2xl leading-none tracking-wide whitespace-nowrap">
+        <span className="text-pink-300">{mine}</span>
+        <span className="text-neutral-500 mx-0.5">:</span>
+        <span className="text-blue-300">{theirs}</span>
       </p>
-      <p className="mt-1 font-bebas text-base tracking-wider leading-none flex justify-end gap-2">
-        <span className="text-blue-300 truncate max-w-[6rem]">{partnerName}</span><span className="text-white">{theirs}</span>
-      </p>
+      <p className="mt-1 text-[10px] text-neutral-500 font-bebas tracking-[0.2em] uppercase leading-none">Score</p>
     </div>
   );
 };
