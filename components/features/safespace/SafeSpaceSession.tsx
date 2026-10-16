@@ -28,6 +28,7 @@ import {
 import { AmbientBackground } from "../../ui/AmbientBackground";
 import { cn, formatRelativeTime } from "@/lib/utils";
 import { useSensoryFeedback } from "@/hooks/useSensoryFeedback";
+import { useScrollLock } from "@/hooks/useScrollLock";
 
 interface SafeSpaceSessionProps {
   /** Step out. The space stays open and waiting. */
@@ -65,10 +66,7 @@ export const SafeSpaceSession: React.FC<SafeSpaceSessionProps> = ({ onLeave, onC
   const sessionId = activeSafeSpace?.id;
   const partnerName = partner?.displayName?.split(" ")[0] || "your partner";
 
-  useEffect(() => {
-    document.body.style.overflow = "hidden";
-    return () => { document.body.style.overflow = ""; };
-  }, []);
+  useScrollLock();
 
   useEffect(() => {
     if (!coupleId || !sessionId) return;

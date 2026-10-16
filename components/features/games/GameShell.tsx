@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useEffect, useState } from "react";
+import React, { useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { X } from "lucide-react";
 import { endGame } from "@/lib/firestore-helpers";
@@ -8,6 +8,7 @@ import { DECK_BY_ID } from "@/lib/games/decks";
 import type { ActiveGame } from "@/lib/types";
 import { cn } from "@/lib/utils";
 import { DECK_ICONS, titleFont } from "./deckIcons";
+import { useScrollLock } from "@/hooks/useScrollLock";
 
 // The frame around the board and drawing games: header, the two scores, a status line, and "end for both".
 export const GameShell = ({ game, coupleId, partnerUid, partnerName, scores, scoreLabel, status, onLeave, children }: {
@@ -26,10 +27,7 @@ export const GameShell = ({ game, coupleId, partnerUid, partnerName, scores, sco
   const deck = DECK_BY_ID[game.deck];
   const Icon = DECK_ICONS[game.deck];
 
-  useEffect(() => {
-    document.body.style.overflow = "hidden";
-    return () => { document.body.style.overflow = ""; };
-  }, []);
+  useScrollLock();
 
   const handleEnd = () => {
     if (busy) return;

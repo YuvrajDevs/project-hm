@@ -3,6 +3,7 @@
 import React, { useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { Heart, Sparkles, LogOut, ArrowRight, ShieldCheck } from "lucide-react";
+import { useScrollLock } from "@/hooks/useScrollLock";
 
 interface PartnerLeftOverlayProps {
   onClearData: () => Promise<void>;
@@ -12,11 +13,10 @@ interface PartnerLeftOverlayProps {
 export const PartnerLeftOverlay: React.FC<PartnerLeftOverlayProps> = ({ onClearData, onClose }) => {
   const [loading, setLoading] = useState(false);
 
+  useScrollLock();
   React.useEffect(() => {
-    document.body.style.overflow = 'hidden';
     window.dispatchEvent(new CustomEvent('popupStateChange', { detail: { isOpen: true }}));
     return () => {
-      document.body.style.overflow = '';
       window.dispatchEvent(new CustomEvent('popupStateChange', { detail: { isOpen: false }}));
     };
   }, []);

@@ -7,6 +7,7 @@ import { useMailbox } from "@/context/MailboxContext";
 import { X, Send, Hash, Clock, Lock, Unlock } from "lucide-react";
 import { useSensoryFeedback } from "@/hooks/useSensoryFeedback";
 import { PREMIUM_ICONS, INTENT_ICONS } from "@/lib/constants";
+import { useScrollLock } from "@/hooks/useScrollLock";
 
 const composeStatuses = (Object.keys(PREMIUM_ICONS) as MailboxStatus[]).map(id => ({
     id,
@@ -33,11 +34,10 @@ export const ComposeMessage = ({ onClose }: { onClose: () => void }) => {
   const [timezoneMode, setTimezoneMode] = useState<"MINE" | "PARTNERS">("MINE");
   const [isSecretBeforeUnlock, setIsSecretBeforeUnlock] = useState(false);
 
+  useScrollLock();
   React.useEffect(() => {
-    document.body.style.overflow = 'hidden';
     window.dispatchEvent(new CustomEvent('popupStateChange', { detail: { isOpen: true }}));
     return () => {
-      document.body.style.overflow = '';
       window.dispatchEvent(new CustomEvent('popupStateChange', { detail: { isOpen: false }}));
     };
   }, []);

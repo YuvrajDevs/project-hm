@@ -15,6 +15,7 @@ import {
 import type { PartnerNote } from "@/lib/types";
 import { useSensoryFeedback } from "@/hooks/useSensoryFeedback";
 import { cn } from "@/lib/utils";
+import { useScrollLock } from "@/hooks/useScrollLock";
 
 const PREVIEW = 4;
 const MAX_LENGTH = 140;
@@ -327,13 +328,10 @@ const CloseButton = ({ onClick }: { onClick: () => void }) => (
 
 // A centred pop-up over the blurred page. "tall" gives it a fixed height for lists.
 const Sheet = ({ onClose, tint, tall, children }: { onClose: () => void; tint?: string; tall?: boolean; children: React.ReactNode }) => {
+  useScrollLock();
   useEffect(() => {
     window.dispatchEvent(new CustomEvent("popupStateChange", { detail: { isOpen: true } }));
-    document.body.style.overflow = "hidden";
-    return () => {
-      window.dispatchEvent(new CustomEvent("popupStateChange", { detail: { isOpen: false } }));
-      document.body.style.overflow = "";
-    };
+    return () => { window.dispatchEvent(new CustomEvent("popupStateChange", { detail: { isOpen: false } })); };
   }, []);
   return (
     <motion.div

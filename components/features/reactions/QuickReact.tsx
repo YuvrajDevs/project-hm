@@ -7,6 +7,7 @@ import { ReactionType, QuickReact as QuickReactType } from "@/lib/types";
 import { X, Send, Sparkles } from "lucide-react";
 import { useSensoryFeedback } from "@/hooks/useSensoryFeedback";
 import { REACTION_ICONS } from "@/lib/constants";
+import { useScrollLock } from "@/hooks/useScrollLock";
 
 interface ReactionConfig {
     type: ReactionType;
@@ -32,8 +33,8 @@ export const QuickReact = ({ onClose }: { onClose: () => void }) => {
   const [error, setError] = useState("");
   const { playSend, playPop } = useSensoryFeedback();
 
+  useScrollLock();
   useEffect(() => {
-    document.body.style.overflow = 'hidden';
     window.dispatchEvent(new CustomEvent('popupStateChange', { detail: { isOpen: true }}));
     
     const lastSent = localStorage.getItem('last_signal_sent');
@@ -45,7 +46,6 @@ export const QuickReact = ({ onClose }: { onClose: () => void }) => {
     }
 
     return () => {
-      document.body.style.overflow = '';
       window.dispatchEvent(new CustomEvent('popupStateChange', { detail: { isOpen: false }}));
     };
   }, []);

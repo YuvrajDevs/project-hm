@@ -16,6 +16,7 @@ import { NotificationCenter } from "@/components/features/notifications/Notifica
 import { Bell } from "lucide-react";
 import { PENDING_INVITE_KEY } from "@/lib/constants";
 import dynamic from "next/dynamic";
+import { useScrollLock } from "@/hooks/useScrollLock";
 
 // Screens and dialogs that are not on the first screen load on demand, so opening the app
 // downloads and runs only what the home screen needs.
@@ -143,18 +144,9 @@ export default function Home() {
     }
   }, [isHidden, messages.length, safeSpaceHasNew]);
 
-  useEffect(() => {
-    const isAnyPopupOpen = showCheckInPopup || inSafeSpace || isOverlayActive || 
-      (couple?.resetStatus === "pending" && couple?.resetBy !== user?.uid) ||
-      (!!couple?.whiteFlagBy && couple?.whiteFlagBy !== user?.uid);
-    
-    if (isAnyPopupOpen) {
-      document.body.style.overflow = "hidden";
-    } else {
-      document.body.style.overflow = "";
-    }
-    return () => { document.body.style.overflow = ""; };
-  }, [showCheckInPopup, inSafeSpace, isOverlayActive, couple, user]);
+  useScrollLock(showCheckInPopup || isOverlayActive ||
+    (couple?.resetStatus === "pending" && couple?.resetBy !== user?.uid) ||
+    (!!couple?.whiteFlagBy && couple?.whiteFlagBy !== user?.uid));
 
   useEffect(() => {
     if (!loading) {
@@ -224,12 +216,17 @@ export default function Home() {
   // Once the home screen has settled, fetch the on-demand pieces in the background so the first tap does not wait
   useEffect(() => {
     if (!isPaired) return;
-    const warm = () => { loadCompose(); loadCheckIn(); loadHistory(); loadArchive(); loadSafeSpace(); loadGame(); loadQuestions(); };
+    const warm = () => {
+      loadCompose(); loadCheckIn(); loadHistory(); loadArchive(); loadSafeSpace(); loadGame(); loadQuestions();
+      // The other pages too, so tapping Settings or Profile opens them without a wait
+      router.prefetch("/settings");
+      router.prefetch("/profile");
+    };
     const idle = (window as unknown as { requestIdleCallback?: (cb: () => void, opts?: { timeout: number }) => number }).requestIdleCallback;
-    const timer = idle ? undefined : setTimeout(warm, 2500);
-    if (idle) idle(warm, { timeout: 4000 });
+    const timer = idle ? undefined : setTimeout(warm, 1000);
+    if (idle) idle(warm, { timeout: 1500 });
     return () => { if (timer) clearTimeout(timer); };
-  }, [isPaired]);
+  }, [isPaired, router]);
 
   const [hasLoadedInitially, setHasLoadedInitially] = React.useState(false);
 
