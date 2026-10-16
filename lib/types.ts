@@ -241,6 +241,8 @@ export interface CoupleGame {
   winner?: string | null; // a uid, "draw", or null while playing
   wins?: Record<string, number>;
   match?: number;       // which round of the board game this is, from 1
+
+  replacedBy?: string;  // set when someone starts the next round of this game; the id of the new one
 }
 
 // A game in progress, with its document id

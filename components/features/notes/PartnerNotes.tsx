@@ -41,6 +41,7 @@ export const PartnerNotes = () => {
   const [filter, setFilter] = useState<Filter>("all");
   const [open, setOpen] = useState<PartnerNote | "new" | null>(null);
   const [showAll, setShowAll] = useState(false);
+  const [error, setError] = useState("");
 
   const uid = user?.uid;
   useEffect(() => {
@@ -59,6 +60,8 @@ export const PartnerNotes = () => {
 
   // Without a partner there are no shared notes to show, whatever was loaded before
   const fromPartner = partnerUid ? theirs : [];
+  // The open note, kept in step with the live lists: if it's deleted (here, or by the partner), the pop-up closes
+  const openNote = open === "new" ? "new" : open ? [...mine, ...fromPartner].find(n => n.id === open.id) ?? null : null;
   const kindOf = (n: PartnerNote): Kind => (n.userUid !== user.uid ? "theirs" : n.shared ? "shared" : "private");
   const shown = (
     filter === "mine" ? mine.filter(n => !n.shared)
@@ -97,6 +100,7 @@ export const PartnerNotes = () => {
       </div>
 
       <FilterPills value={filter} onChange={setFilter} />
+      {error && <p className="text-rose-500 font-outfit text-xs">{error}</p>}
 
       {shown.length === 0 ? (
         <div className="py-8 px-6 flex items-center justify-center bg-white/5 border border-white/5 border-dashed rounded-[2rem] text-center">
@@ -128,14 +132,15 @@ export const PartnerNotes = () => {
               <div className="flex-1 min-h-0 overflow-y-auto -mx-6 px-6 pb-2">{grid(shown)}</div>
             </Sheet>
           )}
-          {open && (
+          {openNote && (
             <NoteDialog
-              key={open === "new" ? "new-note" : open.id}
-              note={open === "new" ? null : open}
-              readOnly={open !== "new" && open.userUid !== user.uid}
+              key={openNote === "new" ? "new-note" : openNote.id}
+              note={openNote === "new" ? null : openNote}
+              readOnly={openNote !== "new" && openNote.userUid !== user.uid}
               uid={user.uid}
               partnerName={partnerName}
               onClose={() => setOpen(null)}
+              onError={setError}
             />
           )}
         </AnimatePresence>,
@@ -192,47 +197,34 @@ const NoteCard = ({ note, kind, partnerName, onOpen }: { note: PartnerNote; kind
 
 // Write a new note, or open one: edit it, change who can see it, or delete it.
 // A note from the partner opens read-only.
-const NoteDialog = ({ note, readOnly, uid, partnerName, onClose }: {
-  note: PartnerNote | null; readOnly: boolean; uid: string; partnerName: string; onClose: () => void;
+const NoteDialog = ({ note, readOnly, uid, partnerName, onClose, onError }: {
+  note: PartnerNote | null; readOnly: boolean; uid: string; partnerName: string; onClose: () => void; onError: (msg: string) => void;
 }) => {
   const [text, setText] = useState(note?.text ?? "");
   const [shared, setShared] = useState(!!note?.shared);
-  const [busy, setBusy] = useState(false);
-  const [error, setError] = useState("");
   const [confirmDelete, setConfirmDelete] = useState(false);
   const { playPop } = useSensoryFeedback();
 
   const kind: Kind = readOnly ? "theirs" : shared ? "shared" : "private";
   const changed = !note || text.trim() !== note.text || shared !== !!note.shared;
 
-  const save = async () => {
+  // The list updates the moment a change is made on this phone, so the pop-up closes right away;
+  // if the change doesn't reach the server, a message shows above the notes
+  const save = () => {
     const t = text.trim();
-    if (!t || busy) return;
-    setBusy(true);
-    setError("");
-    try {
-      if (note) await updatePartnerNote(uid, note.id, t, shared);
-      else await addPartnerNote(uid, t, shared);
-      playPop();
-      onClose();
-    } catch (err) {
-      console.error(err);
-      setError("Couldn't save that. Check your connection and try again.");
-      setBusy(false);
-    }
+    if (!t) return;
+    onError("");
+    const write = note ? updatePartnerNote(uid, note.id, t, shared) : addPartnerNote(uid, t, shared);
+    write.catch((err) => { console.error(err); onError("A note didn't save. Check your connection and try again."); });
+    playPop();
+    onClose();
   };
 
-  const remove = async () => {
-    if (!note || busy) return;
-    setBusy(true);
-    try {
-      await deletePartnerNote(uid, note.id);
-      onClose();
-    } catch (err) {
-      console.error(err);
-      setError("Couldn't delete that. Try again.");
-      setBusy(false);
-    }
+  const remove = () => {
+    if (!note) return;
+    onError("");
+    deletePartnerNote(uid, note.id).catch((err) => { console.error(err); onError("A note didn't delete. Try again."); });
+    onClose();
   };
 
   return (
@@ -282,8 +274,6 @@ const NoteDialog = ({ note, readOnly, uid, partnerName, onClose }: {
           : shared ? `${partnerName} can read this note too.` : `Only you can see this note.`}
       </p>
 
-      {error && <p className="text-rose-300 font-outfit text-xs">{error}</p>}
-
       {!readOnly && (
         confirmDelete ? (
           <div className="grid grid-cols-2 gap-3">
@@ -295,7 +285,6 @@ const NoteDialog = ({ note, readOnly, uid, partnerName, onClose }: {
             </button>
             <button
               onClick={remove}
-              disabled={busy}
               className="h-14 rounded-2xl bg-rose-500 text-white font-bebas tracking-widest uppercase hover:bg-rose-600 active:scale-95 disabled:opacity-30 transition-all"
             >
               Delete
@@ -314,10 +303,10 @@ const NoteDialog = ({ note, readOnly, uid, partnerName, onClose }: {
             )}
             <button
               onClick={save}
-              disabled={busy || !text.trim() || !changed}
+              disabled={!text.trim() || !changed}
               className="flex-1 h-14 rounded-2xl bg-white text-black font-bebas tracking-widest uppercase hover:bg-neutral-200 active:scale-95 disabled:opacity-30 transition-all"
             >
-              {busy ? "Saving..." : note ? "Save Changes" : "Save Note"}
+              {note ? "Save Changes" : "Save Note"}
             </button>
           </div>
         )

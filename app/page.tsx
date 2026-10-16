@@ -83,6 +83,20 @@ export default function Home() {
   const [openQuestionsId, setOpenQuestionsId] = React.useState<string | null>(null);
   const inQuestions = !!openQuestionsId && questionGames.some(g => g.id === openQuestionsId);
 
+  // When the partner starts the next round of the game that's open here, follow them into it
+  const replacements = React.useRef<Record<string, string>>({});
+  useEffect(() => {
+    for (const g of [...liveGames, ...questionGames]) if (g.replacedBy) replacements.current[g.id] = g.replacedBy;
+  }, [liveGames, questionGames]);
+  useEffect(() => {
+    const next = openGameId && !inGame ? replacements.current[openGameId] : null;
+    if (next && liveGames.some(g => g.id === next)) setOpenGameId(next);
+  }, [openGameId, inGame, liveGames]);
+  useEffect(() => {
+    const next = openQuestionsId && !inQuestions ? replacements.current[openQuestionsId] : null;
+    if (next && questionGames.some(g => g.id === next)) setOpenQuestionsId(next);
+  }, [openQuestionsId, inQuestions, questionGames]);
+
   // Signing out, or the space being closed by the partner, always leaves the room
   useEffect(() => {
     if (!activeSafeSpace) setSafeSpaceOpen(false);

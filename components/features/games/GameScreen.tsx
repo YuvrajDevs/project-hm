@@ -6,7 +6,7 @@ import { ArrowRight, X } from "lucide-react";
 import { useMailbox } from "@/context/MailboxContext";
 import {
   advanceGame, chooseTruthOrDare, endGame, joinGame, judgeTruthOrDare,
-  startGame, submitGameAnswer,
+  replayGame, submitGameAnswer,
 } from "@/lib/firestore-helpers";
 import { DECK_BY_ID, type DeckInfo } from "@/lib/games/decks";
 import { getCard, isRoundComplete, roundKey, totalScores, truthDarePlayer, type GameCard } from "@/lib/games/engine";
@@ -82,12 +82,12 @@ export const GameScreen = ({ gameId, onLeave }: { gameId: string; onLeave: () =>
   };
 
   const handleNext = () => run(async () => { playTick(); await advanceGame(coupleId, gameId, round); });
-  const handleEnd = () => run(async () => { await endGame(coupleId, gameId); onLeave(); });
+  // Leave straight away; the game is saved to Past Games (if finished) and removed in the background
+  const handleEnd = () => { onLeave(); endGame(coupleId, gameId).catch(console.error); };
   // A fresh set of cards as a new game; this finished one goes to Past Games
   const handleReplay = () => run(async () => {
-    const newId = await startGame(coupleId, uid, partnerUid, game.deck, user?.displayName?.split(" ")[0]);
-    openGame(newId);
-    await endGame(coupleId, gameId);
+    const newId = await replayGame(coupleId, gameId, uid, partnerUid, user?.displayName?.split(" ")[0]);
+    if (newId) openGame(newId);
     playPop();
   });
 

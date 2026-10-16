@@ -112,24 +112,20 @@ export const BucketList = () => {
 const AddItem = ({ coupleId, onError }: { coupleId: string; onError: (msg: string) => void }) => {
   const { user, partner } = useMailbox();
   const [text, setText] = useState("");
-  const [busy, setBusy] = useState(false);
   const { playPop } = useSensoryFeedback();
 
-  const add = async () => {
+  // Shows up in the list straight away; if it doesn't reach the server, the text comes back to try again
+  const add = () => {
     const t = text.trim();
-    if (!t || busy || !user) return;
-    setBusy(true);
+    if (!t || !user) return;
     onError("");
-    try {
-      await addBucketItem(coupleId, user.uid, t, partner?.uid, user.displayName?.split(" ")[0]);
-      setText("");
-      playPop();
-    } catch (err) {
+    setText("");
+    playPop();
+    addBucketItem(coupleId, user.uid, t, partner?.uid, user.displayName?.split(" ")[0]).catch((err) => {
       console.error(err);
+      setText(t);
       onError("Couldn't add that. Check your connection and try again.");
-    } finally {
-      setBusy(false);
-    }
+    });
   };
 
   return (
@@ -144,7 +140,7 @@ const AddItem = ({ coupleId, onError }: { coupleId: string; onError: (msg: strin
       <button
         type="submit"
         aria-label="Add to bucket list"
-        disabled={busy || !text.trim()}
+        disabled={!text.trim()}
         className="w-14 shrink-0 rounded-2xl bg-white text-black flex items-center justify-center hover:bg-neutral-200 active:scale-95 disabled:opacity-30 transition-all"
       >
         <Plus className="w-5 h-5" />

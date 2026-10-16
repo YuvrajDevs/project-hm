@@ -4,7 +4,7 @@ import React, { useEffect, useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { X } from "lucide-react";
 import { useMailbox } from "@/context/MailboxContext";
-import { endGame, joinGame, startGame, submitQuestionAnswer } from "@/lib/firestore-helpers";
+import { endGame, joinGame, replayGame, submitQuestionAnswer } from "@/lib/firestore-helpers";
 import { DECK_BY_ID } from "@/lib/games/decks";
 import { answeredCount, getCard, nextUnanswered, roundKey } from "@/lib/games/engine";
 import { useSensoryFeedback } from "@/hooks/useSensoryFeedback";
@@ -63,12 +63,11 @@ export const QuestionDeckScreen = ({ gameId, onLeave }: { gameId: string; onLeav
     }
   };
 
-  const handleEnd = () => run(async () => { await endGame(coupleId, gameId); onLeave(); });
+  const handleEnd = () => { onLeave(); endGame(coupleId, gameId).catch(console.error); };
   // New questions as a new deck; this one goes to Past Games
   const handleNewDeck = () => run(async () => {
-    const newId = await startGame(coupleId, uid, partnerUid, game.deck, myName);
-    openQuestions(newId);
-    await endGame(coupleId, gameId);
+    const newId = await replayGame(coupleId, gameId, uid, partnerUid, myName);
+    if (newId) openQuestions(newId);
     playPop();
   });
 

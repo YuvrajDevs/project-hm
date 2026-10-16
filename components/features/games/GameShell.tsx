@@ -31,11 +31,11 @@ export const GameShell = ({ game, coupleId, partnerUid, partnerName, scores, sco
     return () => { document.body.style.overflow = ""; };
   }, []);
 
-  const handleEnd = async () => {
+  const handleEnd = () => {
     if (busy) return;
     setBusy(true);
-    try { await endGame(coupleId, game.id); onLeave(); }
-    catch (err) { console.error(err); setBusy(false); }
+    onLeave();
+    endGame(coupleId, game.id).catch(console.error);
   };
 
   return (

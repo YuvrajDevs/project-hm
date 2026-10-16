@@ -538,16 +538,68 @@ export const addScribbleStroke = (coupleId: string, gameId: string, round: numbe
 export const clearScribble = (coupleId: string, gameId: string, round: number) =>
   updateDoc(gameRef(coupleId, gameId), { [`strokes.r${round}`]: [] });
 
+/** Scribble: settle how a round ended, once. A skip can't undo a right guess that got there first, or the other way round. */
+const endScribbleRound = (coupleId: string, gameId: string, round: number, result: "solved" | "skipped", extra: Record<string, unknown> = {}) =>
+  runTransaction(db, async (tx) => {
+    const snap = await tx.get(gameRef(coupleId, gameId));
+    if (!snap.exists()) return;
+    const g = snap.data() as CoupleGame;
+    if (g.round !== round || g.sb?.[`r${round}`]?.result) return;
+    tx.update(gameRef(coupleId, gameId), { [`sb.r${round}.result`]: result, ...extra });
+  });
+
 /** Scribble: record a guess; a right one ends the round */
 export const submitScribbleGuess = (coupleId: string, gameId: string, round: number, guess: string, correct: boolean) =>
-  updateDoc(gameRef(coupleId, gameId), {
-    [`guesses.r${round}`]: arrayUnion(guess),
-    ...(correct ? { [`sb.r${round}.result`]: "solved" } : {}),
-  });
+  correct
+    ? endScribbleRound(coupleId, gameId, round, "solved", { [`guesses.r${round}`]: arrayUnion(guess) })
+    : updateDoc(gameRef(coupleId, gameId), { [`guesses.r${round}`]: arrayUnion(guess) });
 
 /** Scribble: the artist gives up on this word */
 export const skipScribble = (coupleId: string, gameId: string, round: number) =>
-  updateDoc(gameRef(coupleId, gameId), { [`sb.r${round}.result`]: "skipped" });
+  endScribbleRound(coupleId, gameId, round, "skipped");
+
+/**
+ * "Play again" / "New deck": start a fresh game of the same kind and close the finished one.
+ * If both tap at once, the second tap opens the game the first one made instead of making another.
+ * Returns the new game's id, or null if the finished game is already gone.
+ */
+export const replayGame = async (coupleId: string, oldId: string, uid: string, partnerUid: string, starterName?: string) => {
+  const { dealGame } = await import("./games/engine");
+  const newRef = doc(collection(db, "couples", coupleId, "games"));
+  let deck: DeckId | null = null;
+  const result = await runTransaction(db, async (tx) => {
+    const snap = await tx.get(gameRef(coupleId, oldId));
+    if (!snap.exists()) return null;
+    const old = snap.data() as CoupleGame & { replacedBy?: string };
+    if (old.replacedBy) return old.replacedBy;
+    deck = old.deck;
+    const game: CoupleGame = {
+      deck: old.deck,
+      cards: [],
+      ...dealGame(old.deck, uid),
+      round: 0,
+      players: [uid, partnerUid],
+      startedBy: uid,
+      startedAt: new Date().toISOString(),
+      joined: { [uid]: true },
+    };
+    tx.set(newRef, game);
+    tx.update(gameRef(coupleId, oldId), { replacedBy: newRef.id });
+    return newRef.id;
+  });
+  // Only the person who made the new game tidies up the old one and tells the partner
+  if (result && result === newRef.id && deck) {
+    await endGame(coupleId, oldId).catch(console.error);
+    const written = slotFor(deck) === "questions";
+    await notifyPartner(partnerUid, {
+      uid: partnerUid,
+      type: "GAME",
+      title: written ? "Questions for You" : "Come Play",
+      body: `${starterName || "Your partner"} started another round of ${DECK_BY_ID[deck].title}.`,
+    }).catch(console.error);
+  }
+  return result;
+};
 
 /** Close a game for both. A finished one is kept in the history first. */
 export const endGame = async (coupleId: string, gameId: string) => {

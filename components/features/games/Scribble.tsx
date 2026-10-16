@@ -3,7 +3,7 @@
 import React, { useEffect, useRef, useState } from "react";
 import { ArrowRight, Eraser } from "lucide-react";
 import {
-  addScribbleStroke, advanceGame, clearScribble, endGame, skipScribble, startGame, submitScribbleGuess,
+  addScribbleStroke, advanceGame, clearScribble, endGame, replayGame, skipScribble, submitScribbleGuess,
 } from "@/lib/firestore-helpers";
 import { drawer, getCard, guessMatches, roundKey, totalScores } from "@/lib/games/engine";
 import type { ActiveGame } from "@/lib/types";
@@ -83,16 +83,15 @@ export const Scribble = ({ game, uid, partnerUid, partnerName, coupleId, onLeave
           <div className="flex-1" />
           <BigButton
             onClick={() => run(async () => {
-              const newId = await startGame(coupleId, uid, partnerUid, game.deck);
-              openGame(newId);
-              await endGame(coupleId, game.id);
+              const newId = await replayGame(coupleId, game.id, uid, partnerUid);
+              if (newId) openGame(newId);
               playPop();
             })}
             disabled={busy}
           >
             Play 10 More
           </BigButton>
-          <BigButton quiet onClick={() => run(async () => { await endGame(coupleId, game.id); onLeave(); })} disabled={busy}>
+          <BigButton quiet onClick={() => { onLeave(); endGame(coupleId, game.id).catch(console.error); }} disabled={busy}>
             Pick Another Game
           </BigButton>
         </>
