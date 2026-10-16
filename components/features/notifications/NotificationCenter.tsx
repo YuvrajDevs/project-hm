@@ -5,21 +5,14 @@ import { motion, AnimatePresence } from "framer-motion";
 import { useMailbox } from "@/context/MailboxContext";
 import { X, Bell, MessageCircle, Heart, Sparkles, Trash2, CheckCircle2 } from "lucide-react";
 import { formatRelativeTime } from "@/lib/utils";
+import { useScrollLock } from "@/hooks/useScrollLock";
 
 export const NotificationCenter = ({ isOpen, onClose }: { isOpen: boolean, onClose: () => void }) => {
     const { notifications, markNotiRead, clearAllNotis, unreadNotificationsCount } = useMailbox();
 
+    useScrollLock(isOpen);
     React.useEffect(() => {
-        if (isOpen) {
-            document.body.style.overflow = 'hidden';
-            window.dispatchEvent(new CustomEvent('popupStateChange', { detail: { isOpen: true }}));
-        } else {
-            document.body.style.overflow = '';
-            window.dispatchEvent(new CustomEvent('popupStateChange', { detail: { isOpen: false }}));
-        }
-        return () => {
-            document.body.style.overflow = '';
-        };
+        window.dispatchEvent(new CustomEvent('popupStateChange', { detail: { isOpen } }));
     }, [isOpen]);
 
     return (

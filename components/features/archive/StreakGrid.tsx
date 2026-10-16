@@ -12,6 +12,7 @@ import {
 } from "lucide-react";
 import { formatDateId, eventFallsOn } from "@/lib/utils";
 import { useMailbox } from "@/context/MailboxContext";
+import { useScrollLock } from "@/hooks/useScrollLock";
 
 interface StreakGridProps {
   history: DailyCheckIn[];
@@ -25,16 +26,14 @@ export const StreakGrid: React.FC<StreakGridProps> = ({ history }) => {
   const [viewDate, setViewDate] = useState(new Date());
   const [isAddingEvent, setIsAddingEvent] = useState(false);
 
+  useScrollLock(!!selectedDate);
   React.useEffect(() => {
     if (selectedDate) {
-        document.body.style.overflow = 'hidden';
         window.dispatchEvent(new CustomEvent('popupStateChange', { detail: { isOpen: true }}));
     } else {
-        document.body.style.overflow = '';
         window.dispatchEvent(new CustomEvent('popupStateChange', { detail: { isOpen: false }}));
     }
     return () => {
-        document.body.style.overflow = '';
         window.dispatchEvent(new CustomEvent('popupStateChange', { detail: { isOpen: false }}));
     };
   }, [selectedDate]);

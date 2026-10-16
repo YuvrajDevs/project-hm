@@ -16,11 +16,17 @@ import { cn } from "@/lib/utils";
 import { DECK_ICONS, openGame, titleFont } from "./deckIcons";
 import { BoardGame } from "./BoardGame";
 import { Scribble } from "./Scribble";
+import { useScrollLock } from "@/hooks/useScrollLock";
 
 // Full-screen game. The game lives in Firestore, so either person can leave and come back to the same card.
 export const GameScreen = ({ gameId, onLeave }: { gameId: string; onLeave: () => void }) => {
   const { user, partner, liveGames } = useMailbox();
-  const game = liveGames.find(g => g.id === gameId) ?? null;
+  // Once the game is gone (ended by either of you), keep showing its last state while the screen fades out;
+  // with nothing to draw, the closing animation never finishes and the screen never really goes away
+  const live = liveGames.find(g => g.id === gameId) ?? null;
+  const [lastSeen, setLastSeen] = useState(live);
+  if (live && live !== lastSeen) setLastSeen(live);
+  const game = live ?? lastSeen;
   const [confirmEnd, setConfirmEnd] = useState(false);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState("");
@@ -31,10 +37,7 @@ export const GameScreen = ({ gameId, onLeave }: { gameId: string; onLeave: () =>
   const coupleId = user?.coupleId || "";
   const partnerName = partner?.displayName?.split(" ")[0] || "Your partner";
 
-  useEffect(() => {
-    document.body.style.overflow = "hidden";
-    return () => { document.body.style.overflow = ""; };
-  }, []);
+  useScrollLock();
 
   // Opening the game counts as joining it
   const joined = !!game?.joined?.[uid];

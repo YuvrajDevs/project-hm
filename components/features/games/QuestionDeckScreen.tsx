@@ -11,12 +11,18 @@ import { useSensoryFeedback } from "@/hooks/useSensoryFeedback";
 import { cn } from "@/lib/utils";
 import { DECK_ICONS, openQuestions, titleFont } from "./deckIcons";
 import type { ActiveGame } from "@/lib/types";
+import { useScrollLock } from "@/hooks/useScrollLock";
 
 // Question decks: each person answers every card at their own pace.
 // Nothing of the other person's shows until both are done; then it's one list, question by question.
 export const QuestionDeckScreen = ({ gameId, onLeave }: { gameId: string; onLeave: () => void }) => {
   const { user, partner, questionGames } = useMailbox();
-  const game = questionGames.find(g => g.id === gameId) ?? null;
+  // Once the game is gone (ended by either of you), keep showing its last state while the screen fades out;
+  // with nothing to draw, the closing animation never finishes and the screen never really goes away
+  const live = questionGames.find(g => g.id === gameId) ?? null;
+  const [lastSeen, setLastSeen] = useState(live);
+  if (live && live !== lastSeen) setLastSeen(live);
+  const game = live ?? lastSeen;
   const [confirmEnd, setConfirmEnd] = useState(false);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState("");
@@ -28,10 +34,7 @@ export const QuestionDeckScreen = ({ gameId, onLeave }: { gameId: string; onLeav
   const myName = user?.displayName?.split(" ")[0];
   const partnerName = partner?.displayName?.split(" ")[0] || "Your partner";
 
-  useEffect(() => {
-    document.body.style.overflow = "hidden";
-    return () => { document.body.style.overflow = ""; };
-  }, []);
+  useScrollLock();
 
   const joined = !!game?.joined?.[uid];
   useEffect(() => {
