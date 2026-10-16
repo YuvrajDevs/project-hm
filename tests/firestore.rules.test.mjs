@@ -440,14 +440,14 @@ test("a partner can read only the notes shared with them", async () => {
   await assertFails(updateDoc(doc(db(BOB), "users", ALICE, "notes", "n2"), { text: "changed" }));
 });
 
-test("both partners share the bucket list; only the adder removes an item", async () => {
+test("both partners share the bucket list and can tick or remove items", async () => {
   await seedCouple();
   const item = { text: "See the sunrise", addedBy: ALICE, done: false, createdAt: "2026-10-17T10:00:00Z" };
   await assertSucceeds(setDoc(doc(db(ALICE), "couples", COUPLE, "bucket_list", "b1"), item));
   await assertFails(setDoc(doc(db(BOB), "couples", COUPLE, "bucket_list", "b2"), { ...item, addedBy: ALICE }));
   await assertSucceeds(updateDoc(doc(db(BOB), "couples", COUPLE, "bucket_list", "b1"), { done: true, doneBy: BOB, doneAt: "2026-10-17T11:00:00Z" }));
   await assertFails(updateDoc(doc(db(BOB), "couples", COUPLE, "bucket_list", "b1"), { text: "Something else" }));
-  await assertFails(deleteDoc(doc(db(BOB), "couples", COUPLE, "bucket_list", "b1")));
   await assertFails(getDocs(collection(db(MALLORY), "couples", COUPLE, "bucket_list")));
-  await assertSucceeds(deleteDoc(doc(db(ALICE), "couples", COUPLE, "bucket_list", "b1")));
+  await assertFails(deleteDoc(doc(db(MALLORY), "couples", COUPLE, "bucket_list", "b1")));
+  await assertSucceeds(deleteDoc(doc(db(BOB), "couples", COUPLE, "bucket_list", "b1")));
 });

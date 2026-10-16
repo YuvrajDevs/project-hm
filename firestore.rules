@@ -240,7 +240,7 @@ service cloud.firestore {
         allow read, create, update, delete: if isPartOfCouple(coupleId);
       }
 
-      // Shared bucket list: either can add or tick off; only the one who added it removes it (or a reset/unpair)
+      // Shared bucket list: either partner can add, tick off or remove items
       match /bucket_list/{itemId} {
         allow read: if isPartOfCouple(coupleId);
         allow create: if isPartOfCouple(coupleId)
@@ -250,7 +250,7 @@ service cloud.firestore {
           && request.resource.data.text.size() <= 120;
         allow update: if isPartOfCouple(coupleId)
           && changedOnly(['done', 'doneBy', 'doneAt']);
-        allow delete: if isPartOfCouple(coupleId) && canDeleteCoupleItem(coupleId, resource.data.addedBy);
+        allow delete: if isPartOfCouple(coupleId);
       }
 
       // Finished games, kept so the two of them can look back at them

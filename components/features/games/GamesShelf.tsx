@@ -256,17 +256,17 @@ const DeckSection = ({ title, subtitle, decks, active, noun, onPick, onOpenPendi
               key={deck.id}
               onClick={() => { playTick(); vibrateTick(); onPick(deck); }}
               className={cn(
-                "relative shrink-0 snap-start w-36 h-36 md:w-44 md:h-44 rounded-[2rem] p-4 md:p-5 flex flex-col justify-between text-left",
+                "relative shrink-0 snap-start w-[9.5rem] h-[11rem] md:w-44 md:h-[12.5rem] rounded-[1.75rem] p-4 flex flex-col justify-between text-left overflow-hidden",
                 "border border-white/10 bg-gradient-to-br active:scale-[0.97] hover:border-white/20 transition-all",
                 deck.gradient
               )}
             >
-              <div className="w-10 h-10 rounded-xl bg-white/10 flex items-center justify-center">
-                <Icon className="w-5 h-5 text-white" />
+              <div className="w-9 h-9 rounded-xl bg-white/10 flex items-center justify-center">
+                <Icon className="w-[18px] h-[18px] text-white" />
               </div>
-              <div className="space-y-1">
-                <h3 className="text-xl font-bebas text-white tracking-widest uppercase leading-[0.95]">{deck.title}</h3>
-                <p className="text-white/60 font-outfit text-xs leading-snug">{deck.blurb}</p>
+              <div className="space-y-1.5">
+                <h3 className="text-[1.15rem] font-bebas text-white tracking-wider uppercase leading-[1.05] line-clamp-3">{deck.title}</h3>
+                <p className="text-white/60 font-outfit text-xs leading-snug line-clamp-2">{deck.blurb}</p>
               </div>
             </button>
           );

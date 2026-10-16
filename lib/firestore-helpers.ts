@@ -975,10 +975,11 @@ export const deletePartnerNote = async (uid: string, noteId: string) => {
   return deleteDoc(noteRef);
 };
 
-export const updatePartnerNote = async (uid: string, noteId: string, text: string) => {
+export const updatePartnerNote = async (uid: string, noteId: string, text: string, shared?: boolean) => {
   const noteRef = doc(db, "users", uid, "notes", noteId);
   return updateDoc(noteRef, {
     text,
+    ...(shared === undefined ? {} : { shared }),
     updatedAt: Timestamp.now()
   });
 };

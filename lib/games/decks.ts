@@ -66,9 +66,9 @@ export const DECKS: DeckInfo[] = [
   deck("tot_classic", "play", "This or That", "Quick picks, no overthinking", MATCH, "choice", "orange", "rose"),
   deck("nhie_classic", "play", "Never Have I Ever", "Confess everything", "Say whether you have or haven't. Same answer, a point each.", "choice", "indigo", "violet", NHIE),
   deck("likely_classic", "play", "Who's More Likely", "Point at each other", WHO_HOW, "who", "teal", "cyan"),
-  deck("tot_after_dark", "play", "This or That: After Dark", "Quick picks, late at night", MATCH, "choice", "pink", "fuchsia"),
-  deck("nhie_after_dark", "play", "Never Have I Ever: After Dark", "The ones you whisper", "Say whether you have or haven't. Same answer, a point each.", "choice", "fuchsia", "purple", NHIE),
-  deck("likely_after_dark", "play", "Who's More Likely: After Dark", "Point, then blush", WHO_HOW, "who", "rose", "pink"),
+  deck("tot_after_dark", "play", "This or That 🌶️", "Quick picks, after dark", MATCH, "choice", "pink", "fuchsia"),
+  deck("nhie_after_dark", "play", "Never Have I Ever 🌶️", "The ones you whisper", "Say whether you have or haven't. Same answer, a point each.", "choice", "fuchsia", "purple", NHIE),
+  deck("likely_after_dark", "play", "Who's More Likely 🌶️", "Point, then blush", WHO_HOW, "who", "rose", "pink"),
   deck("yay_or_nay", "play", "Yay or Nay", "Kinks and things to try", "Yay or nay on things you might want to try. Matches are a point, and a hint.", "choice", "red", "rose", { a: "Yay", b: "Nay", suffix: "?" }),
 
   // Getting to know
