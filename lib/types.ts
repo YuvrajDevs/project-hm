@@ -1,4 +1,4 @@
-import type { DeckId, GameLevel } from "./games/decks";
+import type { DeckId } from "./games/decks";
 
 export type UserRole = "PARTNER_A" | "PARTNER_B";
 
@@ -173,7 +173,7 @@ export interface SafeSpaceSession {
 export interface AppNotification {
   id: string;
   uid: string; // recipient
-  type: "MAILBOX" | "CHECK_IN" | "REACTION" | "SAFE_SPACE" | "GAME";
+  type: "MAILBOX" | "CHECK_IN" | "REACTION" | "SAFE_SPACE" | "GAME" | "BUCKET";
   title: string;
   body: string;
   read: boolean;
@@ -196,10 +196,22 @@ export interface PartnerNote {
   id: string;
   userUid: string; // The person who wrote the note
   text: string;    // The note itself (max 140 chars)
+  shared?: boolean; // true: the partner can read it too; otherwise only the writer
   createdAt: string;
 }
 
-// 🎲 Games: one game at a time per couple, stored at couples/{id}/games/current
+// 🪣 Bucket list: things the two of them want to do together
+export interface BucketItem {
+  id: string;
+  text: string;
+  addedBy: string;
+  done: boolean;
+  doneBy?: string | null;
+  doneAt?: string | null;
+  createdAt: string;
+}
+
+// 🎲 Games: each game in progress is a document in couples/{id}/games
 export interface GameAnswer {
   pick?: string;  // "a" / "b" for two-option cards, a uid for "who's more likely"
   text?: string;  // written answer for question decks
@@ -207,16 +219,28 @@ export interface GameAnswer {
 
 export interface CoupleGame {
   deck: DeckId;
-  level: GameLevel;
-  cards: number[];      // card positions in the question list, in play order
+  level?: string;       // only on games from the older version
+  cards: number[];      // card positions in the deck, in play order (empty for board games)
   dareCards?: number[]; // truth or dare: dares are dealt separately from truths
-  round: number;        // live games: the card on the table, equal to cards.length once finished. Unused by question decks.
+  round: number;        // the card on the table, equal to cards.length once finished. Unused by question and board games.
   players: [string, string]; // [who started, their partner]
   startedBy: string;
   startedAt: string;
   joined: Record<string, boolean>;
   answers?: Record<string, Record<string, GameAnswer>>;  // round key -> uid -> answer
   td?: Record<string, { choice?: "truth" | "dare"; result?: "done" | "skipped" }>;
+
+  // Scribble, per round: the drawing so far, wrong guesses, and how the round ended
+  strokes?: Record<string, string[]>;  // round key -> strokes, each "x,y x,y …" on a 0–1000 grid
+  guesses?: Record<string, string[]>;
+  sb?: Record<string, { result?: "solved" | "skipped" }>;
+
+  // Board games: the current board, whose turn, and the running tally across rounds
+  board?: string[];     // "" for empty, otherwise the uid that owns the cell
+  turn?: string;
+  winner?: string | null; // a uid, "draw", or null while playing
+  wins?: Record<string, number>;
+  match?: number;       // which round of the board game this is, from 1
 }
 
 // A game in progress, with its document id

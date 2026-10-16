@@ -36,9 +36,10 @@ import {
   AppNotification,
   CoupleGame,
   GameAnswer,
-  ActiveGame
+  ActiveGame,
+  BucketItem
 } from "./types";
-import { DECK_BY_ID, LEVEL_LABEL, slotFor, type DeckId, type GameLevel } from "./games/decks";
+import { DECK_BY_ID, slotFor, type DeckId } from "./games/decks";
 import type { User as FirebaseUser } from "firebase/auth";
 import { REACTION_ICONS } from "./constants";
 
@@ -392,11 +393,17 @@ export const subscribeToGames = (coupleId: string, callback: (games: ActiveGame[
     () => callback([])
   );
 
-/** A game counts as finished when the last card is done, or for a question deck, when both have answered everything */
-const isFinished = (g: CoupleGame) =>
-  slotFor(g.deck) === "questions"
-    ? g.players.every(u => g.cards.every((_, r) => !!g.answers?.[`r${r}`]?.[u]?.text))
-    : g.round >= g.cards.length;
+/**
+ * A game counts as finished when the last card is done, for a question deck when both have answered everything,
+ * and for a board game once anyone has won a round
+ */
+const isFinished = (g: CoupleGame) => {
+  if (!DECK_BY_ID[g.deck]) return false;
+  const mechanic = DECK_BY_ID[g.deck].mechanic;
+  if (mechanic === "xo" || mechanic === "connect4") return Object.values(g.wins ?? {}).some(n => n > 0);
+  if (mechanic === "open") return g.players.every(u => g.cards.every((_, r) => !!g.answers?.[`r${r}`]?.[u]?.text));
+  return g.round >= g.cards.length;
+};
 
 /**
  * Keep a finished game before it's removed, so it can be read again later.
@@ -418,13 +425,13 @@ export const getGameHistory = async (coupleId: string) => {
 };
 
 /** Deal a new game alongside the others. Returns its id. */
-export const startGame = async (coupleId: string, uid: string, partnerUid: string, deck: DeckId, level: GameLevel, starterName?: string) => {
-  // The question lists are only downloaded when someone actually plays
-  const { dealCards } = await import("./games/engine");
+export const startGame = async (coupleId: string, uid: string, partnerUid: string, deck: DeckId, starterName?: string) => {
+  // The card lists are only downloaded when someone actually plays
+  const { dealGame } = await import("./games/engine");
   const game: CoupleGame = {
     deck,
-    level,
-    ...dealCards(deck, level),
+    cards: [],
+    ...dealGame(deck, uid),
     round: 0,
     players: [uid, partnerUid],
     startedBy: uid,
@@ -439,8 +446,8 @@ export const startGame = async (coupleId: string, uid: string, partnerUid: strin
     type: "GAME",
     title: written ? "Questions for You" : "Come Play",
     body: written
-      ? `${starterName || "Your partner"} started ${DECK_BY_ID[deck].title} (${LEVEL_LABEL[level]}). Answer whenever you're ready.`
-      : `${starterName || "Your partner"} started ${DECK_BY_ID[deck].title} (${LEVEL_LABEL[level]}). Your move.`,
+      ? `${starterName || "Your partner"} started ${DECK_BY_ID[deck].title}. Answer whenever you're ready.`
+      : `${starterName || "Your partner"} started ${DECK_BY_ID[deck].title}. Your move.`,
   });
   return ref.id;
 };
@@ -478,6 +485,69 @@ export const advanceGame = async (coupleId: string, gameId: string, fromRound: n
     tx.update(gameRef(coupleId, gameId), { round: fromRound + 1 });
   });
 };
+
+/**
+ * Board games: place a piece. Runs as a transaction so a move only lands on the player's own turn,
+ * in an empty cell, and the win is counted exactly once.
+ */
+export const playBoardMove = async (coupleId: string, gameId: string, uid: string, cell: number) => {
+  const { c4Landing, c4Winner, xoWinner } = await import("./games/engine");
+  await runTransaction(db, async (tx) => {
+    const snap = await tx.get(gameRef(coupleId, gameId));
+    if (!snap.exists()) return;
+    const g = snap.data() as CoupleGame;
+    if (!g.board || g.winner || g.turn !== uid) return;
+    const connect4 = DECK_BY_ID[g.deck]?.mechanic === "connect4";
+    // In four in a row the tap picks a column; the coin falls to the lowest free cell
+    const target = connect4 ? c4Landing(g.board, cell) : cell;
+    if (target < 0 || g.board[target]) return;
+    const board = [...g.board];
+    board[target] = uid;
+    const winner = connect4 ? c4Winner(board) : xoWinner(board);
+    const other = g.players.find(p => p !== uid) ?? uid;
+    tx.update(gameRef(coupleId, gameId), {
+      board,
+      turn: winner ? g.turn : other,
+      winner: winner ?? null,
+      ...(winner && winner !== "draw" ? { [`wins.${winner}`]: (g.wins?.[winner] ?? 0) + 1 } : {}),
+    });
+  });
+};
+
+/** Board games: clear the board for another round. Whoever went second last time goes first. */
+export const nextBoardRound = async (coupleId: string, gameId: string) => {
+  await runTransaction(db, async (tx) => {
+    const snap = await tx.get(gameRef(coupleId, gameId));
+    if (!snap.exists()) return;
+    const g = snap.data() as CoupleGame;
+    if (!g.board || !g.winner) return;
+    const match = (g.match ?? 1) + 1;
+    tx.update(gameRef(coupleId, gameId), {
+      board: g.board.map(() => ""),
+      winner: null,
+      match,
+      turn: g.players[(match - 1) % 2],
+    });
+  });
+};
+
+/** Scribble: add one finished stroke to this round's drawing */
+export const addScribbleStroke = (coupleId: string, gameId: string, round: number, stroke: string) =>
+  updateDoc(gameRef(coupleId, gameId), { [`strokes.r${round}`]: arrayUnion(stroke) });
+
+export const clearScribble = (coupleId: string, gameId: string, round: number) =>
+  updateDoc(gameRef(coupleId, gameId), { [`strokes.r${round}`]: [] });
+
+/** Scribble: record a guess; a right one ends the round */
+export const submitScribbleGuess = (coupleId: string, gameId: string, round: number, guess: string, correct: boolean) =>
+  updateDoc(gameRef(coupleId, gameId), {
+    [`guesses.r${round}`]: arrayUnion(guess),
+    ...(correct ? { [`sb.r${round}.result`]: "solved" } : {}),
+  });
+
+/** Scribble: the artist gives up on this word */
+export const skipScribble = (coupleId: string, gameId: string, round: number) =>
+  updateDoc(gameRef(coupleId, gameId), { [`sb.r${round}.result`]: "skipped" });
 
 /** Close a game for both. A finished one is kept in the history first. */
 export const endGame = async (coupleId: string, gameId: string) => {
@@ -550,7 +620,7 @@ export const respondToMessage = async (coupleId: string, messageId: string, resp
   });
 };
 
-const COUPLE_SUBCOLLECTIONS = ["mailbox", "checkins", "reactions", "safe_space_sessions", "events", "games", "game_history"];
+const COUPLE_SUBCOLLECTIONS = ["mailbox", "checkins", "reactions", "safe_space_sessions", "events", "games", "game_history", "bucket_list"];
 
 /**
  * Delete documents in chunks that fit inside a single batch
@@ -841,13 +911,64 @@ export const subscribeToPartnerNotes = (uid: string, callback: (notes: PartnerNo
   });
 };
 
-export const addPartnerNote = async (uid: string, text: string) => {
+export const addPartnerNote = async (uid: string, text: string, shared = false) => {
   return addDoc(collection(db, "users", uid, "notes"), {
     userUid: uid,
     text,
+    shared,
     createdAt: Timestamp.now()
   });
 };
+
+/** The notes a partner chose to share. Sorted here, so no extra index is needed. */
+export const subscribeToSharedNotes = (partnerUid: string, callback: (notes: PartnerNote[]) => void) => {
+  const q = query(collection(db, "users", partnerUid, "notes"), where("shared", "==", true)).withConverter(converter<PartnerNote>());
+  return onSnapshot(
+    q,
+    (snapshot) => callback(snapshot.docs.map(d => d.data()).sort((a, b) => (b.createdAt || "").localeCompare(a.createdAt || ""))),
+    () => callback([])
+  );
+};
+
+export const setPartnerNoteShared = async (uid: string, noteId: string, shared: boolean) =>
+  updateDoc(doc(db, "users", uid, "notes", noteId), { shared, updatedAt: Timestamp.now() });
+
+/**
+ * Bucket list: one shared list per couple
+ */
+export const subscribeToBucketList = (coupleId: string, callback: (items: BucketItem[]) => void) =>
+  onSnapshot(
+    query(collection(db, "couples", coupleId, "bucket_list"), orderBy("createdAt", "asc")),
+    (snap) => callback(snap.docs.map(d => ({ ...(d.data() as Omit<BucketItem, "id">), id: d.id }))),
+    () => callback([])
+  );
+
+export const addBucketItem = async (coupleId: string, uid: string, text: string, partnerUid?: string, name?: string) => {
+  await addDoc(collection(db, "couples", coupleId, "bucket_list"), {
+    text,
+    addedBy: uid,
+    done: false,
+    createdAt: new Date().toISOString(),
+  });
+  if (partnerUid) {
+    await notifyPartner(partnerUid, {
+      uid: partnerUid,
+      type: "BUCKET",
+      title: "Bucket List",
+      body: `${name || "Your partner"} added "${text.slice(0, 60)}" to your bucket list.`,
+    });
+  }
+};
+
+export const setBucketItemDone = (coupleId: string, itemId: string, uid: string, done: boolean) =>
+  updateDoc(doc(db, "couples", coupleId, "bucket_list", itemId), {
+    done,
+    doneBy: done ? uid : null,
+    doneAt: done ? new Date().toISOString() : null,
+  });
+
+export const deleteBucketItem = (coupleId: string, itemId: string) =>
+  deleteDoc(doc(db, "couples", coupleId, "bucket_list", itemId));
 
 export const deletePartnerNote = async (uid: string, noteId: string) => {
   const noteRef = doc(db, "users", uid, "notes", noteId);

@@ -8,12 +8,14 @@ import {
   advanceGame, chooseTruthOrDare, endGame, joinGame, judgeTruthOrDare,
   startGame, submitGameAnswer,
 } from "@/lib/firestore-helpers";
-import { DECK_BY_ID, LEVEL_LABEL, type DeckInfo } from "@/lib/games/decks";
+import { DECK_BY_ID, type DeckInfo } from "@/lib/games/decks";
 import { getCard, isRoundComplete, roundKey, totalScores, truthDarePlayer, type GameCard } from "@/lib/games/engine";
 import type { CoupleGame } from "@/lib/types";
 import { useSensoryFeedback } from "@/hooks/useSensoryFeedback";
 import { cn } from "@/lib/utils";
 import { DECK_ICONS, openGame } from "./deckIcons";
+import { BoardGame } from "./BoardGame";
+import { Scribble } from "./Scribble";
 
 // Full-screen game. The game lives in Firestore, so either person can leave and come back to the same card.
 export const GameScreen = ({ gameId, onLeave }: { gameId: string; onLeave: () => void }) => {
@@ -55,6 +57,11 @@ export const GameScreen = ({ gameId, onLeave }: { gameId: string; onLeave: () =>
 
   const deck = DECK_BY_ID[game.deck];
   const Icon = DECK_ICONS[game.deck];
+
+  // Board and drawing games have their own screens
+  const shared = { game, uid, partnerUid, partnerName, coupleId, onLeave };
+  if (deck.mechanic === "xo" || deck.mechanic === "connect4") return <BoardGame {...shared} />;
+  if (deck.mechanic === "scribble") return <Scribble {...shared} />;
   const finished = game.round >= game.cards.length;
   const scores = totalScores(game, [uid, partnerUid]);
   const card = finished ? null : getCard(game, round);
@@ -78,7 +85,7 @@ export const GameScreen = ({ gameId, onLeave }: { gameId: string; onLeave: () =>
   const handleEnd = () => run(async () => { await endGame(coupleId, gameId); onLeave(); });
   // A fresh set of cards as a new game; this finished one goes to Past Games
   const handleReplay = () => run(async () => {
-    const newId = await startGame(coupleId, uid, partnerUid, game.deck, game.level, user?.displayName?.split(" ")[0]);
+    const newId = await startGame(coupleId, uid, partnerUid, game.deck, user?.displayName?.split(" ")[0]);
     openGame(newId);
     await endGame(coupleId, gameId);
     playPop();
@@ -91,7 +98,7 @@ export const GameScreen = ({ gameId, onLeave }: { gameId: string; onLeave: () =>
       initial={{ opacity: 0 }}
       animate={{ opacity: 1 }}
       exit={{ opacity: 0 }}
-      className="fixed inset-0 z-[100] bg-[#0a0a0a] text-white"
+      className="fixed inset-0 z-[105] bg-[#0a0a0a] text-white"
     >
       {/* Soft wash in the game's colours */}
       <div className={cn("pointer-events-none absolute inset-x-0 top-0 h-[45vh] bg-gradient-to-b opacity-60", deck.gradient)} />
@@ -110,7 +117,6 @@ export const GameScreen = ({ gameId, onLeave }: { gameId: string; onLeave: () =>
           <div className="flex items-center gap-2 min-w-0">
             <Icon className="w-4 h-4 text-white/80 shrink-0" />
             <span className="font-bebas text-lg tracking-widest uppercase truncate">{deck.title}</span>
-            <span className="font-bebas text-xs tracking-widest uppercase text-white/50 shrink-0">{LEVEL_LABEL[game.level]}</span>
           </div>
           <button
             onClick={() => setConfirmEnd(true)}
@@ -265,6 +271,7 @@ const RoundView = (props: RoundProps) => {
       : <PairRound {...props} card={props.card} />;
     case "who": return <SingleChoiceRound {...props} prompt={props.card.prompt} options={[{ id: props.uid, label: "Me" }, { id: props.partnerUid, label: props.partnerName }]} />;
     case "open": return null; // question decks have their own screen
+    case "draw": return null; // scribble has its own screen
     case "truthdare": return <TruthDareRound {...props} card={props.card} />;
   }
 };

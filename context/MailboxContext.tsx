@@ -58,7 +58,7 @@ import {
   recordStreak,
   CapsuleContent
 } from "@/lib/firestore-helpers";
-import { slotFor } from "@/lib/games/decks";
+import { isKnownDeck, slotFor } from "@/lib/games/decks";
 import { getCheckInDateId, addDays, countStreak } from "@/lib/utils";
 
 interface MailboxContextType {
@@ -141,8 +141,9 @@ export const MailboxProvider: React.FC<{ children: React.ReactNode }> = ({ child
   const [historyCheckins, setHistoryCheckins] = useState<DailyCheckIn[]>([]);
   const [activeSafeSpace, setActiveSafeSpace] = useState<SafeSpaceSession | null>(null);
   const [games, setGames] = useState<ActiveGame[]>([]);
-  const liveGames = useMemo(() => games.filter(g => slotFor(g.deck) === "current"), [games]);
-  const questionGames = useMemo(() => games.filter(g => slotFor(g.deck) === "questions"), [games]);
+  // Games from an older version of the app point at decks that no longer exist; they're left out
+  const liveGames = useMemo(() => games.filter(g => isKnownDeck(g.deck) && slotFor(g.deck) === "current"), [games]);
+  const questionGames = useMemo(() => games.filter(g => isKnownDeck(g.deck) && slotFor(g.deck) === "questions"), [games]);
   const [rawEvents, setRawEvents] = useState<CoupleEvent[]>([]);
   const [notifications, setNotifications] = useState<AppNotification[]>([]);
   const [hasLoadedCheckins, setHasLoadedCheckins] = useState(false);

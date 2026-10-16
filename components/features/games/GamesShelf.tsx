@@ -7,7 +7,7 @@ import dynamic from "next/dynamic";
 import { createPortal } from "react-dom";
 import { useMailbox } from "@/context/MailboxContext";
 import { endGame, startGame } from "@/lib/firestore-helpers";
-import { DECK_BY_ID, LEVELS, LEVEL_LABEL, LIVE_DECKS, MAX_OPEN_GAMES, QUESTION_DECKS, slotFor, type DeckInfo, type GameLevel } from "@/lib/games/decks";
+import { DECKS, DECK_BY_ID, MAX_OPEN_GAMES, SECTIONS, slotFor, type DeckInfo } from "@/lib/games/decks";
 import { answeredCount } from "@/lib/games/engine";
 import type { ActiveGame } from "@/lib/types";
 import { useSensoryFeedback } from "@/hooks/useSensoryFeedback";
@@ -29,6 +29,14 @@ const describe = (g: ActiveGame, uid: string, partnerUid: string, partnerName: s
     if (invited) return { status: `${partnerName} sent you ${total} questions`, action: "Answer" };
     return { status: `You ${mine}/${total} · ${partnerName} ${theirs}/${total}`, action: "Answer" };
   }
+  const mechanic = DECK_BY_ID[g.deck].mechanic;
+  if (mechanic === "xo" || mechanic === "connect4") {
+    const w = g.wins ?? {};
+    const tally = `You ${w[uid] ?? 0} · ${partnerName} ${w[partnerUid] ?? 0}`;
+    if (invited) return { status: `${partnerName} wants to play`, action: "Join" };
+    if (g.winner) return { status: `Round over · ${tally}`, action: "Open" };
+    return g.turn === uid ? { status: `Your move · ${tally}`, action: "Play" } : { status: `${partnerName}'s move · ${tally}`, action: "Open" };
+  }
   if (g.round >= g.cards.length) return { status: "Finished, see how you did", action: "Open" };
   if (invited) return { status: `${partnerName} wants to play`, action: "Join" };
   return { status: `Card ${g.round + 1} of ${g.cards.length}`, action: "Resume" };
@@ -43,24 +51,19 @@ export const GamesShelf = () => {
 
   return (
     <>
-      <DeckSection
-        title="Play Together"
-        subtitle="Little games for the two of you"
-        decks={LIVE_DECKS}
-        active={liveGames}
-        noun="game"
-        onPick={setPicked}
-        onOpenPending={() => setPending("game")}
-      />
-      <DeckSection
-        title="Ask Each Other"
-        subtitle="Answer at your own pace, read them together"
-        decks={QUESTION_DECKS}
-        active={questionGames}
-        noun="deck"
-        onPick={setPicked}
-        onOpenPending={() => setPending("deck")}
-      />
+      {/* Games in progress sit under the first section; question decks in progress under Getting to Know */}
+      {SECTIONS.map(section => (
+        <DeckSection
+          key={section.id}
+          title={section.title}
+          subtitle={section.subtitle}
+          decks={DECKS.filter(d => d.section === section.id)}
+          active={section.id === "play" ? liveGames : section.id === "know" ? questionGames : []}
+          noun={section.id === "know" ? "deck" : "game"}
+          onPick={setPicked}
+          onOpenPending={() => setPending(section.id === "know" ? "deck" : "game")}
+        />
+      ))}
       <button
         onClick={() => setShowPast(true)}
         className="w-full flex items-center justify-between rounded-2xl bg-white/5 border border-white/10 p-5 hover:bg-white/10 active:scale-[0.98] transition-all"
@@ -93,7 +96,7 @@ const PendingRow = ({ games, noun, onOpen }: { games: ActiveGame[]; noun: string
   const { playTick, vibrateTick } = useSensoryFeedback();
   const uid = user?.uid || "";
   const partnerName = partner?.displayName?.split(" ")[0] || "your partner";
-  const waitingOnYou = games.filter(g => ["Join", "Answer"].includes(describe(g, uid, partner?.uid || "", partnerName).action)).length;
+  const waitingOnYou = games.filter(g => ["Join", "Answer", "Play"].includes(describe(g, uid, partner?.uid || "", partnerName).action)).length;
   const newest = DECK_BY_ID[games[0].deck];
 
   return (
@@ -150,7 +153,7 @@ const PendingList = ({ games, busy, onClose, onOpen }: { games: ActiveGame[]; bu
               <div className="flex-1 min-w-0">
                 <p className="font-bebas text-base tracking-wider uppercase leading-none truncate">{gDeck.title}</p>
                 <p className="font-outfit text-xs text-neutral-400 mt-1 truncate">
-                  {`${LEVEL_LABEL[g.level]} · ${describe(g, uid, partner?.uid || "", partnerName).status}`}
+                  {describe(g, uid, partner?.uid || "", partnerName).status}
                 </p>
                 {oldest && <p className="font-outfit text-[11px] text-amber-300/80 mt-0.5">Waiting longest</p>}
               </div>
@@ -253,7 +256,7 @@ const DeckSection = ({ title, subtitle, decks, active, noun, onPick, onOpenPendi
               key={deck.id}
               onClick={() => { playTick(); vibrateTick(); onPick(deck); }}
               className={cn(
-                "relative shrink-0 snap-start w-40 h-40 md:w-44 md:h-44 rounded-[2rem] p-5 flex flex-col justify-between text-left",
+                "relative shrink-0 snap-start w-36 h-36 md:w-44 md:h-44 rounded-[2rem] p-4 md:p-5 flex flex-col justify-between text-left",
                 "border border-white/10 bg-gradient-to-br active:scale-[0.97] hover:border-white/20 transition-all",
                 deck.gradient
               )}
@@ -275,7 +278,6 @@ const DeckSection = ({ title, subtitle, decks, active, noun, onPick, onOpenPendi
 
 const GameLobby = ({ deck, onClose }: { deck: DeckInfo; onClose: () => void }) => {
   const { user, partner, liveGames, questionGames } = useMailbox();
-  const [level, setLevel] = useState<GameLevel>("normal");
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState("");
   const [askToMakeRoom, setAskToMakeRoom] = useState(false);
@@ -293,7 +295,7 @@ const GameLobby = ({ deck, onClose }: { deck: DeckInfo; onClose: () => void }) =
 
   const written = slotFor(deck.id) === "questions";
   const kindGames = written ? questionGames : liveGames; // newest first
-  const sameRunning = kindGames.find(g => g.deck === deck.id && g.level === level && (written || g.round < g.cards.length));
+  const sameRunning = kindGames.find(g => g.deck === deck.id && (written || g.board || g.round < g.cards.length));
   const full = kindGames.length >= MAX_OPEN_GAMES;
   const showMakeRoom = askToMakeRoom && full;
   const noun = written ? "deck" : "game";
@@ -313,7 +315,7 @@ const GameLobby = ({ deck, onClose }: { deck: DeckInfo; onClose: () => void }) =
   };
 
   const begin = async () => {
-    const id = await startGame(user!.coupleId!, uid, partnerUid, deck.id, level, user?.displayName?.split(" ")[0]);
+    const id = await startGame(user!.coupleId!, uid, partnerUid, deck.id, user?.displayName?.split(" ")[0]);
     playPop();
     onClose();
     (written ? openQuestions : openGame)(id);
@@ -400,25 +402,6 @@ const GameLobby = ({ deck, onClose }: { deck: DeckInfo; onClose: () => void }) =
           </div>
         ) : (
           <div className="p-8 pt-6 space-y-6">
-            <div className="space-y-3">
-              <p className="text-[10px] text-neutral-500 font-bebas tracking-[0.4em] uppercase">Choose a level</p>
-              <div className="grid grid-cols-3 gap-2">
-                {LEVELS.map((l) => (
-                  <button
-                    key={l.id}
-                    onClick={() => setLevel(l.id)}
-                    className={cn(
-                      "rounded-2xl border px-2 py-3 text-center transition-all",
-                      level === l.id ? "bg-white text-black border-white" : "bg-white/5 border-white/5 text-neutral-400 hover:text-white"
-                    )}
-                  >
-                    <span className="block font-bebas text-base tracking-widest uppercase leading-none">{l.label}</span>
-                    <span className={cn("block font-outfit text-[11px] mt-1 leading-tight", level === l.id ? "text-black/60" : "text-neutral-500")}>{l.hint}</span>
-                  </button>
-                ))}
-              </div>
-            </div>
-
             {error && <p className="text-rose-500 font-outfit text-xs">{error}</p>}
 
             <div className="space-y-3">

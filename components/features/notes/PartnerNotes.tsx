@@ -6,7 +6,9 @@ import { useMailbox } from "@/context/MailboxContext";
 import { 
   addPartnerNote, 
   deletePartnerNote, 
+  setPartnerNoteShared,
   subscribeToPartnerNotes,
+  subscribeToSharedNotes,
   updatePartnerNote
 } from "@/lib/firestore-helpers";
 import { PartnerNote } from "@/lib/types";
@@ -18,7 +20,8 @@ import {
   SendHorizontal,
   X,
   Clock,
-  ExternalLink
+  ExternalLink,
+  Users
 } from "lucide-react";
 import { cn, formatRelativeTime, formatFullDateTime } from "@/lib/utils";
 import { NoteDetailPopup } from "./NoteDetailPopup";
@@ -30,6 +33,10 @@ export const PartnerNotes = () => {
   const [isAdding, setIsAdding] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [selectedNote, setSelectedNote] = useState<PartnerNote | null>(null);
+  // Notes the partner chose to share, a filter for the list, and who a new note is for
+  const [partnerShared, setPartnerShared] = useState<PartnerNote[]>([]);
+  const [filter, setFilter] = useState<"all" | "mine" | "shared">("all");
+  const [composeShared, setComposeShared] = useState(false);
 
   useEffect(() => {
     if (!user?.uid) return;
@@ -38,6 +45,12 @@ export const PartnerNotes = () => {
     });
     return () => unsub();
   }, [user?.uid]);
+
+  const partnerUid = partner?.uid;
+  useEffect(() => {
+    if (!partnerUid) { setPartnerShared([]); return; }
+    return subscribeToSharedNotes(partnerUid, setPartnerShared);
+  }, [partnerUid]);
 
   const handleAddNote = async () => {
     if (!inputText.trim() || !user?.uid || isSubmitting) return;
@@ -48,7 +61,7 @@ export const PartnerNotes = () => {
     setIsSubmitting(true);
     
     try {
-      await addPartnerNote(user.uid, noteText);
+      await addPartnerNote(user.uid, noteText, composeShared);
     } catch (err) {
       console.error("Failed to add note:", err);
     } finally {
@@ -72,7 +85,13 @@ export const PartnerNotes = () => {
 
   if (!user) return null;
 
-  const partnerName = partner?.displayName || "Partner";
+  const partnerName = partner?.displayName?.split(" ")[0] || "Partner";
+  const shown = (
+    filter === "mine" ? notes.filter(n => !n.shared)
+    : filter === "shared" ? [...notes.filter(n => n.shared), ...partnerShared]
+    : [...notes, ...partnerShared]
+  ).sort((a, b) => (b.createdAt || "").localeCompare(a.createdAt || ""));
+  const isMine = (n: PartnerNote) => n.userUid === user.uid;
 
   return (
     <section className="space-y-6">
@@ -82,7 +101,7 @@ export const PartnerNotes = () => {
             <Lock className="w-3 h-3 text-neutral-600" />
             <h2 className="text-3xl font-bebas text-white tracking-widest uppercase leading-none">Partner Notes</h2>
           </div>
-          <p className="text-[10px] text-neutral-500 font-bebas tracking-[0.2em] uppercase">Private notes about {partnerName}</p>
+          <p className="text-[10px] text-neutral-500 font-bebas tracking-[0.2em] uppercase">{`Notes about ${partnerName}, for you or for both`}</p>
         </div>
         {!isAdding && (
           <button 
@@ -108,7 +127,20 @@ export const PartnerNotes = () => {
               <div className="absolute top-0 left-1/2 -translate-x-1/2 w-20 h-1 bg-white/10 rounded-full" />
               
               <div className="flex justify-between items-center">
-                <span className="text-[10px] font-bebas tracking-[0.3em] text-neutral-500 uppercase">Adding a private thought...</span>
+                <div className="flex gap-2">
+                  {([[false, "Just Me"], [true, "Both of Us"]] as const).map(([value, label]) => (
+                    <button
+                      key={label}
+                      onClick={() => setComposeShared(value)}
+                      className={cn(
+                        "px-3 py-1.5 rounded-full border text-xs font-outfit transition-all",
+                        composeShared === value ? "bg-white text-black border-white" : "bg-white/5 border-white/5 text-neutral-400 hover:text-white"
+                      )}
+                    >
+                      {label}
+                    </button>
+                  ))}
+                </div>
                 <button onClick={() => setIsAdding(false)} className="p-2 text-neutral-500 hover:text-white transition-colors">
                   <X className="w-4 h-4" />
                 </button>
@@ -143,10 +175,25 @@ export const PartnerNotes = () => {
         </AnimatePresence>
       </motion.div>
 
+      <div className="flex gap-2">
+        {([["all", "All"], ["mine", "Just Me"], ["shared", "Shared"]] as const).map(([id, label]) => (
+          <button
+            key={id}
+            onClick={() => setFilter(id)}
+            className={cn(
+              "px-4 py-2.5 rounded-full border text-xs font-outfit transition-all",
+              filter === id ? "bg-white text-black border-white" : "bg-white/5 border-white/5 text-neutral-400 hover:text-white"
+            )}
+          >
+            {label}
+          </button>
+        ))}
+      </div>
+
       <motion.div layout className="grid grid-cols-1 md:grid-cols-2 gap-6">
         <AnimatePresence initial={false}>
-          {notes.length > 0 ? (
-            notes.map((note, index) => (
+          {shown.length > 0 ? (
+            shown.map((note, index) => (
               <motion.div 
                 key={note.id}
                 layout
@@ -154,7 +201,7 @@ export const PartnerNotes = () => {
                 animate={{ opacity: 1, scale: 1, rotate: 0 }}
                 exit={{ opacity: 0, scale: 0.9 }}
                 transition={{ duration: 0.4, ease: [0.16, 1, 0.3, 1] }}
-                onClick={() => setSelectedNote(note)}
+                onClick={() => isMine(note) && setSelectedNote(note)}
                 className="group cursor-pointer bg-white/5 border border-white/5 hover:border-white/20 rounded-[2.5rem] p-8 transition-all relative overflow-hidden flex flex-col justify-between min-h-[160px] hover:shadow-2xl hover:bg-white/[0.07] hover:-translate-y-1"
               >
                 <div className="absolute top-0 left-8 w-12 h-1 bg-white/10 group-hover:bg-indigo-500/50 transition-colors rounded-b-full" />
@@ -176,10 +223,26 @@ export const PartnerNotes = () => {
                 </div>
 
                 <div className="flex justify-between items-center mt-6 relative z-10">
-                  <div className="flex items-center gap-2 text-[9px] text-neutral-600 uppercase tracking-widest font-bebas">
-                    <Lock className="w-2.5 h-2.5" /> Private
-                  </div>
-                  <div className="flex gap-2">
+                  {!isMine(note) ? (
+                    <div className="flex items-center gap-2 text-[9px] text-blue-300/80 uppercase tracking-widest font-bebas">
+                      <Users className="w-2.5 h-2.5" /> {`From ${partnerName}`}
+                    </div>
+                  ) : (
+                    // Tap to switch who can read it
+                    <button
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        setPartnerNoteShared(user.uid, note.id, !note.shared).catch(console.error);
+                      }}
+                      className={cn(
+                        "flex items-center gap-2 text-[9px] uppercase tracking-widest font-bebas px-2 py-1 -ml-2 rounded-lg hover:bg-white/5 transition-all",
+                        note.shared ? "text-pink-300/80" : "text-neutral-600"
+                      )}
+                    >
+                      {note.shared ? <><Users className="w-2.5 h-2.5" /> {`Shared with ${partnerName}`}</> : <><Lock className="w-2.5 h-2.5" /> Just me</>}
+                    </button>
+                  )}
+                  {isMine(note) && <div className="flex gap-2">
                     <button 
                       onClick={(e) => {
                         e.stopPropagation();
@@ -192,7 +255,7 @@ export const PartnerNotes = () => {
                     <div className="p-3 text-neutral-700 group-hover:text-white transition-all">
                       <ExternalLink className="w-4 h-4" />
                     </div>
-                  </div>
+                  </div>}
                 </div>
               </motion.div>
             ))
@@ -205,7 +268,9 @@ export const PartnerNotes = () => {
               className="col-span-full h-40 flex flex-col items-center justify-center bg-white/5 border border-white/5 border-dashed rounded-[2.5rem] text-neutral-600 gap-3"
             >
               <StickyNote className="w-8 h-8 opacity-20" />
-              <p className="font-bebas text-xs tracking-widest uppercase">No notes yet. Capture a moment.</p>
+              <p className="font-bebas text-xs tracking-widest uppercase">
+                {filter === "shared" ? "Nothing shared yet" : filter === "mine" ? "No private notes yet" : "No notes yet. Capture a moment."}
+              </p>
             </motion.div>
           )}
         </AnimatePresence>

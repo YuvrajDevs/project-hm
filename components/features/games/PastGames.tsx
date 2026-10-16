@@ -5,7 +5,7 @@ import { motion } from "framer-motion";
 import { ArrowLeft, ChevronRight, X } from "lucide-react";
 import { useMailbox } from "@/context/MailboxContext";
 import { getGameHistory } from "@/lib/firestore-helpers";
-import { DECK_BY_ID, LEVEL_LABEL } from "@/lib/games/decks";
+import { DECK_BY_ID, isKnownDeck } from "@/lib/games/decks";
 import { getCard, roundKey, totalScores, truthDarePlayer } from "@/lib/games/engine";
 import type { CoupleGame } from "@/lib/types";
 import { cn } from "@/lib/utils";
@@ -27,7 +27,7 @@ export const PastGames = ({ onClose }: { onClose: () => void }) => {
   useEffect(() => {
     if (!user?.coupleId) return;
     getGameHistory(user.coupleId)
-      .then(setEntries)
+      .then(list => setEntries(list.filter(e => isKnownDeck(e.deck))))
       .catch((err) => { console.error(err); setError("Couldn't load past games. Check your connection."); setEntries([]); });
   }, [user?.coupleId]);
 
@@ -100,7 +100,7 @@ export const PastGames = ({ onClose }: { onClose: () => void }) => {
                     <div className="flex-1 min-w-0">
                       <p className="font-bebas text-lg tracking-wider uppercase leading-none truncate">{deck.title}</p>
                       <p className="font-outfit text-xs text-neutral-400 mt-1 truncate">
-                        {`${LEVEL_LABEL[e.level]} · ${summaryLine(e, uid, partnerUid, partnerName)}`}
+                        {summaryLine(e, uid, partnerUid, partnerName)}
                       </p>
                     </div>
                     <span className="font-outfit text-xs text-neutral-500 shrink-0">
@@ -121,6 +121,14 @@ export const PastGames = ({ onClose }: { onClose: () => void }) => {
 const summaryLine = (g: CoupleGame, uid: string, partnerUid: string, partnerName: string) => {
   const mechanic = DECK_BY_ID[g.deck].mechanic;
   if (mechanic === "open") return `${g.cards.length} questions`;
+  if (mechanic === "xo" || mechanic === "connect4") {
+    const w = g.wins ?? {};
+    return `Rounds won: you ${w[uid] ?? 0} · ${partnerName} ${w[partnerUid] ?? 0}`;
+  }
+  if (mechanic === "scribble") {
+    const solved = g.cards.filter((_, r) => g.sb?.[roundKey(r)]?.result === "solved").length;
+    return `Guessed ${solved} of ${g.cards.length}`;
+  }
   if (mechanic === "choice" || mechanic === "who") {
     const matches = g.cards.filter((_, r) => {
       const a = g.answers?.[roundKey(r)] || {};
@@ -135,6 +143,15 @@ const summaryLine = (g: CoupleGame, uid: string, partnerUid: string, partnerName
 // Every card of a finished game, with what each of them said
 const GameReplay = ({ game, uid, partnerUid, partnerName }: { game: CoupleGame; uid: string; partnerUid: string; partnerName: string }) => {
   const nameOf = (id?: string) => (id === uid ? "You" : partnerName);
+  const mechanic = DECK_BY_ID[game.deck].mechanic;
+  // Board games have no cards to look back at, just the final tally
+  if (mechanic === "xo" || mechanic === "connect4") {
+    return (
+      <p className="py-8 text-center font-outfit text-sm text-neutral-300">
+        {summaryLine(game, uid, partnerUid, partnerName)}
+      </p>
+    );
+  }
   return (
     <div className="divide-y divide-white/10">
       {game.cards.map((_, r) => {
@@ -154,6 +171,11 @@ const GameReplay = ({ game, uid, partnerUid, partnerName }: { game: CoupleGame; 
         } else if (card.kind === "open") {
           title = card.text;
           lines = [{ who: "them", text: answers[partnerUid]?.text || "" }, { who: "you", text: answers[uid]?.text || "" }];
+        } else if (card.kind === "draw") {
+          title = card.word;
+          const artist = truthDarePlayer(game, r);
+          const result = game.sb?.[roundKey(r)]?.result;
+          lines = [{ who: artist === uid ? "you" : "them", text: `Drew it · ${result === "solved" ? "guessed" : "skipped"}` }];
         } else {
           const td = game.td?.[roundKey(r)];
           const player = truthDarePlayer(game, r);
