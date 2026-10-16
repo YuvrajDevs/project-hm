@@ -87,7 +87,6 @@ service cloud.firestore {
         );
       }
 
-      // Private notes: never visible to the partner
       // Notes about the partner: private by default; the writer can share one, and then the partner can read it
       match /notes/{noteId} {
         allow read: if isOwner(userId)
@@ -249,7 +248,8 @@ service cloud.firestore {
           && request.resource.data.text.size() > 0
           && request.resource.data.text.size() <= 120;
         allow update: if isPartOfCouple(coupleId)
-          && changedOnly(['done', 'doneBy', 'doneAt']);
+          && changedOnly(['done', 'doneBy', 'doneAt'])
+          && (request.resource.data.get('doneBy', null) == null || request.resource.data.doneBy == request.auth.uid);
         allow delete: if isPartOfCouple(coupleId);
       }
 

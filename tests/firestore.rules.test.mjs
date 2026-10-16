@@ -447,6 +447,7 @@ test("both partners share the bucket list and can tick or remove items", async (
   await assertFails(setDoc(doc(db(BOB), "couples", COUPLE, "bucket_list", "b2"), { ...item, addedBy: ALICE }));
   await assertSucceeds(updateDoc(doc(db(BOB), "couples", COUPLE, "bucket_list", "b1"), { done: true, doneBy: BOB, doneAt: "2026-10-17T11:00:00Z" }));
   await assertFails(updateDoc(doc(db(BOB), "couples", COUPLE, "bucket_list", "b1"), { text: "Something else" }));
+  await assertFails(updateDoc(doc(db(BOB), "couples", COUPLE, "bucket_list", "b1"), { done: true, doneBy: ALICE }));
   await assertFails(getDocs(collection(db(MALLORY), "couples", COUPLE, "bucket_list")));
   await assertFails(deleteDoc(doc(db(MALLORY), "couples", COUPLE, "bucket_list", "b1")));
   await assertSucceeds(deleteDoc(doc(db(BOB), "couples", COUPLE, "bucket_list", "b1")));
