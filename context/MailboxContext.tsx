@@ -58,7 +58,7 @@ import {
   recordStreak,
   CapsuleContent
 } from "@/lib/firestore-helpers";
-import { slotFor } from "@/lib/games/decks";
+import { isKnownDeck, slotFor } from "@/lib/games/decks";
 import { getCheckInDateId, addDays, countStreak } from "@/lib/utils";
 
 interface MailboxContextType {
@@ -141,8 +141,9 @@ export const MailboxProvider: React.FC<{ children: React.ReactNode }> = ({ child
   const [historyCheckins, setHistoryCheckins] = useState<DailyCheckIn[]>([]);
   const [activeSafeSpace, setActiveSafeSpace] = useState<SafeSpaceSession | null>(null);
   const [games, setGames] = useState<ActiveGame[]>([]);
-  const liveGames = useMemo(() => games.filter(g => slotFor(g.deck) === "current"), [games]);
-  const questionGames = useMemo(() => games.filter(g => slotFor(g.deck) === "questions"), [games]);
+  // Games from an older version of the app point at decks that no longer exist; they're left out
+  const liveGames = useMemo(() => games.filter(g => isKnownDeck(g.deck) && slotFor(g.deck) === "current"), [games]);
+  const questionGames = useMemo(() => games.filter(g => isKnownDeck(g.deck) && slotFor(g.deck) === "questions"), [games]);
   const [rawEvents, setRawEvents] = useState<CoupleEvent[]>([]);
   const [notifications, setNotifications] = useState<AppNotification[]>([]);
   const [hasLoadedCheckins, setHasLoadedCheckins] = useState(false);
@@ -253,8 +254,13 @@ export const MailboxProvider: React.FC<{ children: React.ReactNode }> = ({ child
   }, [rawMessages, user, now, sealedContent]);
 
   // ─── Metrics Derivations ──────────────────────────────────────────────────
+  // Plain values for the memo below, so it only recalculates when these actually change
+  const metricsCoupleId = user?.coupleId;
+  const metricsUid = user?.uid;
+  const metricsStreakLastDay = couple?.streakLastDay;
+  const metricsStreakCount = couple?.streakCount;
   const metrics = useMemo(() => {
-    if (!user?.coupleId) return null;
+    if (!metricsCoupleId || !metricsUid) return null;
 
     const sortedCheckins = [...historyCheckins].sort((a, b) => b.dateId.localeCompare(a.dateId));
     const nowDate = new Date(now);
@@ -272,9 +278,9 @@ export const MailboxProvider: React.FC<{ children: React.ReactNode }> = ({ child
 
     // The running count is kept on the couple, so it is not limited by how much history is loaded
     let currentStreak = historyStreak;
-    if (couple?.streakLastDay) {
-        const stored = couple.streakLastDay === today || couple.streakLastDay === yesterday ? (couple.streakCount || 0) : 0;
-        currentStreak = Math.max(stored, completeDays.has(today) && couple.streakLastDay !== today ? historyStreak : 0);
+    if (metricsStreakLastDay) {
+        const stored = metricsStreakLastDay === today || metricsStreakLastDay === yesterday ? (metricsStreakCount || 0) : 0;
+        currentStreak = Math.max(stored, completeDays.has(today) && metricsStreakLastDay !== today ? historyStreak : 0);
     }
 
     // Latest entry per person (history is newest first)
@@ -293,13 +299,13 @@ export const MailboxProvider: React.FC<{ children: React.ReactNode }> = ({ child
     }
 
     const unreadCount = messages.filter(m => 
-        !m.response && m.senderUid !== user.uid && !(m.unlockAt && new Date(m.unlockAt).getTime() > now)
+        !m.response && m.senderUid !== metricsUid && !(m.unlockAt && new Date(m.unlockAt).getTime() > now)
     ).length;
 
     let state: string = "Connected";
     const latestReacts = [
-        ...reactions.filter(r => r.senderUid === user.uid).slice(0, 1),
-        ...reactions.filter(r => r.senderUid !== user.uid).slice(0, 1)
+        ...reactions.filter(r => r.senderUid === metricsUid).slice(0, 1),
+        ...reactions.filter(r => r.senderUid !== metricsUid).slice(0, 1)
     ];
 
     const hasInLast24h = (type: string) => latestReacts.some(r => r.type === type && (Date.now() - new Date(r.createdAt).getTime() < 86400000));
@@ -313,8 +319,8 @@ export const MailboxProvider: React.FC<{ children: React.ReactNode }> = ({ child
 
     // 5. Recent Activity
     const allActivities = [
-        ...messages.map(m => ({ time: m.createdAt, type: "message", initiator: m.senderUid === user.uid ? "you" : "partner" })),
-        ...reactions.map(r => ({ time: r.createdAt, type: "reaction", initiator: r.senderUid === user.uid ? "you" : "partner" })),
+        ...messages.map(m => ({ time: m.createdAt, type: "message", initiator: m.senderUid === metricsUid ? "you" : "partner" })),
+        ...reactions.map(r => ({ time: r.createdAt, type: "reaction", initiator: r.senderUid === metricsUid ? "you" : "partner" })),
     ].sort((a, b) => {
         const timeA = a.time || "";
         const timeB = b.time || "";
@@ -346,7 +352,7 @@ export const MailboxProvider: React.FC<{ children: React.ReactNode }> = ({ child
         reactsCount,
         trend
     };
-  }, [user?.coupleId, user?.uid, historyCheckins, messages, reactions, now, todayId, couple?.streakLastDay, couple?.streakCount]);
+  }, [metricsCoupleId, metricsUid, historyCheckins, messages, reactions, now, todayId, metricsStreakLastDay, metricsStreakCount]);
 
   // Everything that belongs to one couple. Cleared whenever the account or the couple changes,
   // so nothing from a previous session can show up for the next one on a shared device.

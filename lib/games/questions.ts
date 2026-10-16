@@ -1,4 +1,5 @@
-import type { GameLevel } from "./decks";
+// The original three-level card lists. Decks are put together from these and newer lists in ./content.
+type GameLevel = "normal" | "medium" | "spicy";
 
 // All game cards, by game and level. Loaded only when a game is played.
 // Card positions are stored in the game, so only add to the end of a list; never reorder or delete mid-list.

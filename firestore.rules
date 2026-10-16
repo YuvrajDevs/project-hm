@@ -87,12 +87,17 @@ service cloud.firestore {
         );
       }
 
-      // Private notes: never visible to the partner
+      // Notes about the partner: private by default; the writer can share one, and then the partner can read it
       match /notes/{noteId} {
-        allow read, delete: if isOwner(userId);
+        allow read: if isOwner(userId)
+          || (isAuthenticated()
+            && resource.data.get('shared', false) == true
+            && get(/databases/$(database)/documents/users/$(userId)).data.get('partnerId', null) == request.auth.uid);
+        allow delete: if isOwner(userId);
         allow create, update: if isOwner(userId)
           && request.resource.data.text is string
-          && request.resource.data.text.size() <= 280;
+          && request.resource.data.text.size() <= 280
+          && (!('shared' in request.resource.data) || request.resource.data.shared is bool);
       }
 
       // In-app notifications: written by the partner, read and cleared by the owner
@@ -232,6 +237,20 @@ service cloud.firestore {
       // Games in progress, shared by both partners (the app keeps at most a few of each kind open)
       match /games/{gameId} {
         allow read, create, update, delete: if isPartOfCouple(coupleId);
+      }
+
+      // Shared bucket list: either partner can add, tick off or remove items
+      match /bucket_list/{itemId} {
+        allow read: if isPartOfCouple(coupleId);
+        allow create: if isPartOfCouple(coupleId)
+          && request.resource.data.addedBy == request.auth.uid
+          && request.resource.data.text is string
+          && request.resource.data.text.size() > 0
+          && request.resource.data.text.size() <= 120;
+        allow update: if isPartOfCouple(coupleId)
+          && changedOnly(['done', 'doneBy', 'doneAt'])
+          && (request.resource.data.get('doneBy', null) == null || request.resource.data.doneBy == request.auth.uid);
+        allow delete: if isPartOfCouple(coupleId);
       }
 
       // Finished games, kept so the two of them can look back at them

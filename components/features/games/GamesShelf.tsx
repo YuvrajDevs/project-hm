@@ -7,12 +7,12 @@ import dynamic from "next/dynamic";
 import { createPortal } from "react-dom";
 import { useMailbox } from "@/context/MailboxContext";
 import { endGame, startGame } from "@/lib/firestore-helpers";
-import { DECK_BY_ID, LEVELS, LEVEL_LABEL, LIVE_DECKS, MAX_OPEN_GAMES, QUESTION_DECKS, slotFor, type DeckInfo, type GameLevel } from "@/lib/games/decks";
+import { DECKS, DECK_BY_ID, MAX_OPEN_GAMES, SECTIONS, slotFor, type DeckInfo } from "@/lib/games/decks";
 import { answeredCount } from "@/lib/games/engine";
 import type { ActiveGame } from "@/lib/types";
 import { useSensoryFeedback } from "@/hooks/useSensoryFeedback";
 import { cn } from "@/lib/utils";
-import { DECK_ICONS, openGame, openQuestions } from "./deckIcons";
+import { DECK_ICONS, openGame, openQuestions, titleFont } from "./deckIcons";
 
 // The history reads every card back, so its code only loads when opened
 const PastGames = dynamic(() => import("./PastGames").then(m => m.PastGames));
@@ -29,6 +29,14 @@ const describe = (g: ActiveGame, uid: string, partnerUid: string, partnerName: s
     if (invited) return { status: `${partnerName} sent you ${total} questions`, action: "Answer" };
     return { status: `You ${mine}/${total} · ${partnerName} ${theirs}/${total}`, action: "Answer" };
   }
+  const mechanic = DECK_BY_ID[g.deck].mechanic;
+  if (mechanic === "xo" || mechanic === "connect4") {
+    const w = g.wins ?? {};
+    const tally = `You ${w[uid] ?? 0} · ${partnerName} ${w[partnerUid] ?? 0}`;
+    if (invited) return { status: `${partnerName} wants to play`, action: "Join" };
+    if (g.winner) return { status: `Round over · ${tally}`, action: "Open" };
+    return g.turn === uid ? { status: `Your move · ${tally}`, action: "Play" } : { status: `${partnerName}'s move · ${tally}`, action: "Open" };
+  }
   if (g.round >= g.cards.length) return { status: "Finished, see how you did", action: "Open" };
   if (invited) return { status: `${partnerName} wants to play`, action: "Join" };
   return { status: `Card ${g.round + 1} of ${g.cards.length}`, action: "Resume" };
@@ -43,24 +51,20 @@ export const GamesShelf = () => {
 
   return (
     <>
-      <DeckSection
-        title="Play Together"
-        subtitle="Little games for the two of you"
-        decks={LIVE_DECKS}
-        active={liveGames}
-        noun="game"
-        onPick={setPicked}
-        onOpenPending={() => setPending("game")}
-      />
-      <DeckSection
-        title="Ask Each Other"
-        subtitle="Answer at your own pace, read them together"
-        decks={QUESTION_DECKS}
-        active={questionGames}
-        noun="deck"
-        onPick={setPicked}
-        onOpenPending={() => setPending("deck")}
-      />
+      {/* Games in progress sit under the first section; question decks in progress under Getting to Know */}
+      {SECTIONS.map(section => (
+        <DeckSection
+          key={section.id}
+          title={section.title}
+          subtitle={section.subtitle}
+          decks={DECKS.filter(d => d.section === section.id)}
+          active={section.id === "play" ? liveGames : section.id === "know" ? questionGames : []}
+          noun={section.id === "know" ? "deck" : "game"}
+          showScore={section.id === "play"}
+          onPick={setPicked}
+          onOpenPending={() => setPending(section.id === "know" ? "deck" : "game")}
+        />
+      ))}
       <button
         onClick={() => setShowPast(true)}
         className="w-full flex items-center justify-between rounded-2xl bg-white/5 border border-white/10 p-5 hover:bg-white/10 active:scale-[0.98] transition-all"
@@ -87,13 +91,33 @@ export const GamesShelf = () => {
   );
 };
 
+// The two of you, all-time: points from every game you've finished
+const ScoreTally = () => {
+  const { user, partner, couple } = useMailbox();
+  const scores = couple?.gameScores ?? {};
+  const mine = user?.uid ? scores[user.uid] ?? 0 : 0;
+  const theirs = partner?.uid ? scores[partner.uid] ?? 0 : 0;
+  const partnerName = partner?.displayName?.split(" ")[0] || "Partner";
+  return (
+    <div className="shrink-0 rounded-2xl bg-white/5 border border-white/10 px-3.5 py-2 text-center" aria-label={`Score: you ${mine}, ${partnerName} ${theirs}`}>
+      {/* Yours first in pink, theirs in blue: "1:2" */}
+      <p className="font-bebas text-2xl leading-none tracking-wide whitespace-nowrap">
+        <span className="text-pink-300">{mine}</span>
+        <span className="text-neutral-500 mx-0.5">:</span>
+        <span className="text-blue-300">{theirs}</span>
+      </p>
+      <p className="mt-1 text-[10px] text-neutral-500 font-bebas tracking-[0.2em] uppercase leading-none">Score</p>
+    </div>
+  );
+};
+
 // One row per section on the home screen: how many are going, and whether anything is waiting on you
 const PendingRow = ({ games, noun, onOpen }: { games: ActiveGame[]; noun: string; onOpen: () => void }) => {
   const { user, partner } = useMailbox();
   const { playTick, vibrateTick } = useSensoryFeedback();
   const uid = user?.uid || "";
   const partnerName = partner?.displayName?.split(" ")[0] || "your partner";
-  const waitingOnYou = games.filter(g => ["Join", "Answer"].includes(describe(g, uid, partner?.uid || "", partnerName).action)).length;
+  const waitingOnYou = games.filter(g => ["Join", "Answer", "Play"].includes(describe(g, uid, partner?.uid || "", partnerName).action)).length;
   const newest = DECK_BY_ID[games[0].deck];
 
   return (
@@ -148,9 +172,9 @@ const PendingList = ({ games, busy, onClose, onOpen }: { games: ActiveGame[]; bu
                 <GIcon className="w-4 h-4 text-white" />
               </div>
               <div className="flex-1 min-w-0">
-                <p className="font-bebas text-base tracking-wider uppercase leading-none truncate">{gDeck.title}</p>
+                <p className={cn("font-bebas text-base tracking-wider uppercase leading-none truncate", titleFont(gDeck.id))}>{gDeck.title}</p>
                 <p className="font-outfit text-xs text-neutral-400 mt-1 truncate">
-                  {`${LEVEL_LABEL[g.level]} · ${describe(g, uid, partner?.uid || "", partnerName).status}`}
+                  {describe(g, uid, partner?.uid || "", partnerName).status}
                 </p>
                 {oldest && <p className="font-outfit text-[11px] text-amber-300/80 mt-0.5">Waiting longest</p>}
               </div>
@@ -230,16 +254,19 @@ const PendingDialog = ({ kind, onClose }: { kind: "game" | "deck"; onClose: () =
   );
 };
 
-const DeckSection = ({ title, subtitle, decks, active, noun, onPick, onOpenPending }: {
-  title: string; subtitle: string; decks: DeckInfo[]; active: ActiveGame[]; noun: string;
+const DeckSection = ({ title, subtitle, decks, active, noun, showScore, onPick, onOpenPending }: {
+  title: string; subtitle: string; decks: DeckInfo[]; active: ActiveGame[]; noun: string; showScore?: boolean;
   onPick: (deck: DeckInfo) => void; onOpenPending: () => void;
 }) => {
   const { playTick, vibrateTick } = useSensoryFeedback();
   return (
     <section className="space-y-6">
-      <div className="space-y-1">
-        <h2 className="text-3xl font-bebas text-white tracking-widest uppercase leading-none">{title}</h2>
-        <p className="text-[10px] text-neutral-500 font-bebas tracking-[0.2em] uppercase">{subtitle}</p>
+      <div className="flex items-end justify-between gap-4">
+        <div className="space-y-1 min-w-0">
+          <h2 className="text-3xl font-bebas text-white tracking-widest uppercase leading-none">{title}</h2>
+          <p className="text-[10px] text-neutral-500 font-bebas tracking-[0.2em] uppercase">{subtitle}</p>
+        </div>
+        {showScore && <ScoreTally />}
       </div>
 
       {/* Everything in progress sits behind one row, so nobody has to hunt for it */}
@@ -253,17 +280,17 @@ const DeckSection = ({ title, subtitle, decks, active, noun, onPick, onOpenPendi
               key={deck.id}
               onClick={() => { playTick(); vibrateTick(); onPick(deck); }}
               className={cn(
-                "relative shrink-0 snap-start w-40 h-40 md:w-44 md:h-44 rounded-[2rem] p-5 flex flex-col justify-between text-left",
+                "relative shrink-0 snap-start w-[9.5rem] h-[11rem] md:w-44 md:h-[12.5rem] rounded-[1.75rem] p-4 flex flex-col justify-between text-left overflow-hidden",
                 "border border-white/10 bg-gradient-to-br active:scale-[0.97] hover:border-white/20 transition-all",
                 deck.gradient
               )}
             >
-              <div className="w-10 h-10 rounded-xl bg-white/10 flex items-center justify-center">
-                <Icon className="w-5 h-5 text-white" />
+              <div className="w-9 h-9 rounded-xl bg-white/10 flex items-center justify-center">
+                <Icon className="w-[18px] h-[18px] text-white" />
               </div>
-              <div className="space-y-1">
-                <h3 className="text-xl font-bebas text-white tracking-widest uppercase leading-[0.95]">{deck.title}</h3>
-                <p className="text-white/60 font-outfit text-xs leading-snug">{deck.blurb}</p>
+              <div className="space-y-1.5">
+                <h3 className={cn("text-[1.15rem] font-bebas text-white tracking-wider uppercase leading-[1.05] line-clamp-3", titleFont(deck.id))}>{deck.title}</h3>
+                <p className="text-white/60 font-outfit text-xs leading-snug line-clamp-2">{deck.blurb}</p>
               </div>
             </button>
           );
@@ -275,7 +302,6 @@ const DeckSection = ({ title, subtitle, decks, active, noun, onPick, onOpenPendi
 
 const GameLobby = ({ deck, onClose }: { deck: DeckInfo; onClose: () => void }) => {
   const { user, partner, liveGames, questionGames } = useMailbox();
-  const [level, setLevel] = useState<GameLevel>("normal");
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState("");
   const [askToMakeRoom, setAskToMakeRoom] = useState(false);
@@ -293,7 +319,7 @@ const GameLobby = ({ deck, onClose }: { deck: DeckInfo; onClose: () => void }) =
 
   const written = slotFor(deck.id) === "questions";
   const kindGames = written ? questionGames : liveGames; // newest first
-  const sameRunning = kindGames.find(g => g.deck === deck.id && g.level === level && (written || g.round < g.cards.length));
+  const sameRunning = kindGames.find(g => g.deck === deck.id && (written || g.board || g.round < g.cards.length));
   const full = kindGames.length >= MAX_OPEN_GAMES;
   const showMakeRoom = askToMakeRoom && full;
   const noun = written ? "deck" : "game";
@@ -313,7 +339,7 @@ const GameLobby = ({ deck, onClose }: { deck: DeckInfo; onClose: () => void }) =
   };
 
   const begin = async () => {
-    const id = await startGame(user!.coupleId!, uid, partnerUid, deck.id, level, user?.displayName?.split(" ")[0]);
+    const id = await startGame(user!.coupleId!, uid, partnerUid, deck.id, user?.displayName?.split(" ")[0]);
     playPop();
     onClose();
     (written ? openQuestions : openGame)(id);
@@ -366,7 +392,7 @@ const GameLobby = ({ deck, onClose }: { deck: DeckInfo; onClose: () => void }) =
             </button>
           </div>
           <div className="space-y-2">
-            <h3 className="text-4xl font-bebas text-white tracking-widest uppercase leading-none">{deck.title}</h3>
+            <h3 className={cn("text-4xl font-bebas text-white tracking-widest uppercase leading-none", titleFont(deck.id))}>{deck.title}</h3>
             {!showMakeRoom && <p className="text-white/70 font-outfit text-xs leading-relaxed">{deck.howTo}</p>}
           </div>
         </div>
@@ -400,25 +426,6 @@ const GameLobby = ({ deck, onClose }: { deck: DeckInfo; onClose: () => void }) =
           </div>
         ) : (
           <div className="p-8 pt-6 space-y-6">
-            <div className="space-y-3">
-              <p className="text-[10px] text-neutral-500 font-bebas tracking-[0.4em] uppercase">Choose a level</p>
-              <div className="grid grid-cols-3 gap-2">
-                {LEVELS.map((l) => (
-                  <button
-                    key={l.id}
-                    onClick={() => setLevel(l.id)}
-                    className={cn(
-                      "rounded-2xl border px-2 py-3 text-center transition-all",
-                      level === l.id ? "bg-white text-black border-white" : "bg-white/5 border-white/5 text-neutral-400 hover:text-white"
-                    )}
-                  >
-                    <span className="block font-bebas text-base tracking-widest uppercase leading-none">{l.label}</span>
-                    <span className={cn("block font-outfit text-[11px] mt-1 leading-tight", level === l.id ? "text-black/60" : "text-neutral-500")}>{l.hint}</span>
-                  </button>
-                ))}
-              </div>
-            </div>
-
             {error && <p className="text-rose-500 font-outfit text-xs">{error}</p>}
 
             <div className="space-y-3">

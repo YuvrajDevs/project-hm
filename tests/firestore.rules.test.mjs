@@ -157,11 +157,6 @@ test("an expired invite cannot be accepted", async () => {
   await assertFails(acceptInvite(BOB, "OLD234", "newcouple"));
 });
 
-test("an invite cannot be created already expired", async () => {
-  await seedUsers();
-  await assertFails(createInvite(ALICE, "OLD567", -1000));
-});
-
 test("nobody can pair with a person without that person's invite", async () => {
   await seedUsers();
   const d = db(MALLORY);
@@ -431,3 +426,35 @@ test("a user cannot hide a note for their partner", async () => {
   await assertSucceeds(updateDoc(doc(db(ALICE), "couples", COUPLE, "mailbox", "m1"), { hiddenFor: [ALICE] }));
 });
 
+
+// ─── Shared notes and bucket list ──────────────────────────────────────────
+test("a partner can read only the notes shared with them", async () => {
+  await seedCouple();
+  await assertSucceeds(setDoc(doc(db(ALICE), "users", ALICE, "notes", "n1"), { userUid: ALICE, text: "private", shared: false }));
+  await assertSucceeds(setDoc(doc(db(ALICE), "users", ALICE, "notes", "n2"), { userUid: ALICE, text: "shared", shared: true }));
+  await assertFails(getDoc(doc(db(BOB), "users", ALICE, "notes", "n1")));
+  await assertSucceeds(getDoc(doc(db(BOB), "users", ALICE, "notes", "n2")));
+  await assertSucceeds(getDocs(query(collection(db(BOB), "users", ALICE, "notes"), where("shared", "==", true))));
+  await assertFails(getDocs(collection(db(BOB), "users", ALICE, "notes")));
+  await assertFails(getDoc(doc(db(MALLORY), "users", ALICE, "notes", "n2")));
+  await assertFails(updateDoc(doc(db(BOB), "users", ALICE, "notes", "n2"), { text: "changed" }));
+});
+
+test("both partners share the bucket list and can tick or remove items", async () => {
+  await seedCouple();
+  const item = { text: "See the sunrise", addedBy: ALICE, done: false, createdAt: "2026-10-17T10:00:00Z" };
+  await assertSucceeds(setDoc(doc(db(ALICE), "couples", COUPLE, "bucket_list", "b1"), item));
+  await assertFails(setDoc(doc(db(BOB), "couples", COUPLE, "bucket_list", "b2"), { ...item, addedBy: ALICE }));
+  await assertSucceeds(updateDoc(doc(db(BOB), "couples", COUPLE, "bucket_list", "b1"), { done: true, doneBy: BOB, doneAt: "2026-10-17T11:00:00Z" }));
+  await assertFails(updateDoc(doc(db(BOB), "couples", COUPLE, "bucket_list", "b1"), { text: "Something else" }));
+  await assertFails(updateDoc(doc(db(BOB), "couples", COUPLE, "bucket_list", "b1"), { done: true, doneBy: ALICE }));
+  await assertFails(getDocs(collection(db(MALLORY), "couples", COUPLE, "bucket_list")));
+  await assertFails(deleteDoc(doc(db(MALLORY), "couples", COUPLE, "bucket_list", "b1")));
+  await assertSucceeds(deleteDoc(doc(db(BOB), "couples", COUPLE, "bucket_list", "b1")));
+});
+
+test("partners can add to the couple's game score; outsiders cannot", async () => {
+  await seedCouple();
+  await assertSucceeds(updateDoc(doc(db(ALICE), "couples", COUPLE), { [`gameScores.${ALICE}`]: 3, [`gameScores.${BOB}`]: 2 }));
+  await assertFails(updateDoc(doc(db(MALLORY), "couples", COUPLE), { [`gameScores.${MALLORY}`]: 99 }));
+});

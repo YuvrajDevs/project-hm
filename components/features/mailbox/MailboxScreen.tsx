@@ -15,6 +15,7 @@ import { Plus, Inbox, History, Heart, Sparkles, MessageSquarePlus } from "lucide
 import { AmbientBackground } from "../../ui/AmbientBackground";
 import { cn } from "@/lib/utils";
 import { GamesShelf } from "../games/GamesShelf";
+import { BucketList } from "../notes/BucketList";
 
 interface MailboxScreenProps {
     onOpenCheckIn?: () => void;
@@ -145,6 +146,9 @@ export const MailboxScreen: React.FC<MailboxScreenProps> = ({ onOpenCheckIn, onC
                 </div>
                 <WhiteFlagButton />
             </section>
+
+            {/* Shared bucket list, next to the notes */}
+            <BucketList />
 
             {/* 3. Partner Notes */}
             <section>
