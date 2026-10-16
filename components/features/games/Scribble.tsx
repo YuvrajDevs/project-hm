@@ -224,8 +224,10 @@ const Canvas = ({ strokes, canDraw, onStroke }: { strokes: string[]; canDraw: bo
   };
 
   return (
-    <div className="flex-1 min-h-0 flex items-center justify-center">
+    // A square pad, as big as fits on screen, so a drawing looks the same on both phones
+    <div className="flex-1 min-h-0 w-full flex items-center justify-center" style={{ containerType: "size" }}>
       <svg
+        style={{ width: "min(100cqw, 100cqh)", height: "min(100cqw, 100cqh)" }}
         ref={ref}
         viewBox={`0 0 ${GRID} ${GRID}`}
         // Stretch the 0–1000 grid to the pad exactly, so where the finger touches is where the line appears
@@ -235,7 +237,7 @@ const Canvas = ({ strokes, canDraw, onStroke }: { strokes: string[]; canDraw: bo
         onPointerUp={up}
         onPointerLeave={up}
         onPointerCancel={up}
-        className={cn("w-full h-full rounded-[2rem] bg-white", canDraw ? "cursor-crosshair touch-none" : "")}
+        className={cn("rounded-[2rem] bg-white", canDraw ? "cursor-crosshair touch-none" : "")}
       >
         {strokes.map((s, i) => (
           <path key={i} d={toPath(s)} fill="none" stroke="#111" strokeWidth={4} vectorEffect="non-scaling-stroke" strokeLinecap="round" strokeLinejoin="round" />

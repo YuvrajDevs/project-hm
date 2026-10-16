@@ -29,7 +29,12 @@ export const BoardGame = ({ game, uid, partnerUid, partnerName, coupleId, onLeav
     setBusy(true);
     setError("");
     try { await action(); }
-    catch (err) { console.error(err); setError("That move didn't go through. Try again."); }
+    catch (err) {
+      console.error(err);
+      setError(typeof navigator !== "undefined" && !navigator.onLine
+        ? "You're offline. Moves go through once you're back online."
+        : "That move didn't go through. Try again.");
+    }
     finally { setBusy(false); }
   };
 
@@ -63,11 +68,15 @@ export const BoardGame = ({ game, uid, partnerUid, partnerName, coupleId, onLeav
       status={status}
       onLeave={onLeave}
     >
-      <div className="flex-1 min-h-0 flex items-center justify-center">
+      {/* The board takes the largest size that fits both the width and the height left on screen */}
+      <div className="flex-1 min-h-0 w-full flex items-center justify-center" style={{ containerType: "size" }}>
         {connect4 ? (
           <div
-            className={cn("w-full rounded-[2rem] bg-gradient-to-br p-3 grid gap-1.5", DECK_BY_ID[game.deck].cards[0])}
-            style={{ gridTemplateColumns: `repeat(${C4_COLS}, minmax(0, 1fr))`, maxWidth: 420 }}
+            className={cn("rounded-[1.75rem] bg-gradient-to-br p-2.5 grid gap-1.5", DECK_BY_ID[game.deck].cards[0])}
+            style={{
+              gridTemplateColumns: `repeat(${C4_COLS}, minmax(0, 1fr))`,
+              width: `min(100cqw, calc(100cqh * ${C4_COLS} / ${C4_ROWS}), 440px)`,
+            }}
           >
             {Array.from({ length: C4_ROWS * C4_COLS }, (_, i) => {
               const owner = board[i];
@@ -97,7 +106,7 @@ export const BoardGame = ({ game, uid, partnerUid, partnerName, coupleId, onLeav
             })}
           </div>
         ) : (
-          <div className="w-full grid grid-cols-3 gap-3" style={{ maxWidth: 360 }}>
+          <div className="grid grid-cols-3 gap-3" style={{ width: "min(100cqw, 100cqh, 380px)" }}>
             {board.map((owner, i) => (
               <button
                 key={i}
@@ -114,7 +123,8 @@ export const BoardGame = ({ game, uid, partnerUid, partnerName, coupleId, onLeav
                   <motion.span
                     initial={{ scale: 0.4, opacity: 0 }}
                     animate={{ scale: 1, opacity: 1 }}
-                    className={cn("font-bebas text-6xl leading-none", owner === uid ? "text-pink-400" : "text-blue-400")}
+                    className={cn("font-bebas leading-none", owner === uid ? "text-pink-400" : "text-blue-400")}
+                    style={{ fontSize: "min(17cqw, 17cqh, 4.5rem)" }}
                   >
                     {xoMark(owner)}
                   </motion.span>

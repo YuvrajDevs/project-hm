@@ -439,16 +439,20 @@ export const startGame = async (coupleId: string, uid: string, partnerUid: strin
     joined: { [uid]: true },
   };
   const ref = doc(collection(db, "couples", coupleId, "games"));
-  await setDoc(ref, game);
+  // The game shows up on this phone as soon as it's written locally, so the screen can open right away
+  // instead of waiting for the server. If the server refuses it, it disappears again and the screen closes.
+  const saved = setDoc(ref, game);
   const written = slotFor(deck) === "questions";
-  await notifyPartner(partnerUid, {
-    uid: partnerUid,
-    type: "GAME",
-    title: written ? "Questions for You" : "Come Play",
-    body: written
-      ? `${starterName || "Your partner"} started ${DECK_BY_ID[deck].title}. Answer whenever you're ready.`
-      : `${starterName || "Your partner"} started ${DECK_BY_ID[deck].title}. Your move.`,
-  });
+  saved
+    .then(() => notifyPartner(partnerUid, {
+      uid: partnerUid,
+      type: "GAME",
+      title: written ? "Questions for You" : "Come Play",
+      body: written
+        ? `${starterName || "Your partner"} started ${DECK_BY_ID[deck].title}. Answer whenever you're ready.`
+        : `${starterName || "Your partner"} started ${DECK_BY_ID[deck].title}. Your move.`,
+    }))
+    .catch(console.error);
   return ref.id;
 };
 
