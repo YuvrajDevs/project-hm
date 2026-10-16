@@ -311,6 +311,9 @@ const GameLobby = ({ deck, onClose }: { deck: DeckInfo; onClose: () => void }) =
   const partnerUid = partner?.uid || "";
   const partnerName = partner?.displayName?.split(" ")[0] || "your partner";
 
+  // Fetch the game code while the person reads the panel, so tapping Start doesn't wait for a download
+  useEffect(() => { import("@/lib/games/engine").catch(() => {}); }, []);
+
   // Hide the dock and header while the dialog is up
   useEffect(() => {
     window.dispatchEvent(new CustomEvent("popupStateChange", { detail: { isOpen: true } }));
@@ -339,7 +342,11 @@ const GameLobby = ({ deck, onClose }: { deck: DeckInfo; onClose: () => void }) =
   };
 
   const begin = async () => {
-    const id = await startGame(user!.coupleId!, uid, partnerUid, deck.id, user?.displayName?.split(" ")[0]);
+    // Never leave the button on "Starting..." forever: give up after a while and say so
+    const id = await Promise.race([
+      startGame(user!.coupleId!, uid, partnerUid, deck.id, user?.displayName?.split(" ")[0]),
+      new Promise<never>((_, reject) => setTimeout(() => reject(new Error("start-timeout")), 10000)),
+    ]);
     playPop();
     onClose();
     (written ? openQuestions : openGame)(id);
