@@ -120,14 +120,22 @@ export const BoardGame = ({ game, uid, partnerUid, partnerName, coupleId, onLeav
                 )}
               >
                 {owner && (
-                  <motion.span
+                  <motion.svg
                     initial={{ scale: 0.4, opacity: 0 }}
                     animate={{ scale: 1, opacity: 1 }}
-                    className={cn("font-bebas leading-none", owner === uid ? "text-pink-400" : "text-blue-400")}
-                    style={{ fontSize: "min(17cqw, 17cqh, 4.5rem)" }}
+                    viewBox="0 0 100 100"
+                    className={cn("w-[62%] h-[62%]", owner === uid ? "text-pink-400" : "text-blue-400")}
+                    aria-label={xoMark(owner)}
                   >
-                    {xoMark(owner)}
-                  </motion.span>
+                    {xoMark(owner) === "X" ? (
+                      <g stroke="currentColor" strokeWidth={15}>
+                        <line x1={14} y1={14} x2={86} y2={86} />
+                        <line x1={86} y1={14} x2={14} y2={86} />
+                      </g>
+                    ) : (
+                      <circle cx={50} cy={50} r={37} fill="none" stroke="currentColor" strokeWidth={13} />
+                    )}
+                  </motion.svg>
                 )}
               </button>
             ))}

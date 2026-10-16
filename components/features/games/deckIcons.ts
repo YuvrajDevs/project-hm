@@ -55,3 +55,7 @@ export const DECK_ICONS = new Proxy(ICONS, { get: (t, k: string) => t[k] ?? Spar
 // Open a specific game on its full screen
 export const openGame = (id: string) => window.dispatchEvent(new CustomEvent("openGame", { detail: { id } }));
 export const openQuestions = (id: string) => window.dispatchEvent(new CustomEvent("openQuestions", { detail: { id } }));
+
+// The heading font draws the letter O almost like a zero, so "XO" reads as "X0" there.
+// That one title uses the round body font instead.
+export const titleFont = (deckId: string) => (deckId === "xo" ? "font-outfit font-bold tracking-wide" : "");

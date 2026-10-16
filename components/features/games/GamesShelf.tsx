@@ -12,7 +12,7 @@ import { answeredCount } from "@/lib/games/engine";
 import type { ActiveGame } from "@/lib/types";
 import { useSensoryFeedback } from "@/hooks/useSensoryFeedback";
 import { cn } from "@/lib/utils";
-import { DECK_ICONS, openGame, openQuestions } from "./deckIcons";
+import { DECK_ICONS, openGame, openQuestions, titleFont } from "./deckIcons";
 
 // The history reads every card back, so its code only loads when opened
 const PastGames = dynamic(() => import("./PastGames").then(m => m.PastGames));
@@ -151,7 +151,7 @@ const PendingList = ({ games, busy, onClose, onOpen }: { games: ActiveGame[]; bu
                 <GIcon className="w-4 h-4 text-white" />
               </div>
               <div className="flex-1 min-w-0">
-                <p className="font-bebas text-base tracking-wider uppercase leading-none truncate">{gDeck.title}</p>
+                <p className={cn("font-bebas text-base tracking-wider uppercase leading-none truncate", titleFont(gDeck.id))}>{gDeck.title}</p>
                 <p className="font-outfit text-xs text-neutral-400 mt-1 truncate">
                   {describe(g, uid, partner?.uid || "", partnerName).status}
                 </p>
@@ -265,7 +265,7 @@ const DeckSection = ({ title, subtitle, decks, active, noun, onPick, onOpenPendi
                 <Icon className="w-[18px] h-[18px] text-white" />
               </div>
               <div className="space-y-1.5">
-                <h3 className="text-[1.15rem] font-bebas text-white tracking-wider uppercase leading-[1.05] line-clamp-3">{deck.title}</h3>
+                <h3 className={cn("text-[1.15rem] font-bebas text-white tracking-wider uppercase leading-[1.05] line-clamp-3", titleFont(deck.id))}>{deck.title}</h3>
                 <p className="text-white/60 font-outfit text-xs leading-snug line-clamp-2">{deck.blurb}</p>
               </div>
             </button>
@@ -368,7 +368,7 @@ const GameLobby = ({ deck, onClose }: { deck: DeckInfo; onClose: () => void }) =
             </button>
           </div>
           <div className="space-y-2">
-            <h3 className="text-4xl font-bebas text-white tracking-widest uppercase leading-none">{deck.title}</h3>
+            <h3 className={cn("text-4xl font-bebas text-white tracking-widest uppercase leading-none", titleFont(deck.id))}>{deck.title}</h3>
             {!showMakeRoom && <p className="text-white/70 font-outfit text-xs leading-relaxed">{deck.howTo}</p>}
           </div>
         </div>

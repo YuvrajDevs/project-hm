@@ -9,7 +9,7 @@ import { DECK_BY_ID, isKnownDeck } from "@/lib/games/decks";
 import { getCard, roundKey, totalScores, truthDarePlayer } from "@/lib/games/engine";
 import type { CoupleGame } from "@/lib/types";
 import { cn } from "@/lib/utils";
-import { DECK_ICONS } from "./deckIcons";
+import { DECK_ICONS, titleFont } from "./deckIcons";
 
 type Entry = CoupleGame & { archivedAt: string; id: string };
 
@@ -98,7 +98,7 @@ export const PastGames = ({ onClose }: { onClose: () => void }) => {
                       <Icon className="w-5 h-5 text-white" />
                     </div>
                     <div className="flex-1 min-w-0">
-                      <p className="font-bebas text-lg tracking-wider uppercase leading-none truncate">{deck.title}</p>
+                      <p className={cn("font-bebas text-lg tracking-wider uppercase leading-none truncate", titleFont(deck.id))}>{deck.title}</p>
                       <p className="font-outfit text-xs text-neutral-400 mt-1 truncate">
                         {summaryLine(e, uid, partnerUid, partnerName)}
                       </p>

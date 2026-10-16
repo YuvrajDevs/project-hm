@@ -9,7 +9,7 @@ import { DECK_BY_ID } from "@/lib/games/decks";
 import { answeredCount, getCard, nextUnanswered, roundKey } from "@/lib/games/engine";
 import { useSensoryFeedback } from "@/hooks/useSensoryFeedback";
 import { cn } from "@/lib/utils";
-import { DECK_ICONS, openQuestions } from "./deckIcons";
+import { DECK_ICONS, openQuestions, titleFont } from "./deckIcons";
 import type { ActiveGame } from "@/lib/types";
 
 // Question decks: each person answers every card at their own pace.
@@ -93,7 +93,7 @@ export const QuestionDeckScreen = ({ gameId, onLeave }: { gameId: string; onLeav
           </button>
           <div className="flex items-center gap-2 min-w-0">
             <Icon className="w-4 h-4 text-white/80 shrink-0" />
-            <span className="font-bebas text-lg tracking-widest uppercase truncate">{deck.title}</span>
+            <span className={cn("font-bebas text-lg tracking-widest uppercase truncate", titleFont(deck.id))}>{deck.title}</span>
           </div>
           <button
             onClick={() => setConfirmEnd(true)}
