@@ -451,3 +451,9 @@ test("both partners share the bucket list and can tick or remove items", async (
   await assertFails(deleteDoc(doc(db(MALLORY), "couples", COUPLE, "bucket_list", "b1")));
   await assertSucceeds(deleteDoc(doc(db(BOB), "couples", COUPLE, "bucket_list", "b1")));
 });
+
+test("partners can add to the couple's game score; outsiders cannot", async () => {
+  await seedCouple();
+  await assertSucceeds(updateDoc(doc(db(ALICE), "couples", COUPLE), { [`gameScores.${ALICE}`]: 3, [`gameScores.${BOB}`]: 2 }));
+  await assertFails(updateDoc(doc(db(MALLORY), "couples", COUPLE), { [`gameScores.${MALLORY}`]: 99 }));
+});

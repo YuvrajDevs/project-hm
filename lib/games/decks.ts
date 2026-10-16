@@ -115,7 +115,7 @@ export const DECKS: DeckInfo[] = [
 ];
 
 export const SECTIONS: { id: SectionId; title: string; subtitle: string }[] = [
-  { id: "play", title: "Play Games", subtitle: "Little games for the two of you" },
+  { id: "play", title: "Play Together", subtitle: "Little games for the two of you" },
   { id: "know", title: "Getting to Know", subtitle: "Answer at your own pace, read them together" },
   { id: "spicy", title: "I Like It Spicy", subtitle: "Just for the two of you" },
   { id: "wyr", title: "Would You Rather", subtitle: "Pick one, hope you match" },

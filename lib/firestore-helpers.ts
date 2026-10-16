@@ -21,7 +21,8 @@ import {
   QueryDocumentSnapshot,
   SnapshotOptions,
   limit,
-  limitToLast
+  limitToLast,
+  increment
 } from "firebase/firestore";
 import { db, auth } from "./firebase";
 import { 
@@ -415,8 +416,21 @@ const archiveIfFinished = async (coupleId: string, gameId: string) => {
   const game = snap.data() as CoupleGame;
   if (!isFinished(game)) return;
   const id = `${game.startedAt}_${game.deck}`.replace(/[^\w-]/g, "_");
-  // If the partner already stored it, the copy is there and history entries can't be overwritten
-  await setDoc(doc(db, "couples", coupleId, "game_history", id), { ...game, archivedAt: new Date().toISOString() }).catch(() => {});
+  // If the partner already stored it, the copy is there and history entries can't be overwritten,
+  // so the write fails and the points aren't counted a second time
+  const stored = await setDoc(doc(db, "couples", coupleId, "game_history", id), { ...game, archivedAt: new Date().toISOString() })
+    .then(() => true, () => false);
+  if (!stored) return;
+  // Add this game's points to the couple's running score
+  const { totalScores } = await import("./games/engine");
+  const [a, b] = game.players;
+  const pts = totalScores(game, [a, b]);
+  if (pts[a] || pts[b]) {
+    await updateDoc(doc(db, "couples", coupleId), {
+      [`gameScores.${a}`]: increment(pts[a] || 0),
+      [`gameScores.${b}`]: increment(pts[b] || 0),
+    }).catch(console.error);
+  }
 };
 
 export const getGameHistory = async (coupleId: string) => {
@@ -761,6 +775,7 @@ export const acceptCoupleReset = async (coupleId: string) => {
     whiteFlagAt: null,
     streakCount: 0,
     streakLastDay: null,
+    gameScores: {},
   });
 };
 

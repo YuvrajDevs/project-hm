@@ -26,6 +26,7 @@ export interface User {
 
 export interface Couple {
   id: string;
+  gameScores?: Record<string, number>; // running total of points from finished games, per uid
   partnerA_uid: string;
   partnerB_uid: string;
   createdAt: string;

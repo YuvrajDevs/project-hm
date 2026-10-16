@@ -60,6 +60,7 @@ export const GamesShelf = () => {
           decks={DECKS.filter(d => d.section === section.id)}
           active={section.id === "play" ? liveGames : section.id === "know" ? questionGames : []}
           noun={section.id === "know" ? "deck" : "game"}
+          showScore={section.id === "play"}
           onPick={setPicked}
           onOpenPending={() => setPending(section.id === "know" ? "deck" : "game")}
         />
@@ -87,6 +88,27 @@ export const GamesShelf = () => {
         document.body
       )}
     </>
+  );
+};
+
+// The two of you, all-time: points from every game you've finished
+const ScoreTally = () => {
+  const { user, partner, couple } = useMailbox();
+  const scores = couple?.gameScores ?? {};
+  const mine = user?.uid ? scores[user.uid] ?? 0 : 0;
+  const theirs = partner?.uid ? scores[partner.uid] ?? 0 : 0;
+  const partnerName = partner?.displayName?.split(" ")[0] || "Partner";
+  return (
+    <div className="shrink-0 rounded-2xl bg-white/5 border border-white/10 px-3 py-2 text-right" aria-label={`Score: you ${mine}, ${partnerName} ${theirs}`}>
+      <p className="text-[10px] text-neutral-500 font-bebas tracking-[0.2em] uppercase leading-none">Score</p>
+      {/* One line each, so a long name never pushes the title around */}
+      <p className="mt-1.5 font-bebas text-base tracking-wider leading-none flex justify-end gap-2">
+        <span className="text-pink-300">You</span><span className="text-white">{mine}</span>
+      </p>
+      <p className="mt-1 font-bebas text-base tracking-wider leading-none flex justify-end gap-2">
+        <span className="text-blue-300 truncate max-w-[6rem]">{partnerName}</span><span className="text-white">{theirs}</span>
+      </p>
+    </div>
   );
 };
 
@@ -233,16 +255,19 @@ const PendingDialog = ({ kind, onClose }: { kind: "game" | "deck"; onClose: () =
   );
 };
 
-const DeckSection = ({ title, subtitle, decks, active, noun, onPick, onOpenPending }: {
-  title: string; subtitle: string; decks: DeckInfo[]; active: ActiveGame[]; noun: string;
+const DeckSection = ({ title, subtitle, decks, active, noun, showScore, onPick, onOpenPending }: {
+  title: string; subtitle: string; decks: DeckInfo[]; active: ActiveGame[]; noun: string; showScore?: boolean;
   onPick: (deck: DeckInfo) => void; onOpenPending: () => void;
 }) => {
   const { playTick, vibrateTick } = useSensoryFeedback();
   return (
     <section className="space-y-6">
-      <div className="space-y-1">
-        <h2 className="text-3xl font-bebas text-white tracking-widest uppercase leading-none">{title}</h2>
-        <p className="text-[10px] text-neutral-500 font-bebas tracking-[0.2em] uppercase">{subtitle}</p>
+      <div className="flex items-end justify-between gap-4">
+        <div className="space-y-1 min-w-0">
+          <h2 className="text-3xl font-bebas text-white tracking-widest uppercase leading-none">{title}</h2>
+          <p className="text-[10px] text-neutral-500 font-bebas tracking-[0.2em] uppercase">{subtitle}</p>
+        </div>
+        {showScore && <ScoreTally />}
       </div>
 
       {/* Everything in progress sits behind one row, so nobody has to hunt for it */}
