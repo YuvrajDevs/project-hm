@@ -7,7 +7,6 @@ export interface Category {
   label: string;         // as the owner sees it
   partnerLabel: string;  // as their partner sees it
   hint: string;          // one line in the editor
-  icon: string;
   defaultTags: string[];
 }
 
@@ -17,7 +16,6 @@ export const CATEGORIES: Record<TagCategoryId, Category> = {
     label: "How to show up for me",
     partnerLabel: "How to show up for {name}",
     hint: "What helps most when things feel heavy.",
-    icon: "🧠",
     defaultTags: ["Reassure me", "Give me space", "Just listen", "Distract me", "Be direct"],
   },
   offSignals: {
@@ -25,7 +23,6 @@ export const CATEGORIES: Record<TagCategoryId, Category> = {
     label: "When I'm off, I usually…",
     partnerLabel: "When {name} is off, they usually…",
     hint: "The signs that tell your partner something is up.",
-    icon: "⚡",
     defaultTags: ["Withdraw", "Overthink", "Get quiet", "Get reactive", "Need reassurance"],
   },
   loveLanguages: {
@@ -33,7 +30,6 @@ export const CATEGORIES: Record<TagCategoryId, Category> = {
     label: "What makes me feel loved",
     partnerLabel: "What makes {name} feel loved",
     hint: "Pick the ways love lands best for you.",
-    icon: "❤️",
     defaultTags: ["Words", "Time", "Touch", "Acts", "Gifts"],
   },
   personality: {
@@ -41,7 +37,6 @@ export const CATEGORIES: Record<TagCategoryId, Category> = {
     label: "A bit about me",
     partnerLabel: "A bit about {name}",
     hint: "A few words that sound like you.",
-    icon: "🎯",
     defaultTags: ["Introvert", "Extrovert", "Funny", "Sarcastic", "Chill", "Intense", "Planner", "Spontaneous"],
   },
   interests: {
@@ -49,7 +44,6 @@ export const CATEGORIES: Record<TagCategoryId, Category> = {
     label: "Things I like",
     partnerLabel: "Things {name} likes",
     hint: "Hobbies, food, places, anything you enjoy.",
-    icon: "🎮",
     defaultTags: ["Movies", "Gaming", "Gym", "Music", "Travel", "Cooking", "Reading"],
   },
   dislikes: {
@@ -57,7 +51,6 @@ export const CATEGORIES: Record<TagCategoryId, Category> = {
     label: "Things I don't like",
     partnerLabel: "Things {name} doesn't like",
     hint: "Good to know before it happens.",
-    icon: "🚫",
     defaultTags: ["Being interrupted", "Last-minute plans", "Silent treatment", "Loud places", "Being rushed"],
   },
 };
@@ -86,7 +79,11 @@ export const AVATARS = [
 export const MAX_TAGS = 10;
 export const MAX_BIO = 80;
 
-export const LOVE_EMOJI: Record<string, string> = { Words: "💬", Time: "⏳", Touch: "🤝", Acts: "🛠️", Gifts: "🎁" };
+// Pixel icons for the love languages; a language someone added themselves gets the star
+export const LOVE_ICONS: Record<string, string> = {
+  Words: "/icons/love_words.png", Time: "/icons/love_time.png", Touch: "/icons/love_touch.png", Acts: "/icons/love_acts.png", Gifts: "/icons/love_gifts.png",
+};
+export const LOVE_CUSTOM_ICON = "/icons/love_custom.png";
 
 // ─── What's filled in ──────────────────────────────────────────────────────
 

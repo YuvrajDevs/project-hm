@@ -37,7 +37,9 @@ export const EmpathyNudge: React.FC<EmpathyNudgeProps> = ({ onWriteNote, onDismi
                         <div className="space-y-1">
                             <h4 className="font-bebas text-lg tracking-widest text-white uppercase italic">Heavier Rhythm Today</h4>
                             <p className="text-neutral-400 font-outfit text-xs leading-relaxed uppercase tracking-widest">
-                                Your connection feels a bit heavy today. A small, honest note can go a long way in bridging the gap. ❤️
+                                Your connection feels a bit heavy today. A small, honest note can go a long way in bridging the gap.{" "}
+                                {/* eslint-disable-next-line @next/next/no-img-element */}
+                                <img src="/icons/heart_inline.png" alt="" className="inline-block w-4 h-4 align-[-3px]" />
                             </p>
                         </div>
                         <button 
