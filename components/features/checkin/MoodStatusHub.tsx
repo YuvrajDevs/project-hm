@@ -25,14 +25,13 @@ export const MoodStatusHub = () => {
       <div className="grid grid-cols-2 gap-4 items-stretch">
         {/* Your Mood Tile */}
         <div className="relative group flex">
-            <div className="absolute inset-0 bg-gradient-to-br from-pink-500/10 to-transparent rounded-[2rem] -z-10 blur-xl opacity-0 group-hover:opacity-100 transition-opacity" />
             <button
                 onClick={openSignalSelector}
                 className={cn(
-                    "w-full bg-white/5 border rounded-[2rem] p-6 text-left transition-all relative overflow-hidden flex flex-col justify-center min-h-[140px]",
+                    "w-full tone-pink rounded-[2rem] p-6 text-left transition-all relative overflow-hidden flex flex-col justify-center min-h-[140px]",
                     needsUpdate 
-                        ? "border-pink-500/40 shadow-[0_0_20px_rgba(236,72,153,0.1)]" 
-                        : "border-white/5 hover:border-white/10"
+                        ? "ring-2 ring-pink-400/60" 
+                        : "hover:brightness-110"
                 )}
             >
                 {needsUpdate && (
@@ -45,7 +44,7 @@ export const MoodStatusHub = () => {
                     </div>
                 )}
                 
-                <span className="font-bebas text-[10px] tracking-[0.4em] text-neutral-500 uppercase">You are feeling</span>
+                <span className="font-bebas text-[10px] tracking-[0.4em] text-white/60 uppercase">You are feeling</span>
                 <div className="mt-3 flex flex-col items-start gap-2 sm:flex-row sm:items-center sm:gap-4">
                     <div className="w-12 h-12 flex items-center justify-center relative">
                         <div className="absolute inset-0 bg-white/10 blur-xl rounded-full" />
@@ -73,12 +72,11 @@ export const MoodStatusHub = () => {
 
         {/* Partner's Mood Tile */}
         <div className="relative group flex">
-            <div className="absolute inset-0 bg-gradient-to-br from-blue-500/10 to-transparent rounded-[2rem] -z-10 blur-xl opacity-0 group-hover:opacity-100 transition-opacity" />
             <button
                 onClick={replayPartnerSignal}
-                className="w-full bg-white/5 border border-white/5 rounded-[2rem] p-6 text-left relative overflow-hidden flex flex-col justify-center min-h-[140px] hover:border-white/10 transition-all group/partner"
+                className="w-full tone-blue rounded-[2rem] p-6 text-left relative overflow-hidden flex flex-col justify-center min-h-[140px] hover:brightness-110 transition-all group/partner"
             >
-                <span className="font-bebas text-[10px] tracking-[0.4em] text-neutral-500 uppercase">
+                <span className="font-bebas text-[10px] tracking-[0.4em] text-white/60 uppercase">
                     {partner?.displayName?.split(' ')[0] || "Partner"} is feeling
                 </span>
                 <div className="mt-3 flex flex-col items-start gap-2 sm:flex-row sm:items-center sm:gap-4 group-hover/partner:scale-105 transition-transform origin-left">
@@ -91,7 +89,7 @@ export const MoodStatusHub = () => {
                                 className="w-full h-full object-contain relative z-10 drop-shadow-xl animate-float"
                             />
                         ) : (
-                            <div className="w-full h-full bg-white/5 rounded-full border border-white/10 flex items-center justify-center">
+                            <div className="w-full h-full bg-[#1c1c1c] rounded-full border border-[#2a2a2a] flex items-center justify-center">
                                 <span className="text-neutral-700 text-xs font-bebas">?</span>
                             </div>
                         )}

@@ -80,10 +80,8 @@ export const QuestionDeckScreen = ({ gameId, onLeave }: { gameId: string; onLeav
       initial={{ opacity: 0 }}
       animate={{ opacity: 1 }}
       exit={{ opacity: 0 }}
-      className="fixed inset-0 z-[105] bg-[#0a0a0a] text-white"
+      className="fixed inset-0 z-[105] bg-[#0e0e0e] text-white"
     >
-      <div className={cn("pointer-events-none absolute inset-x-0 top-0 h-[40vh] bg-gradient-to-b opacity-60", deck.gradient)} />
-      <div className="pointer-events-none absolute inset-x-0 top-[18vh] h-[22vh] bg-gradient-to-b from-transparent to-[#0a0a0a]" />
 
       <div className="relative h-[100dvh] max-w-md mx-auto px-5 pt-6 pb-6 flex flex-col gap-4">
         {/* Header */}
@@ -249,7 +247,7 @@ const AnswerCard = ({ text, number, total, gradient, busy, partnerName, isLast, 
           }
         }}
         placeholder={`Your answer. ${partnerName} sees it when you've both finished.`}
-        className="h-[6.5rem] shrink-0 w-full bg-white/5 border border-white/10 rounded-2xl px-5 py-4 font-outfit text-sm text-white focus:outline-none focus:border-white/30 placeholder:text-neutral-500 resize-none"
+        className="h-[6.5rem] shrink-0 w-full bg-[#161616] border border-[#2a2a2a] rounded-2xl px-5 py-4 font-outfit text-sm text-white focus:outline-none focus:border-white/30 placeholder:text-neutral-500 resize-none"
       />
       <button
         onClick={() => onSave(draft.trim())}
@@ -323,7 +321,7 @@ const Results = ({ game, uid, partnerUid, partnerName, gradient, busy, onFinish,
       </div>
 
       <nav aria-label="Questions" className={cn("shrink-0 grid gap-3", isLast ? "grid-cols-[3.5rem_1fr_1fr]" : "grid-cols-[3.5rem_1fr_3.5rem]")}>
-        <button onClick={() => go(index - 1)} disabled={index === 0} aria-label="Previous question" className={cn(arrow, "bg-white/5 border border-white/10 text-white hover:bg-white/10")}>
+        <button onClick={() => go(index - 1)} disabled={index === 0} aria-label="Previous question" className={cn(arrow, "bg-[#1c1c1c] border border-[#2a2a2a] text-white hover:bg-[#242424]")}>
           <ArrowLeft className="w-5 h-5" />
         </button>
         {isLast ? (
@@ -331,7 +329,7 @@ const Results = ({ game, uid, partnerUid, partnerName, gradient, busy, onFinish,
             <button
               onClick={onFinish}
               disabled={busy}
-              className="h-14 rounded-2xl bg-white/5 border border-white/10 font-bebas tracking-widest uppercase hover:bg-white/10 active:scale-95 disabled:opacity-30 transition-all"
+              className="h-14 rounded-2xl bg-[#161616] border border-[#2a2a2a] font-bebas tracking-widest uppercase hover:bg-[#242424] active:scale-95 disabled:opacity-30 transition-all"
             >
               Finish
             </button>

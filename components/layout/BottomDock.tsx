@@ -51,7 +51,7 @@ export const BottomDock: React.FC<BottomDockProps> = ({
             animate={{ y: 0, opacity: 1 }}
             exit={{ y: 100, opacity: 0 }}
             transition={{ type: "spring", damping: 20, stiffness: 100 }}
-            className="pointer-events-auto relative flex items-center gap-1 p-2 bg-black/40 backdrop-blur-xl border border-white/10 rounded-[2.5rem] shadow-[0_20px_50px_rgba(0,0,0,0.5)]"
+            className="pointer-events-auto relative flex items-center gap-1 p-2 bg-[#161616] border border-white/10 rounded-[2.5rem] shadow-[0_20px_50px_rgba(0,0,0,0.5)]"
           >
         {/* Far Left: Inbox Button */}
         <button
@@ -94,7 +94,7 @@ export const BottomDock: React.FC<BottomDockProps> = ({
                 onClick={() => handleNav("mailbox")}
                 className={cn(
                     "w-16 h-16 rounded-full flex items-center justify-center transition-all group p-1.5",
-                    activeView === "mailbox" ? "bg-pink-500 text-white shadow-[0_0_30px_rgba(236,72,153,0.4)]" : "bg-white/5 border border-white/10 text-white"
+                    activeView === "mailbox" ? "bg-pink-500 text-white shadow-[0_0_30px_rgba(236,72,153,0.4)]" : "bg-[#1c1c1c] border border-[#2a2a2a] text-white"
                 )}
             >
                 <img src="/logo.png" alt="HM Logo" className="w-9 h-auto group-hover:scale-110 transition-transform" />

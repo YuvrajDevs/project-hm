@@ -73,7 +73,7 @@ export default function RootLayout({
       suppressHydrationWarning
       className={`${bebasNeue.variable} ${outfit.variable} ${inter.variable} antialiased dark scroll-smooth`}
     >
-      <body suppressHydrationWarning className={`${outfit.className} min-h-screen bg-[#070707] text-neutral-50 overflow-x-hidden flex flex-col`}>
+      <body suppressHydrationWarning className={`${outfit.className} min-h-screen bg-[#0e0e0e] text-neutral-50 overflow-x-hidden flex flex-col`}>
         <JsonLd
           data={{
             "@context": "https://schema.org",

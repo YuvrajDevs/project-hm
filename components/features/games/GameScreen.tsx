@@ -102,11 +102,9 @@ export const GameScreen = ({ gameId, onLeave }: { gameId: string; onLeave: () =>
       initial={{ opacity: 0 }}
       animate={{ opacity: 1 }}
       exit={{ opacity: 0 }}
-      className="fixed inset-0 z-[105] bg-[#0a0a0a] text-white"
+      className="fixed inset-0 z-[105] bg-[#0e0e0e] text-white"
     >
       {/* Soft wash in the game's colours */}
-      <div className={cn("pointer-events-none absolute inset-x-0 top-0 h-[45vh] bg-gradient-to-b opacity-60", deck.gradient)} />
-      <div className="pointer-events-none absolute inset-x-0 top-[20vh] h-[25vh] bg-gradient-to-b from-transparent to-[#0a0a0a]" />
 
       <div className="relative h-[100dvh] max-w-md mx-auto px-5 pt-6 pb-6 flex flex-col gap-4">
         {/* Header */}
@@ -416,7 +414,7 @@ const PairRound = ({ game, card, round, uid, partnerUid, partnerName, complete, 
         {/* Between the cards: "or", and "+1" once you've matched */}
         <span className={cn(
           "pointer-events-none absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 w-12 h-12 rounded-full border flex items-center justify-center font-bebas text-sm tracking-widest transition-colors",
-          matched ? "bg-white text-black border-white" : "bg-[#0a0a0a] text-white/80 border-white/15"
+          matched ? "bg-white text-black border-white" : "bg-[#0e0e0e] text-white/80 border-white/15"
         )}>
           {matched ? "+1" : "OR"}
         </span>

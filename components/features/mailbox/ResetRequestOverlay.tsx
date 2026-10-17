@@ -53,7 +53,7 @@ export const ResetRequestOverlay = () => {
                 >
                     <div className="relative mx-auto w-24 h-24">
                         <div className="absolute inset-0 bg-pink-500/20 rounded-full blur-2xl animate-pulse" />
-                        <div className="relative bg-white/5 border border-white/10 rounded-full w-full h-full flex items-center justify-center">
+                        <div className="relative bg-[#1c1c1c] border border-[#2a2a2a] rounded-full w-full h-full flex items-center justify-center">
                             <RefreshCw className="w-10 h-10 text-white animate-spin-slow" />
                         </div>
                     </div>
@@ -78,7 +78,7 @@ export const ResetRequestOverlay = () => {
                                 animate={{ opacity: 1 }}
                                 className="space-y-4 pt-4"
                             >
-                                <div className="flex flex-col items-center gap-4 p-8 bg-white/5 border border-white/10 rounded-[2rem]">
+                                <div className="flex flex-col items-center gap-4 p-8 bg-[#161616] border border-[#2a2a2a] rounded-[2rem]">
                                     <Loader2 className="w-8 h-8 text-neutral-500 animate-spin" />
                                     <span className="font-bebas text-lg tracking-widest text-neutral-400 uppercase">Resetting Archive...</span>
                                 </div>
@@ -99,7 +99,7 @@ export const ResetRequestOverlay = () => {
                                 
                                 <button 
                                     onClick={handleReject}
-                                    className="w-full bg-white/5 border border-white/10 text-neutral-400 font-bebas text-lg py-4 rounded-[2rem] hover:bg-white/10 hover:text-white transition-all"
+                                    className="w-full bg-[#161616] border border-[#2a2a2a] text-neutral-400 font-bebas text-lg py-4 rounded-[2rem] hover:bg-[#242424] hover:text-white transition-all"
                                 >
                                     Not Now
                                 </button>

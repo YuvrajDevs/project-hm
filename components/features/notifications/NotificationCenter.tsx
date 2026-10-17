@@ -35,14 +35,14 @@ export const NotificationCenter = ({ isOpen, onClose }: { isOpen: boolean, onClo
                         initial={{ opacity: 0, scale: 0.9, y: 20 }}
                         animate={{ opacity: 1, scale: 1, y: 0 }}
                         exit={{ opacity: 0, scale: 0.9, y: 20 }}
-                        className="w-full max-w-md bg-[#0f0f0f] border border-white/10 rounded-[2.5rem] overflow-hidden flex flex-col max-h-[80vh] shadow-2xl relative z-10"
+                        className="w-full max-w-md bg-[#151515] border border-white/10 rounded-[2.5rem] overflow-hidden flex flex-col max-h-[80vh] shadow-2xl relative z-10"
                     >
                         <header className="p-6 border-b border-white/5 flex justify-between items-center">
                             <div className="flex items-center gap-3">
                                 <div className="relative">
                                     <Bell className="w-5 h-5 text-white" />
                                     {unreadNotificationsCount > 0 && (
-                                        <div className="absolute -top-1 -right-1 w-2 h-2 bg-pink-500 rounded-full border border-[#0f0f0f]" />
+                                        <div className="absolute -top-1 -right-1 w-2 h-2 bg-pink-500 rounded-full border border-[#151515]" />
                                     )}
                                 </div>
                                 <h2 className="font-bebas text-xl tracking-widest text-white uppercase">Notifications</h2>
@@ -55,7 +55,7 @@ export const NotificationCenter = ({ isOpen, onClose }: { isOpen: boolean, onClo
                         <div className="flex-1 overflow-y-auto p-4 space-y-3 custom-scrollbar">
                             {notifications.length === 0 ? (
                                 <div className="h-64 flex flex-col items-center justify-center text-center space-y-4">
-                                    <div className="w-16 h-16 rounded-full bg-white/5 flex items-center justify-center">
+                                    <div className="w-16 h-16 rounded-full bg-[#1c1c1c] flex items-center justify-center">
                                         <Bell className="w-8 h-8 text-neutral-700" />
                                     </div>
                                     <p className="font-bebas text-neutral-500 tracking-widest uppercase text-sm">Quiet for now...</p>
@@ -73,12 +73,12 @@ export const NotificationCenter = ({ isOpen, onClose }: { isOpen: boolean, onClo
                                         className={`p-4 rounded-2xl border transition-all cursor-pointer relative ${
                                             noti.read 
                                                 ? "bg-white/[0.02] border-white/5" 
-                                                : "bg-white/5 border-white/10 hover:border-white/20"
+                                                : "bg-[#1c1c1c] border-[#2a2a2a] hover:border-white/20"
                                         }`}
                                     >
                                         <div className="flex gap-4">
                                             <div className={`w-10 h-10 rounded-xl flex items-center justify-center shrink-0 ${
-                                                noti.read ? "bg-white/5" : "bg-white/10"
+                                                noti.read ? "bg-[#1c1c1c]" : "bg-white/10"
                                             }`}>
                                                 {(noti.type === "MAILBOX" || noti.type === "CHAT") ? (
                                                     <MessageCircle className="w-4 h-4 text-blue-400" />

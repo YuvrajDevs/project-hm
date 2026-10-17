@@ -242,7 +242,7 @@ export const MessageCard = ({ message }: { message: MailboxMessage }) => {
                     <span className="font-bebas text-lg tracking-widest uppercase">Waiting for response...</span>
                 </div>
                 {message.readAt && (
-                  <div className="flex items-center gap-1.5 px-3 py-1 rounded-full bg-white/5 border border-white/10">
+                  <div className="flex items-center gap-1.5 px-3 py-1 rounded-full bg-[#1c1c1c] border border-[#2a2a2a]">
                     <Eye className="w-3 h-3 text-blue-400" />
                     <span className="text-[9px] font-bebas tracking-widest uppercase text-blue-200">Partner Read</span>
                   </div>

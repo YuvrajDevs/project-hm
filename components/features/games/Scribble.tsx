@@ -197,7 +197,7 @@ const GuessBox = ({ busy, onGuess }: { busy: boolean; onGuess: (guess: string) =
         maxLength={40}
         placeholder="Type your guess"
         autoComplete="off"
-        className="flex-1 min-w-0 bg-white/5 border border-white/10 rounded-2xl px-4 font-outfit text-sm text-white focus:outline-none focus:border-white/30 placeholder:text-neutral-500"
+        className="flex-1 min-w-0 bg-[#161616] border border-[#2a2a2a] rounded-2xl px-4 font-outfit text-sm text-white focus:outline-none focus:border-white/30 placeholder:text-neutral-500"
       />
       <button
         type="submit"

@@ -8,11 +8,11 @@
   --color-pink-soft: #e06c9f;
   --color-blue-soft: #7aa2f7;
   --color-yellow-soft: #e0af68;
-  --color-dark-base: #0f0f0f;
+  --color-dark-base: #0e0e0e;
 }
 
 :root {
-  --background: #0f0f0f;
+  --background: #0e0e0e;
   --foreground: #f5f5f5;
   
   --accent-pink: #e06c9f;
@@ -67,41 +67,34 @@ h1, h2, h3, h4, h5, h6 {
   border: 1px solid var(--card-dark-border);
 }
 
-/* Dialog backdrop: the page stays visible but blurred behind any popup (never a black wall) */
+/* Dialog backdrop: the page dims behind any popup. Flat, no frosted blur. */
 .overlay-backdrop {
   /* Always the full screen: a parent's spacing utilities (space-y-*) must not add margins to it */
   margin: 0;
-  background: rgba(10, 10, 10, 0.35);
-  -webkit-backdrop-filter: blur(24px) saturate(120%);
-  backdrop-filter: blur(24px) saturate(120%);
+  background: rgba(14, 14, 14, 0.82);
 }
 
-/* Dialog surface: solid enough to read on top of the blurred page */
+/* Dialog surface: a solid card, a step lighter than the page */
 .overlay-panel {
-  background: rgba(20, 20, 20, 0.92);
-  border: 1px solid rgba(255, 255, 255, 0.1);
+  background: #151515;
+  border: 1px solid #262626;
 }
+
+/* Coloured cards: a deep solid colour with the faintest gradient and a hairline border one shade lighter.
+   Text on them is white; secondary text is white at 60%. */
+.tone-slate   { background: linear-gradient(145deg, #1b1b1d, #141415); border: 1px solid #262628; }
+.tone-amber   { background: linear-gradient(145deg, #4a2a10, #2e1a09); border: 1px solid #5b3515; }
+.tone-pink    { background: linear-gradient(145deg, #4b1a31, #2f1020); border: 1px solid #5d2340; }
+.tone-rose    { background: linear-gradient(145deg, #4c1a22, #2f1016); border: 1px solid #5f222c; }
+.tone-blue    { background: linear-gradient(145deg, #17294d, #0f1b36); border: 1px solid #213a68; }
+.tone-indigo  { background: linear-gradient(145deg, #25235a, #171538); border: 1px solid #33307a; }
+.tone-violet  { background: linear-gradient(145deg, #34205a, #211338); border: 1px solid #47297a; }
+.tone-emerald { background: linear-gradient(145deg, #103b2d, #0a2820); border: 1px solid #17503c; }
+.tone-teal    { background: linear-gradient(145deg, #0f3a3e, #0a2629); border: 1px solid #165157; }
 
 /* Subtle Shadows */
 .shadow-soft {
   box-shadow: 0 4px 20px -2px rgba(0, 0, 0, 0.5);
-}
-
-/* Ambient background washes */
-.ambient-wash {
-  will-change: transform;
-  transition: opacity 1s;
-}
-.ambient-wash-a { animation: wash-a 35s ease-in-out infinite; }
-.ambient-wash-b { animation: wash-b 40s ease-in-out infinite; }
-
-@keyframes wash-a {
-  0%, 100% { transform: translate3d(-20%, -20%, 0) scale(1); }
-  50% { transform: translate3d(-10%, -10%, 0) scale(1.1); }
-}
-@keyframes wash-b {
-  0%, 100% { transform: translate3d(20%, 20%, 0) scale(1.2); }
-  50% { transform: translate3d(10%, 10%, 0) scale(1); }
 }
 
 /* Long lists: the browser skips layout and paint for cards that are off screen */

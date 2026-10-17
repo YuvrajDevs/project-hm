@@ -40,10 +40,10 @@ export const Composer = ({ onText, onPhoto, onVoice, onError, preparing }: {
   if (voice.recording) {
     return (
       <div className="flex items-center gap-2 p-3" role="group" aria-label="Recording a voice note">
-        <button type="button" onClick={voice.cancel} aria-label="Discard voice note" className={cn(iconButton, "bg-white/5 border border-white/10 text-neutral-300 hover:text-white")}>
+        <button type="button" onClick={voice.cancel} aria-label="Discard voice note" className={cn(iconButton, "bg-[#1c1c1c] border border-[#2a2a2a] text-neutral-300 hover:text-white")}>
           <Trash2 className="w-4 h-4" />
         </button>
-        <div className="flex-1 min-w-0 h-11 rounded-full bg-white/5 border border-white/10 px-4 flex items-center gap-3">
+        <div className="flex-1 min-w-0 h-11 rounded-full bg-[#1c1c1c] border border-[#2a2a2a] px-4 flex items-center gap-3">
           <span className="w-2.5 h-2.5 rounded-full bg-red-500 animate-pulse shrink-0" />
           <span className="font-outfit text-sm tabular-nums text-white">{formatClock(voice.seconds)}</span>
           <div className="flex-1 h-1 rounded-full bg-white/10 overflow-hidden">
@@ -81,7 +81,7 @@ export const Composer = ({ onText, onPhoto, onVoice, onError, preparing }: {
         onClick={() => picker.current?.click()}
         disabled={preparing}
         aria-label="Send a photo"
-        className={cn(iconButton, "bg-white/5 border border-white/10 text-neutral-300 hover:text-white hover:bg-white/10")}
+        className={cn(iconButton, "bg-[#1c1c1c] border border-[#2a2a2a] text-neutral-300 hover:text-white hover:bg-[#242424]")}
       >
         {preparing ? <Loader2 className="w-4 h-4 animate-spin" /> : <ImagePlus className="w-4 h-4" />}
       </button>
@@ -102,7 +102,7 @@ export const Composer = ({ onText, onPhoto, onVoice, onError, preparing }: {
           }
         }}
         // 16px on phones: smaller text makes iOS zoom the page when the field is tapped
-        className="flex-1 min-w-0 max-h-[120px] resize-none bg-white/5 border border-white/10 rounded-[1.4rem] px-4 py-[11px] text-[16px] sm:text-sm leading-[22px] text-white font-outfit focus:outline-none focus:border-white/30 placeholder:text-neutral-600"
+        className="flex-1 min-w-0 max-h-[120px] resize-none bg-[#1c1c1c] border border-[#2a2a2a] rounded-[1.4rem] px-4 py-[11px] text-[16px] sm:text-sm leading-[22px] text-white font-outfit focus:outline-none focus:border-white/30 placeholder:text-neutral-600"
       />
 
       {text.trim() ? (
@@ -120,7 +120,7 @@ export const Composer = ({ onText, onPhoto, onVoice, onError, preparing }: {
           type="button"
           onClick={voice.start}
           aria-label="Record a voice note"
-          className={cn(iconButton, "bg-white/5 border border-white/10 text-neutral-300 hover:text-white hover:bg-white/10")}
+          className={cn(iconButton, "bg-[#1c1c1c] border border-[#2a2a2a] text-neutral-300 hover:text-white hover:bg-[#242424]")}
         >
           <Mic className="w-4 h-4" />
         </button>

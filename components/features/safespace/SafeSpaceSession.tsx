@@ -196,15 +196,15 @@ export const SafeSpaceSession: React.FC<SafeSpaceSessionProps> = ({ onLeave, onC
         initial={{ opacity: 0 }}
         animate={{ opacity: 1 }}
         exit={{ opacity: 0 }}
-        className="fixed inset-0 z-50 bg-[#050505] flex flex-col font-outfit overflow-hidden"
+        className="fixed inset-0 z-50 bg-[#0e0e0e] flex flex-col font-outfit overflow-hidden"
     >
         <AmbientBackground variant="bright" />
 
         {/* Header */}
-        <header className="px-6 py-6 flex justify-between items-center gap-3 bg-white/5 border-b border-white/5 relative z-10">
+        <header className="px-6 py-6 flex justify-between items-center gap-3 bg-[#1c1c1c] border-b border-[#232323] relative z-10">
             <button
                 onClick={onLeave}
-                className="flex items-center gap-2 px-4 py-2 bg-white/5 border border-white/10 rounded-full font-bebas text-xs tracking-widest text-neutral-300 uppercase hover:text-white hover:bg-white/10 transition-all active:scale-95"
+                className="flex items-center gap-2 px-4 py-2 bg-[#1c1c1c] border border-[#2a2a2a] rounded-full font-bebas text-xs tracking-widest text-neutral-300 uppercase hover:text-white hover:bg-[#242424] transition-all active:scale-95"
             >
                 <ArrowLeft className="w-4 h-4" /> Leave for Now
             </button>
@@ -270,7 +270,7 @@ export const SafeSpaceSession: React.FC<SafeSpaceSessionProps> = ({ onLeave, onC
         </div>
 
         {/* Composer */}
-        <div className="p-6 bg-black/20 backdrop-blur-xl border-t border-white/5 pb-10 relative z-10">
+        <div className="p-6 bg-[#0e0e0e] border-t border-white/5 pb-10 relative z-10">
             <div className="max-w-2xl mx-auto flex flex-col gap-4">
                 <p className="text-xs font-outfit text-neutral-400 text-center leading-relaxed">{status}</p>
                 {sendError && (
@@ -283,7 +283,7 @@ export const SafeSpaceSession: React.FC<SafeSpaceSessionProps> = ({ onLeave, onC
                             <p className="text-sm text-indigo-100">{partnerName} would like to speak. Ready to listen?</p>
                         </div>
                         <div className="flex gap-2 shrink-0">
-                            <button onClick={() => runMicAction(() => respondToMicRequest(coupleId!, sessionId!, partnerUid!, false))} className="px-4 py-2 bg-white/5 rounded-xl text-neutral-300 hover:text-white transition-all text-xs font-bebas tracking-widest uppercase">Let Me Finish</button>
+                            <button onClick={() => runMicAction(() => respondToMicRequest(coupleId!, sessionId!, partnerUid!, false))} className="px-4 py-2 bg-[#1c1c1c] rounded-xl text-neutral-300 hover:text-white transition-all text-xs font-bebas tracking-widest uppercase">Let Me Finish</button>
                             <button onClick={() => runMicAction(() => respondToMicRequest(coupleId!, sessionId!, partnerUid!, true))} className="px-6 py-2 bg-indigo-500 rounded-xl text-white font-bebas tracking-widest uppercase text-xs">Hand Over</button>
                         </div>
                     </div>
@@ -296,7 +296,7 @@ export const SafeSpaceSession: React.FC<SafeSpaceSessionProps> = ({ onLeave, onC
                             onChange={(e) => setInputText(e.target.value)}
                             placeholder="Share your thought honestly..."
                             maxLength={2000}
-                            className="w-full bg-white/5 border border-white/10 rounded-2xl p-5 text-lg text-white focus:outline-none focus:border-indigo-500/50 h-[14vh] min-h-[96px] transition-all resize-none"
+                            className="w-full bg-[#161616] border border-[#2a2a2a] rounded-2xl p-5 text-lg text-white focus:outline-none focus:border-indigo-500/50 h-[14vh] min-h-[96px] transition-all resize-none"
                             onKeyDown={(e) => {
                                 if (e.key === 'Enter' && !e.shiftKey && !e.nativeEvent.isComposing) {
                                     e.preventDefault();
@@ -308,7 +308,7 @@ export const SafeSpaceSession: React.FC<SafeSpaceSessionProps> = ({ onLeave, onC
                             {partnerPresent && partnerUid && (
                                 <button
                                     onClick={() => runMicAction(() => handoverMic(coupleId!, sessionId!, partnerUid))}
-                                    className="flex items-center gap-2 px-5 py-4 bg-white/5 border border-white/10 rounded-2xl text-neutral-300 hover:text-white hover:bg-white/10 transition-all text-xs font-bebas tracking-widest uppercase shrink-0"
+                                    className="flex items-center gap-2 px-5 py-4 bg-[#161616] border border-[#2a2a2a] rounded-2xl text-neutral-300 hover:text-white hover:bg-[#242424] transition-all text-xs font-bebas tracking-widest uppercase shrink-0"
                                 >
                                     <HandMetal className="w-4 h-4" /> Your Turn, {partnerName}
                                 </button>
@@ -331,7 +331,7 @@ export const SafeSpaceSession: React.FC<SafeSpaceSessionProps> = ({ onLeave, onC
                         <button
                             onClick={() => runMicAction(() => requestMic(coupleId!, sessionId!, uid!))}
                             disabled={iAmAsking || cooldownActive}
-                            className="bg-white/5 border border-white/10 text-white font-bebas text-sm tracking-widest uppercase px-8 py-3 rounded-full hover:bg-white/10 transition-all disabled:opacity-40 disabled:cursor-not-allowed"
+                            className="bg-[#1c1c1c] border border-[#2a2a2a] text-white font-bebas text-sm tracking-widest uppercase px-8 py-3 rounded-full hover:bg-[#242424] transition-all disabled:opacity-40 disabled:cursor-not-allowed"
                         >
                             {iAmAsking ? `Asked. Waiting for ${partnerName}` : cooldownActive ? "You can ask again in a few minutes" : "Ask to Speak"}
                         </button>
@@ -349,7 +349,7 @@ export const SafeSpaceSession: React.FC<SafeSpaceSessionProps> = ({ onLeave, onC
                     exit={{ opacity: 0 }}
                     className="fixed inset-0 z-[60] overlay-backdrop flex items-center justify-center p-6"
                 >
-                    <div className="max-w-md w-full bg-[#0a0a0a] border border-white/10 rounded-[2.5rem] p-8 text-center space-y-8">
+                    <div className="max-w-md w-full bg-[#0e0e0e] border border-white/10 rounded-[2.5rem] p-8 text-center space-y-8">
                         <div className="space-y-3">
                             <h3 className="text-3xl font-bebas text-white tracking-widest uppercase leading-none">Close the Safe Space?</h3>
                             <p className="text-neutral-400 font-outfit text-sm leading-relaxed">

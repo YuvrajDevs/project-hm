@@ -2,8 +2,8 @@ import Link from "next/link";
 
 export default function NotFound() {
   return (
-    <div className="min-h-screen bg-[#0a0a0a] text-white flex items-center justify-center p-6">
-      <div className="w-full max-w-sm bg-white/5 border border-white/10 rounded-[2.5rem] p-8 text-center space-y-6">
+    <div className="min-h-screen bg-[#0e0e0e] text-white flex items-center justify-center p-6">
+      <div className="w-full max-w-sm bg-[#161616] border border-[#2a2a2a] rounded-[2.5rem] p-8 text-center space-y-6">
         <img src="/logo.png" alt="" className="w-12 h-auto mx-auto" />
         <div className="space-y-2">
           <h1 className="text-3xl font-bebas tracking-widest uppercase">Page Not Found</h1>

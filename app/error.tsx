@@ -25,8 +25,8 @@ export default function Error({
   }, [error]);
 
   return (
-    <div className="min-h-screen bg-[#0a0a0a] text-white flex items-center justify-center p-6">
-      <div className="w-full max-w-sm bg-white/5 border border-white/10 rounded-[2.5rem] p-8 text-center space-y-6">
+    <div className="min-h-screen bg-[#0e0e0e] text-white flex items-center justify-center p-6">
+      <div className="w-full max-w-sm bg-[#161616] border border-[#2a2a2a] rounded-[2.5rem] p-8 text-center space-y-6">
         <img src="/logo.png" alt="" className="w-12 h-auto mx-auto" />
         <div className="space-y-2">
           <h1 className="text-3xl font-bebas tracking-widest uppercase">Something Went Wrong</h1>
@@ -43,7 +43,7 @@ export default function Error({
           </button>
           <button
             onClick={() => { window.location.href = "/"; }}
-            className="w-full bg-white/5 border border-white/10 text-white font-bebas tracking-widest uppercase rounded-2xl py-4 hover:bg-white/10 transition-all"
+            className="w-full bg-[#161616] border border-[#2a2a2a] text-white font-bebas tracking-widest uppercase rounded-2xl py-4 hover:bg-[#242424] transition-all"
           >
             Go Home
           </button>

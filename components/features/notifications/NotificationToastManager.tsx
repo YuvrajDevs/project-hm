@@ -70,7 +70,7 @@ export const NotificationToastManager = () => {
                         role={game ? "button" : undefined}
                         tabIndex={game ? 0 : undefined}
                         aria-label={game ? `${activeToast.title}. ${activeToast.body}` : undefined}
-                        className={`bg-neutral-900/80 backdrop-blur-xl border border-white/10 rounded-3xl p-4 shadow-2xl flex items-center gap-4 relative overflow-hidden group ${game ? "cursor-pointer hover:bg-neutral-900/90 active:scale-[0.98] transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/50" : ""}`}
+                        className={`bg-[#1a1a1a] border border-white/10 rounded-3xl p-4 shadow-2xl flex items-center gap-4 relative overflow-hidden group ${game ? "cursor-pointer hover:bg-neutral-900/90 active:scale-[0.98] transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/50" : ""}`}
                     >
                         {/* Progress bar */}
                         <motion.div 
@@ -80,7 +80,7 @@ export const NotificationToastManager = () => {
                             className="absolute bottom-0 left-0 h-0.5 bg-gradient-to-r from-pink-500 to-blue-500 opacity-50"
                         />
 
-                        <div className="w-12 h-12 rounded-2xl bg-white/5 border border-white/10 flex items-center justify-center shrink-0">
+                        <div className="w-12 h-12 rounded-2xl bg-[#161616] border border-[#2a2a2a] flex items-center justify-center shrink-0">
                             {(activeToast.type === "MAILBOX" || activeToast.type === "CHAT") ? (
                                 <MessageCircle className="w-6 h-6 text-blue-400" />
                             ) : activeToast.type === "CHECK_IN" ? (

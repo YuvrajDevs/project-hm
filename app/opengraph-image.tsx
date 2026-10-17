@@ -18,7 +18,7 @@ export default function Image() {
           flexDirection: "column",
           alignItems: "center",
           justifyContent: "center",
-          background: "#0a0a0a",
+          background: "#0e0e0e",
           backgroundImage:
             "radial-gradient(circle at 25% 30%, rgba(224,108,159,0.35), transparent 55%), radial-gradient(circle at 75% 70%, rgba(122,162,247,0.35), transparent 55%)",
         }}

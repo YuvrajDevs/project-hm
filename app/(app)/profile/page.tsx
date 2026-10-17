@@ -209,20 +209,20 @@ export default function ProfilePage() {
   const love = profile.loveLanguages || [];
   const likes = profile.interests || [];
   const dislikes = profile.dislikes || [];
-  const tint = isMe ? "from-pink-500/25 via-pink-500/10 to-transparent" : "from-blue-400/25 via-blue-400/10 to-transparent";
+  const heroTone = isMe ? "tone-pink" : "tone-blue";
   const nextUp = progress.missing[0];
 
   return (
     <MotionConfig reducedMotion="user">
-      <div className="min-h-screen bg-[#0a0a0a] text-white font-outfit pb-32 relative">
+      <div className="min-h-screen bg-[#0e0e0e] text-white font-outfit pb-32 relative">
         <AmbientBackground variant="standard" gender={shown?.gender} />
 
-        <header className="flex justify-between items-center w-full fixed top-0 left-0 p-8 z-50 bg-gradient-to-b from-[#0a0a0a]/80 to-transparent backdrop-blur-sm pointer-events-none">
-          <button onClick={() => router.push("/")} aria-label="Back to home" className="w-10 h-10 flex items-center justify-center rounded-full bg-white/5 border border-white/5 hover:bg-white/10 transition-all text-neutral-400 hover:text-white pointer-events-auto focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/50">
+        <header className="flex justify-between items-center w-full fixed top-0 left-0 p-8 z-50 bg-gradient-to-b from-[#0e0e0e] via-[#0e0e0e]/90 to-transparent pointer-events-none">
+          <button onClick={() => router.push("/")} aria-label="Back to home" className="w-10 h-10 flex items-center justify-center rounded-full bg-[#1c1c1c] border border-[#232323] hover:bg-[#242424] transition-all text-neutral-400 hover:text-white pointer-events-auto focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/50">
             <ArrowLeft className="w-5 h-5" />
           </button>
           {isPaired ? (
-            <div role="tablist" aria-label="Whose profile" className="relative flex bg-black/40 p-1.5 rounded-full border border-white/10 pointer-events-auto backdrop-blur-xl">
+            <div role="tablist" aria-label="Whose profile" className="relative flex bg-[#161616] p-1.5 rounded-full border border-white/10 pointer-events-auto">
               {(["me", "partner"] as const).map((v) => {
                 const active = view === v;
                 return (
@@ -242,7 +242,7 @@ export default function ProfilePage() {
           ) : (
             <span className="font-bebas text-xl tracking-[0.2em] uppercase">Profile</span>
           )}
-          <button onClick={() => router.push("/settings")} aria-label="Settings" className="w-10 h-10 flex items-center justify-center rounded-full bg-white/5 border border-white/5 hover:bg-white/10 transition-all text-neutral-400 hover:text-white pointer-events-auto focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/50">
+          <button onClick={() => router.push("/settings")} aria-label="Settings" className="w-10 h-10 flex items-center justify-center rounded-full bg-[#1c1c1c] border border-[#232323] hover:bg-[#242424] transition-all text-neutral-400 hover:text-white pointer-events-auto focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/50">
             <Settings className="w-5 h-5" />
           </button>
         </header>
@@ -253,7 +253,7 @@ export default function ProfilePage() {
             key={view}
             initial={{ opacity: 0, y: 12 }}
             animate={{ opacity: 1, y: 0 }}
-            className={cn("relative overflow-hidden rounded-[2.5rem] border border-white/10 bg-gradient-to-br p-8 text-center", tint)}
+            className={cn("relative overflow-hidden rounded-[2.5rem] p-8 text-center", heroTone)}
           >
             <div className="flex flex-col items-center gap-5">
               <Avatar user={shown} size="lg" className="shadow-2xl" />
@@ -306,35 +306,35 @@ export default function ProfilePage() {
               <button
                 type="button"
                 onClick={() => open({ kind: "date" })}
-                className="text-left rounded-[2rem] bg-white/5 border border-white/10 p-5 space-y-1 hover:bg-white/10 active:scale-[0.98] transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/50"
+                className="text-left rounded-[2rem] tone-rose p-5 space-y-1 hover:brightness-110 active:scale-[0.98] transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/50"
               >
-                <p className="font-bebas text-[10px] tracking-[0.3em] uppercase text-neutral-500">Together</p>
+                <p className="font-bebas text-[10px] tracking-[0.3em] uppercase text-white/55">Together</p>
                 {together !== null ? (
                   <>
-                    <p className="font-bebas text-5xl leading-none tabular-nums">{together.toLocaleString()}<span className="text-xl text-neutral-500 ml-2">days</span></p>
-                    <p className="font-outfit text-xs text-neutral-500 pt-1">{`Since ${formatDate(couple?.anniversaryDate)}`}</p>
+                    <p className="font-bebas text-5xl leading-none tabular-nums">{together.toLocaleString()}<span className="text-xl text-white/55 ml-2">days</span></p>
+                    <p className="font-outfit text-xs text-white/55 pt-1">{`Since ${formatDate(couple?.anniversaryDate)}`}</p>
                   </>
                 ) : (
                   <>
                     <p className="font-bebas text-2xl leading-tight pt-1">Add the day you met</p>
-                    <p className="font-outfit text-xs text-neutral-500">Shared by both of you</p>
+                    <p className="font-outfit text-xs text-white/55">Shared by both of you</p>
                   </>
                 )}
               </button>
-              <div className="rounded-[2rem] bg-white/5 border border-white/10 p-5 space-y-1">
-                <p className="font-bebas text-[10px] tracking-[0.3em] uppercase text-neutral-500">Check-in streak</p>
+              <div className="rounded-[2rem] tone-amber p-5 space-y-1">
+                <p className="font-bebas text-[10px] tracking-[0.3em] uppercase text-white/55">Check-in streak</p>
                 <p className="font-bebas text-5xl leading-none tabular-nums flex items-center gap-2">
-                  <Flame className={cn("w-7 h-7", streak > 0 ? "text-orange-500" : "text-neutral-600")} />
-                  {streak}<span className="text-xl text-neutral-500">days</span>
+                  <Flame className={cn("w-7 h-7", streak > 0 ? "text-orange-500" : "text-white/30")} />
+                  {streak}<span className="text-xl text-white/55">days</span>
                 </p>
-                <p className="font-outfit text-xs text-neutral-500 pt-1">{streak > 0 ? "Both of you, in a row" : "Check in together to start"}</p>
+                <p className="font-outfit text-xs text-white/55 pt-1">{streak > 0 ? "Both of you, in a row" : "Check in together to start"}</p>
               </div>
             </div>
           )}
 
           {/* ─── For the owner: who sees this and what's left to add ─── */}
           {isMe && (
-            <div className="rounded-2xl bg-white/5 border border-white/10 p-5 space-y-4">
+            <div className="rounded-2xl bg-[#161616] border border-[#2a2a2a] p-5 space-y-4">
               <div className="flex items-start gap-3">
                 <Eye className="w-4 h-4 text-neutral-500 shrink-0 mt-0.5" />
                 <p className="text-xs text-neutral-300 font-outfit leading-relaxed text-pretty">
@@ -356,7 +356,7 @@ export default function ProfilePage() {
                 <button
                   type="button"
                   onClick={() => openSection(nextUp.id)}
-                  className="w-full flex items-center justify-between gap-3 px-4 py-3 rounded-xl bg-white/5 border border-white/10 hover:bg-white/10 active:scale-[0.98] transition-all text-left focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/50"
+                  className="w-full flex items-center justify-between gap-3 px-4 py-3 rounded-xl bg-[#1c1c1c] border border-[#2a2a2a] hover:bg-[#242424] active:scale-[0.98] transition-all text-left focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/50"
                 >
                   <span className="min-w-0">
                     <span className="block font-bebas text-[10px] tracking-[0.3em] uppercase text-neutral-500">Add next</span>
@@ -370,7 +370,7 @@ export default function ProfilePage() {
 
           {/* ─── For their partner: a gentle prompt when there's little here ─── */}
           {!isMe && progress.filled <= 2 && (
-            <div className="rounded-2xl bg-white/5 border border-white/10 p-5 flex items-center justify-between gap-4">
+            <div className="rounded-2xl bg-[#161616] border border-[#2a2a2a] p-5 flex items-center justify-between gap-4">
               <p className="font-outfit text-sm text-neutral-300 leading-relaxed text-pretty">{`${firstName} has only added a little so far.`}</p>
               <button
                 type="button"
@@ -390,7 +390,7 @@ export default function ProfilePage() {
             <SectionCard
               icon="/icons/ui_section_hard.png"
               title={isMe ? "When things get hard" : `When ${firstName} is struggling`}
-              tint="from-rose-500/15 via-orange-500/5 to-transparent"
+              tone="tone-rose"
             >
               {(isMe || profile.defaultIntent) && (
                 <div className="space-y-3">
@@ -425,7 +425,7 @@ export default function ProfilePage() {
           {(isMe || love.length > 0 || (profile.personality || []).length > 0) && (
             <div className="grid gap-6 md:grid-cols-2 md:items-start">
               {(isMe || love.length > 0) && (
-                <SectionCard icon="/icons/ui_section_loved.png" title={isMe ? "How I feel loved" : `How ${firstName} feels loved`} onEdit={edit && (() => open({ kind: "tags", id: "loveLanguages" }))}>
+                <SectionCard tone="tone-pink" icon="/icons/ui_section_loved.png" title={isMe ? "How I feel loved" : `How ${firstName} feels loved`} onEdit={edit && (() => open({ kind: "tags", id: "loveLanguages" }))}>
                   {love.length > 0 ? (
                     <ul className="grid grid-cols-2 gap-2">
                       {love.map((l) => (
@@ -442,7 +442,7 @@ export default function ProfilePage() {
                 </SectionCard>
               )}
               {(isMe || (profile.personality || []).length > 0) && (
-                <SectionCard icon="/icons/ui_section_about.png" title={isMe ? "A bit about me" : `A bit about ${firstName}`} onEdit={edit && (() => open({ kind: "tags", id: "personality" }))}>
+                <SectionCard tone="tone-violet" icon="/icons/ui_section_about.png" title={isMe ? "A bit about me" : `A bit about ${firstName}`} onEdit={edit && (() => open({ kind: "tags", id: "personality" }))}>
                   {(profile.personality || []).length > 0 ? <Tags tags={profile.personality!} /> : <AddPrompt onClick={() => open({ kind: "tags", id: "personality" })}>A few words about you</AddPrompt>}
                 </SectionCard>
               )}
@@ -451,7 +451,7 @@ export default function ProfilePage() {
 
           {/* ─── Likes and dislikes ─── */}
           {(isMe || likes.length > 0 || dislikes.length > 0) && (
-            <SectionCard icon="/icons/ui_section_likes.png" title={isMe ? "Likes and dislikes" : `What ${firstName} likes`}>
+            <SectionCard tone="tone-teal" icon="/icons/ui_section_likes.png" title={isMe ? "Likes and dislikes" : `What ${firstName} likes`}>
               <div className="grid gap-6 md:grid-cols-2">
                 {(isMe || likes.length > 0) && (
                   <div className="space-y-3">
@@ -471,7 +471,7 @@ export default function ProfilePage() {
 
           {/* ─── Little things ─── */}
           {(isMe || facts.length > 0) && (
-            <SectionCard icon="/icons/ui_section_little.png" title={isMe ? "Little things" : `Little things about ${firstName}`} onEdit={edit && (() => open({ kind: "facts" }))}>
+            <SectionCard tone="tone-amber" icon="/icons/ui_section_little.png" title={isMe ? "Little things" : `Little things about ${firstName}`} onEdit={edit && (() => open({ kind: "facts" }))}>
               {facts.length > 0 ? (
                 <dl className="divide-y divide-white/5 -my-2">
                   {facts.map((fact) => {
@@ -479,9 +479,9 @@ export default function ProfilePage() {
                     const value = profile.facts![fact.id];
                     return (
                       <div key={fact.id} className="flex items-center gap-4 py-3.5">
-                        <span className="w-10 h-10 shrink-0 rounded-xl bg-white/5 flex items-center justify-center text-neutral-300"><Icon className="w-4 h-4" /></span>
+                        <span className="w-10 h-10 shrink-0 rounded-xl bg-[#1c1c1c] flex items-center justify-center text-neutral-300"><Icon className="w-4 h-4" /></span>
                         <div className="min-w-0">
-                          <dt className="font-bebas text-[10px] tracking-[0.3em] uppercase text-neutral-500">{isMe ? fact.label : fact.partnerLabel}</dt>
+                          <dt className="font-bebas text-[10px] tracking-[0.3em] uppercase text-white/55">{isMe ? fact.label : fact.partnerLabel}</dt>
                           <dd className="font-outfit text-sm text-white break-words">
                             {fact.type === "date" ? formatDate(value) : value}
                             {fact.id === "birthday" && birthday !== null && <span className="text-neutral-500">{` · ${birthdayText(birthday).replace("Birthday ", "")}`}</span>}
@@ -499,7 +499,7 @@ export default function ProfilePage() {
 
           {/* ─── Nothing yet, from their partner's side ─── */}
           {!isMe && progress.filled === 0 && (
-            <div className="py-12 px-6 flex flex-col items-center gap-3 bg-white/5 border border-white/5 border-dashed rounded-[2.5rem] text-center">
+            <div className="py-12 px-6 flex flex-col items-center gap-3 bg-[#161616] border border-[#232323] border-dashed rounded-[2.5rem] text-center">
               <Sparkles className="w-6 h-6 text-neutral-500" />
               <p className="font-bebas text-2xl tracking-widest uppercase">{`${firstName} hasn't added anything yet`}</p>
               <p className="font-outfit text-sm text-neutral-500 leading-relaxed text-pretty max-w-xs">Once they do, what helps them, how they feel loved and the little things show up here.</p>

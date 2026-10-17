@@ -163,7 +163,7 @@ export default function Onboarding() {
   );
 
   return (
-    <div className="h-screen w-screen bg-[#0a0a0a] flex flex-col overflow-hidden relative">
+    <div className="h-screen w-screen bg-[#0e0e0e] flex flex-col overflow-hidden relative">
       {/* Ambient gradient — driven by current profileStep color */}
       <div
         className={`absolute inset-0 bg-gradient-to-br ${currentProfile?.color ?? "from-pink-500/5 to-transparent"} pointer-events-none transition-all duration-700`}
@@ -201,7 +201,7 @@ export default function Onboarding() {
                 className="flex flex-col gap-8"
               >
                 <div className="flex flex-col gap-4">
-                  <div className="w-12 h-12 rounded-2xl bg-white/5 border border-white/10 flex items-center justify-center">
+                  <div className="w-12 h-12 rounded-2xl bg-[#161616] border border-[#2a2a2a] flex items-center justify-center">
                     <User className="w-6 h-6 text-neutral-400" />
                   </div>
                   <div>
@@ -222,7 +222,7 @@ export default function Onboarding() {
                     placeholder="Your name..."
                     autoFocus
                     maxLength={30}
-                    className="w-full bg-white/5 border border-white/10 rounded-2xl px-5 py-4 text-white font-outfit text-lg focus:outline-none focus:border-white/30 transition-all placeholder:text-neutral-700"
+                    className="w-full bg-[#161616] border border-[#2a2a2a] rounded-2xl px-5 py-4 text-white font-outfit text-lg focus:outline-none focus:border-white/30 transition-all placeholder:text-neutral-700"
                   />
                   <div className="flex flex-col gap-3">
                     <button
@@ -256,7 +256,7 @@ export default function Onboarding() {
                 className="flex flex-col gap-8"
               >
                 <div className="flex flex-col gap-4">
-                  <div className="w-12 h-12 rounded-2xl bg-white/5 border border-white/10 flex items-center justify-center">
+                  <div className="w-12 h-12 rounded-2xl bg-[#161616] border border-[#2a2a2a] flex items-center justify-center">
                     {currentProfile.icon}
                   </div>
                   <h2 className="text-3xl font-bebas text-white tracking-widest uppercase leading-tight">
@@ -273,7 +273,7 @@ export default function Onboarding() {
                       key={option}
                       onClick={() => handleOptionSelect(option)}
                       disabled={submitting}
-                      className="w-full px-5 py-4 text-left bg-white/5 border border-white/10 rounded-2xl hover:bg-white/10 hover:border-white/25 transition-all flex justify-between items-center group active:scale-[0.98]"
+                      className="w-full px-5 py-4 text-left bg-[#161616] border border-[#2a2a2a] rounded-2xl hover:bg-[#242424] hover:border-white/25 transition-all flex justify-between items-center group active:scale-[0.98]"
                     >
                       <span className="text-neutral-300 font-outfit text-sm group-hover:text-white transition-colors">
                         {option}

@@ -42,10 +42,8 @@ export const GameShell = ({ game, coupleId, partnerUid, partnerName, scores, sco
       initial={{ opacity: 0 }}
       animate={{ opacity: 1 }}
       exit={{ opacity: 0 }}
-      className="fixed inset-0 z-[105] bg-[#0a0a0a] text-white"
+      className="fixed inset-0 z-[105] bg-[#0e0e0e] text-white"
     >
-      <div className={cn("pointer-events-none absolute inset-x-0 top-0 h-[45vh] bg-gradient-to-b opacity-60", deck.gradient)} />
-      <div className="pointer-events-none absolute inset-x-0 top-[20vh] h-[25vh] bg-gradient-to-b from-transparent to-[#0a0a0a]" />
 
       <div className="relative h-[100dvh] max-w-md mx-auto px-5 pt-6 pb-6 flex flex-col gap-4">
         <div className="flex items-center justify-between gap-4 shrink-0">
