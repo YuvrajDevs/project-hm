@@ -194,6 +194,11 @@ service cloud.firestore {
             && request.resource.data.hiddenFor is list
             && request.resource.data.hiddenFor.hasAll(resource.data.get('hiddenFor', []))
             && request.resource.data.hiddenFor.toSet().difference(resource.data.get('hiddenFor', []).toSet()).hasOnly([request.auth.uid]))
+          // Either one can save it for themselves (and un-save it), touching only their own uid
+          || (changedOnly(['savedBy'])
+            && request.resource.data.savedBy is list
+            && request.resource.data.savedBy.toSet().difference(resource.data.get('savedBy', []).toSet()).hasOnly([request.auth.uid])
+            && resource.data.get('savedBy', []).toSet().difference(request.resource.data.savedBy.toSet()).hasOnly([request.auth.uid]))
           || (resource.data.get('sealed', false) == true
             && request.resource.data.sealed == false
             && changedOnly(['status', 'intent', 'note', 'sealed'])
@@ -251,6 +256,41 @@ service cloud.firestore {
           && changedOnly(['done', 'doneBy', 'doneAt'])
           && (request.resource.data.get('doneBy', null) == null || request.resource.data.doneBy == request.auth.uid);
         allow delete: if isPartOfCouple(coupleId);
+      }
+
+      // Chat: photos and voice notes ride inside the message, so each message is size-capped.
+      // Either person can save a message for themselves; only the sender can unsend it.
+      match /chat/{messageId} {
+        allow read: if isPartOfCouple(coupleId);
+        allow create: if isPartOfCouple(coupleId)
+          && request.resource.data.keys().hasOnly(['senderUid', 'kind', 'text', 'mime', 'data', 'w', 'h', 'dur', 'createdAt'])
+          && request.resource.data.senderUid == request.auth.uid
+          && request.resource.data.createdAt == request.time
+          && (
+            (request.resource.data.kind == 'text'
+              && request.resource.data.text is string
+              && request.resource.data.text.size() > 0
+              && request.resource.data.text.size() <= 2000
+              && !('data' in request.resource.data))
+            || (request.resource.data.kind == 'image'
+              && request.resource.data.get('mime', '') in ['image/jpeg', 'image/webp']
+              && request.resource.data.get('data', null) is string
+              && request.resource.data.data.size() <= 700000
+              && !('text' in request.resource.data))
+            || (request.resource.data.kind == 'voice'
+              && request.resource.data.get('mime', '') in ['audio/webm', 'audio/mp4', 'audio/ogg']
+              && request.resource.data.get('data', null) is string
+              && request.resource.data.data.size() <= 700000
+              && request.resource.data.get('dur', null) is number
+              && request.resource.data.dur <= 120
+              && !('text' in request.resource.data))
+          );
+        allow update: if isPartOfCouple(coupleId)
+          && changedOnly(['savedBy'])
+          && request.resource.data.savedBy is list
+          && request.resource.data.savedBy.toSet().difference(resource.data.get('savedBy', []).toSet()).hasOnly([request.auth.uid])
+          && resource.data.get('savedBy', []).toSet().difference(request.resource.data.savedBy.toSet()).hasOnly([request.auth.uid]);
+        allow delete: if isPartOfCouple(coupleId) && canDeleteCoupleItem(coupleId, resource.data.senderUid);
       }
 
       // Finished games, kept so the two of them can look back at them

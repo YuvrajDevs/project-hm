@@ -71,7 +71,7 @@ export const NotificationCenter = ({ isOpen, onClose }: { isOpen: boolean, onClo
                                             <div className={`w-10 h-10 rounded-xl flex items-center justify-center shrink-0 ${
                                                 noti.read ? "bg-white/5" : "bg-white/10"
                                             }`}>
-                                                {noti.type === "MAILBOX" ? (
+                                                {(noti.type === "MAILBOX" || noti.type === "CHAT") ? (
                                                     <MessageCircle className="w-4 h-4 text-blue-400" />
                                                 ) : noti.type === "CHECK_IN" ? (
                                                     <Heart className="w-4 h-4 text-pink-500" />

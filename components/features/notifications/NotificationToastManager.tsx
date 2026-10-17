@@ -62,7 +62,7 @@ export const NotificationToastManager = () => {
                         />
 
                         <div className="w-12 h-12 rounded-2xl bg-white/5 border border-white/10 flex items-center justify-center shrink-0">
-                            {activeToast.type === "MAILBOX" ? (
+                            {(activeToast.type === "MAILBOX" || activeToast.type === "CHAT") ? (
                                 <MessageCircle className="w-6 h-6 text-blue-400" />
                             ) : activeToast.type === "CHECK_IN" ? (
                                 <Heart className="w-6 h-6 text-pink-500" />

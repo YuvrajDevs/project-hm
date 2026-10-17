@@ -4,10 +4,11 @@ import React, { useState, useEffect, useRef } from "react";
 import { MailboxMessage, ResponseMode } from "@/lib/types";
 import { motion, AnimatePresence } from "framer-motion";
 import { useMailbox } from "@/context/MailboxContext";
-import { Heart, Clock, CheckCircle2, MessageCircle, Ear, Users, Send, ChevronLeft, Trash2, Edit3, Eye, MoreVertical } from "lucide-react";
+import { Heart, Clock, CheckCircle2, MessageCircle, Ear, Users, Send, ChevronLeft, Trash2, Edit3, Eye, MoreVertical, Bookmark } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useSensoryFeedback } from "@/hooks/useSensoryFeedback";
 import { EditMessage } from "./EditMessage";
+import { setThoughtSaved } from "@/lib/firestore-helpers";
 
 import { PREMIUM_ICONS, INTENT_LABELS } from "@/lib/constants";
 
@@ -15,6 +16,7 @@ export const MessageCard = ({ message }: { message: MailboxMessage }) => {
   const { user, partner, markAsRead, deleteForMe, respondToNote } = useMailbox();
   const { playPop, vibrateTick } = useSensoryFeedback();
   const isSender = message.senderUid === user?.uid;
+  const saved = !!user && !!message.savedBy?.includes(user.uid);
   const config = PREMIUM_ICONS[message.status] || { label: message.status, url: "", color: "bg-neutral-800" };
   
   const [timeLeft, setTimeLeft] = useState<string | null>(null);
@@ -144,8 +146,9 @@ export const MessageCard = ({ message }: { message: MailboxMessage }) => {
               </h2>
           </div>
         </div>
-        <div className="flex items-center gap-3 relative z-20">
-            <div className="text-[10px] font-bebas tracking-widest opacity-60 bg-black/10 px-3 py-1.5 rounded-full border border-white/5">
+        <div className="flex flex-col items-end gap-2 relative z-20">
+         <div className="flex items-center gap-3">
+            <div className="whitespace-nowrap text-[10px] font-bebas tracking-widest opacity-60 bg-black/10 px-3 py-1.5 rounded-full border border-white/5">
                 {new Date(message.createdAt).toLocaleDateString([], { month: 'short', day: 'numeric' })}, {new Date(message.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
             </div>
             
@@ -191,6 +194,26 @@ export const MessageCard = ({ message }: { message: MailboxMessage }) => {
                   )}
                 </AnimatePresence>
             </div>
+         </div>
+         {/* Kept for a week on Our Thoughts; saving keeps it. Private to whoever saves it. */}
+         {!message.sealed && (
+           <button
+             type="button"
+             onClick={() => {
+               if (!user?.coupleId) return;
+               vibrateTick();
+               setThoughtSaved(user.coupleId, message.id, user.uid, !saved).catch((err) => { console.error(err); setError("Couldn't save that. Try again."); });
+             }}
+             aria-pressed={saved}
+             className={cn(
+               "inline-flex items-center gap-1 px-2.5 py-1 rounded-full border font-bebas text-[11px] tracking-widest uppercase transition-all active:scale-95 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/60",
+               saved ? "bg-white text-black border-white" : "bg-black/15 border-white/10 text-white/80 hover:bg-black/25 hover:text-white"
+             )}
+           >
+             <Bookmark className="w-3 h-3" fill={saved ? "currentColor" : "none"} />
+             {saved ? "Saved" : "Save"}
+           </button>
+         )}
         </div>
       </div>
 
