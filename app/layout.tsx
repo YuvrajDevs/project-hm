@@ -60,7 +60,6 @@ export const metadata: Metadata = {
   },
 };
 
-import { MailboxProvider } from "@/context/MailboxContext";
 import { JsonLd } from "@/components/seo/JsonLd";
 
 export default function RootLayout({
@@ -91,9 +90,7 @@ export default function RootLayout({
             url: SITE_URL,
           }}
         />
-        <MailboxProvider>
-          {children}
-        </MailboxProvider>
+        {children}
       </body>
     </html>
   );
