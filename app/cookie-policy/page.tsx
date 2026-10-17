@@ -1,16 +1,14 @@
-'use client';
+import type { Metadata } from "next";
+import Link from "next/link";
+import { ArrowLeft } from "lucide-react";
 
-import React, { useState, useEffect } from 'react';
-import Link from 'next/link';
-import { ArrowLeft } from 'lucide-react';
+export const metadata: Metadata = {
+  title: "Cookie Policy",
+  description: "How Honest Mailbox uses cookies and similar technology, and how to control them.",
+  alternates: { canonical: "/cookie-policy" },
+};
 
 export default function CookiePolicy() {
-  const [mounted, setMounted] = useState(false);
-
-  useEffect(() => {
-    setMounted(true);
-  }, []);
-
   return (
     <div className="min-h-screen bg-[#0a0a0a] text-neutral-300 font-inter selection:bg-pink-500/30">
       <div className="max-w-3xl mx-auto px-6 py-12 md:py-20">
@@ -34,7 +32,6 @@ export default function CookiePolicy() {
 
         {/* Content (Termly HTML goes here) */}
         <div className="policy-content" suppressHydrationWarning>
-          {mounted && (
             <div
               dangerouslySetInnerHTML={{
                 __html: `
@@ -58,7 +55,6 @@ export default function CookiePolicy() {
               `,
               }}
             />
-          )}
         </div>
 
         {/* Footer */}

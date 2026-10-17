@@ -1,16 +1,14 @@
-'use client';
+import type { Metadata } from "next";
+import Link from "next/link";
+import { ArrowLeft } from "lucide-react";
 
-import React, { useState, useEffect } from 'react';
-import Link from 'next/link';
-import { ArrowLeft } from 'lucide-react';
+export const metadata: Metadata = {
+  title: "Terms of Service",
+  description: "The terms that govern using Honest Mailbox, including who it is for and how disputes are handled.",
+  alternates: { canonical: "/terms-of-service" },
+};
 
 export default function TermsOfService() {
-  const [mounted, setMounted] = useState(false);
-
-  useEffect(() => {
-    setMounted(true);
-  }, []);
-
   return (
     <div className="min-h-screen bg-[#0a0a0a] text-neutral-300 font-inter selection:bg-pink-500/30">
       <div className="max-w-3xl mx-auto px-6 py-12 md:py-20">
@@ -48,7 +46,6 @@ export default function TermsOfService() {
           prose-p:text-neutral-400
           prose-a:text-pink-400"
         >
-          {mounted && (
             <div
               dangerouslySetInnerHTML={{
                 __html: `
@@ -108,7 +105,6 @@ Department of Consumer Affairs in writing at 1625 North Market Blvd., Suite N
                 `,
               }}
             />
-          )}
         </div>
 
         {/* Footer */}

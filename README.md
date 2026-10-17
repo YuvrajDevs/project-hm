@@ -17,6 +17,8 @@ npm run dev
 
 `.env.local` needs the six `NEXT_PUBLIC_FIREBASE_*` values from the Firebase console (Project settings → Your apps).
 
+For canonical URLs, the sitemap and Open Graph tags, also set `NEXT_PUBLIC_SITE_URL` to the production domain (falls back to `http://localhost:3000` in dev). `NEXT_PUBLIC_GOOGLE_SITE_VERIFICATION` and `NEXT_PUBLIC_BING_SITE_VERIFICATION` are optional search-console verification codes. See `.env.example`.
+
 ## Checks
 
 ```bash
