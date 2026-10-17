@@ -3,7 +3,7 @@ import {
   Moon, Pencil, Plane, Scale, Shield, Sparkles, Split, Sprout, Users, Wine, Zap, Circle, Snowflake, Skull, Lock,
   type LucideIcon,
 } from "lucide-react";
-import type { DeckId } from "@/lib/games/decks";
+import { slotFor, type DeckId } from "@/lib/games/decks";
 
 const ICONS: Record<string, LucideIcon> = {
   scribble: Pencil,
@@ -55,6 +55,8 @@ export const DECK_ICONS = new Proxy(ICONS, { get: (t, k: string) => t[k] ?? Spar
 // Open a specific game on its full screen
 export const openGame = (id: string) => window.dispatchEvent(new CustomEvent("openGame", { detail: { id } }));
 export const openQuestions = (id: string) => window.dispatchEvent(new CustomEvent("openQuestions", { detail: { id } }));
+// Whichever screen this game uses
+export const openAnyGame = (game: { id: string; deck: DeckId }) => (slotFor(game.deck) === "questions" ? openQuestions : openGame)(game.id);
 
 // The heading font draws the letter O almost like a zero, so "XO" reads as "X0" there.
 // That one title uses the round body font instead.

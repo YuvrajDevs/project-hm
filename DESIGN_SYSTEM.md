@@ -68,6 +68,12 @@ Page padding is `px-6`. Cards use `p-6` (rows) or `p-8` (large). Sections are se
 - **Composer:** photo button, auto-growing field (16px on phones so iOS doesn't zoom), and a mic that becomes a send button once there is text. Recording replaces the field with a discard button, a timer and a send button.
 - **Day dividers:** Bebas `text-[10px] tracking-[0.3em]` between two hairlines. "Today", "Yesterday", then the date.
 
+- **Games in progress:** one game going shows as its own row (the deck's gradient, icon tile, title, a line on where it stands, and the action: Join, Resume, Answer). Two or more fold into a single "Pending" row.
+- **Question deck results:** one gradient card per question with both answers on it (theirs in blue, yours in pink). Prev and next arrows sit at the bottom where the answer field was; the last card swaps the next arrow for Finish and New Deck. Arrow keys and swipes work too.
+- **Enter sends** in every written-answer field (Shift+Enter for a new line), matching the chat.
+- **Scribble pens:** a row under the canvas for the artist: an eraser first, a divider, then seven `w-7 h-7 rounded-md` colour boxes. The chosen one gets a white border.
+- **Game invitations:** the toast and the bell list both open the game when tapped, for as long as it is still going. Notification text says what a tap does ("Tap to join", "Tap to answer").
+
 ## Buttons
 
 - **Primary:** `bg-white text-black font-bebas tracking-widest uppercase rounded-2xl py-4 hover:bg-neutral-200 active:scale-95 disabled:opacity-30`. One per screen or dialog.

@@ -2,7 +2,7 @@
 
 import React, { useEffect, useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { X } from "lucide-react";
+import { ArrowLeft, ArrowRight, X } from "lucide-react";
 import { useMailbox } from "@/context/MailboxContext";
 import { endGame, joinGame, replayGame, submitQuestionAnswer } from "@/lib/firestore-helpers";
 import { DECK_BY_ID } from "@/lib/games/decks";
@@ -14,7 +14,7 @@ import type { ActiveGame } from "@/lib/types";
 import { useScrollLock } from "@/hooks/useScrollLock";
 
 // Question decks: each person answers every card at their own pace.
-// Nothing of the other person's shows until both are done; then it's one list, question by question.
+// Nothing of the other person's shows until both are done; then every question is a card with both answers, one at a time.
 export const QuestionDeckScreen = ({ gameId, onLeave }: { gameId: string; onLeave: () => void }) => {
   const { user, partner, questionGames } = useMailbox();
   // Once the game is gone (ended by either of you), keep showing its last state while the screen fades out;
@@ -113,7 +113,17 @@ export const QuestionDeckScreen = ({ gameId, onLeave }: { gameId: string; onLeav
         </div>
 
         {bothDone ? (
-          <Results game={game} uid={uid} partnerUid={partnerUid} partnerName={partnerName} onChime={playChime} />
+          <Results
+            game={game}
+            uid={uid}
+            partnerUid={partnerUid}
+            partnerName={partnerName}
+            gradient={deck.cards[0]}
+            busy={busy}
+            onFinish={handleEnd}
+            onNewDeck={handleNewDeck}
+            onChime={playChime}
+          />
         ) : iAmDone ? (
           <div className="flex-1 min-h-0 flex flex-col">
             <div className={cn("flex-1 min-h-0 rounded-[2.5rem] bg-gradient-to-br px-8 py-10 flex flex-col justify-center gap-3", deck.cards[0])}>
@@ -145,32 +155,15 @@ export const QuestionDeckScreen = ({ gameId, onLeave }: { gameId: string; onLeav
 
         {error && <p className="text-rose-300 font-outfit text-xs text-center shrink-0">{error}</p>}
 
-        {/* Bottom actions for the end states */}
-        {bothDone ? (
-          <div className="grid grid-cols-2 gap-3 shrink-0">
-            <button
-              onClick={handleEnd}
-              disabled={busy}
-              className="h-14 rounded-2xl bg-white/5 border border-white/10 font-bebas tracking-widest uppercase hover:bg-white/10 active:scale-95 disabled:opacity-30 transition-all"
-            >
-              Finish
-            </button>
-            <button
-              onClick={handleNewDeck}
-              disabled={busy}
-              className="h-14 rounded-2xl bg-white text-black font-bebas tracking-widest uppercase hover:bg-neutral-200 active:scale-95 disabled:opacity-30 transition-all"
-            >
-              New Deck
-            </button>
-          </div>
-        ) : iAmDone ? (
+        {/* While you wait for the other person; once you're both done, the cards have their own controls */}
+        {iAmDone && !bothDone && (
           <button
             onClick={onLeave}
             className="w-full h-14 shrink-0 bg-white text-black font-bebas tracking-widest uppercase rounded-2xl hover:bg-neutral-200 active:scale-95 transition-all"
           >
             Close
           </button>
-        ) : null}
+        )}
       </div>
 
       <AnimatePresence>
@@ -245,6 +238,15 @@ const AnswerCard = ({ text, number, total, gradient, busy, partnerName, isLast, 
         value={draft}
         onChange={(e) => setDraft(e.target.value)}
         maxLength={500}
+        enterKeyHint="send"
+        aria-label="Your answer"
+        // Enter saves and moves on; Shift+Enter makes a new line
+        onKeyDown={(e) => {
+          if (e.key === "Enter" && !e.shiftKey && !e.nativeEvent.isComposing) {
+            e.preventDefault();
+            if (!busy && draft.trim()) onSave(draft.trim());
+          }
+        }}
         placeholder={`Your answer. ${partnerName} sees it when you've both finished.`}
         className="h-[6.5rem] shrink-0 w-full bg-white/5 border border-white/10 rounded-2xl px-5 py-4 font-outfit text-sm text-white focus:outline-none focus:border-white/30 placeholder:text-neutral-500 resize-none"
       />
@@ -259,34 +261,103 @@ const AnswerCard = ({ text, number, total, gradient, busy, partnerName, isLast, 
   );
 };
 
-// Both done: every question with both answers, one plain list
-const Results = ({ game, uid, partnerUid, partnerName, onChime }: {
-  game: ActiveGame; uid: string; partnerUid: string; partnerName: string; onChime: () => void;
+// Both done: one card per question with both answers on it. Arrows at the bottom (or the arrow keys, or a swipe) move between them.
+const Results = ({ game, uid, partnerUid, partnerName, gradient, busy, onFinish, onNewDeck, onChime }: {
+  game: ActiveGame; uid: string; partnerUid: string; partnerName: string; gradient: string; busy: boolean;
+  onFinish: () => void; onNewDeck: () => void; onChime: () => void;
 }) => {
+  const total = game.cards.length;
+  const [index, setIndex] = useState(0);
+  const [direction, setDirection] = useState(1);
   useEffect(() => { onChime(); }, [onChime]);
+
+  const go = (to: number) => {
+    if (to < 0 || to >= total || to === index) return;
+    setDirection(to > index ? 1 : -1);
+    setIndex(to);
+  };
+
+  useEffect(() => {
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === "ArrowRight") go(index + 1);
+      else if (e.key === "ArrowLeft") go(index - 1);
+    };
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  });
+
+  const card = getCard(game, index) as { text: string };
+  const answers = game.answers?.[roundKey(index)] || {};
+  const isLast = index === total - 1;
+  const arrow = "h-14 w-14 shrink-0 rounded-2xl flex items-center justify-center active:scale-90 disabled:opacity-25 transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/60";
+
   return (
-    <div className="flex-1 min-h-0 overflow-y-auto -mx-5 px-5">
-      <div className="divide-y divide-white/10">
-        {game.cards.map((_, r) => {
-          const card = getCard(game, r) as { text: string };
-          const answers = game.answers?.[roundKey(r)] || {};
-          return (
-            <div key={r} className="py-5 space-y-3">
-              <h3 className="font-bebas text-xl uppercase tracking-wide leading-tight text-white">{card.text}</h3>
-              <div className="space-y-2">
-                <p className="font-outfit text-sm leading-relaxed text-white/90 break-words whitespace-pre-wrap">
-                  <span className="font-bebas tracking-widest uppercase text-blue-300 mr-2">{partnerName}</span>
-                  {answers[partnerUid]?.text}
-                </p>
-                <p className="font-outfit text-sm leading-relaxed text-white/90 break-words whitespace-pre-wrap">
-                  <span className="font-bebas tracking-widest uppercase text-pink-300 mr-2">You</span>
-                  {answers[uid]?.text}
-                </p>
-              </div>
+    <>
+      <div className="flex-1 min-h-0 relative overflow-hidden">
+        <AnimatePresence mode="popLayout" initial={false} custom={direction}>
+          <motion.div
+            key={index}
+            custom={direction}
+            initial={{ opacity: 0, x: direction * 48 }}
+            animate={{ opacity: 1, x: 0 }}
+            exit={{ opacity: 0, x: direction * -48 }}
+            transition={{ duration: 0.22, ease: "easeOut" }}
+            drag="x"
+            dragDirectionLock
+            dragConstraints={{ left: 0, right: 0 }}
+            dragElastic={0.25}
+            onDragEnd={(_, info) => { if (info.offset.x < -70) go(index + 1); else if (info.offset.x > 70) go(index - 1); }}
+            className={cn("absolute inset-0 rounded-[2.5rem] bg-gradient-to-br p-7 flex flex-col gap-5 overflow-y-auto", gradient)}
+          >
+            <div className="space-y-2">
+              <p className="text-[10px] text-white/80 font-bebas tracking-[0.4em] uppercase">{`Question ${index + 1} of ${total}`}</p>
+              <h2 className="font-bebas uppercase tracking-wide text-[1.9rem] leading-[1.08] text-pretty">{card.text}</h2>
             </div>
-          );
-        })}
+            <div className="space-y-3 mt-auto">
+              <Answer who={partnerName} tone="text-blue-300" text={answers[partnerUid]?.text} />
+              <Answer who="You" tone="text-pink-300" text={answers[uid]?.text} />
+            </div>
+          </motion.div>
+        </AnimatePresence>
       </div>
-    </div>
+
+      <nav aria-label="Questions" className={cn("shrink-0 grid gap-3", isLast ? "grid-cols-[3.5rem_1fr_1fr]" : "grid-cols-[3.5rem_1fr_3.5rem]")}>
+        <button onClick={() => go(index - 1)} disabled={index === 0} aria-label="Previous question" className={cn(arrow, "bg-white/5 border border-white/10 text-white hover:bg-white/10")}>
+          <ArrowLeft className="w-5 h-5" />
+        </button>
+        {isLast ? (
+          <>
+            <button
+              onClick={onFinish}
+              disabled={busy}
+              className="h-14 rounded-2xl bg-white/5 border border-white/10 font-bebas tracking-widest uppercase hover:bg-white/10 active:scale-95 disabled:opacity-30 transition-all"
+            >
+              Finish
+            </button>
+            <button
+              onClick={onNewDeck}
+              disabled={busy}
+              className="h-14 rounded-2xl bg-white text-black font-bebas tracking-widest uppercase hover:bg-neutral-200 active:scale-95 disabled:opacity-30 transition-all"
+            >
+              New Deck
+            </button>
+          </>
+        ) : (
+          <>
+            <p className="self-center text-center font-bebas text-lg tracking-widest text-white/80 tabular-nums" aria-live="polite">{`${index + 1} / ${total}`}</p>
+            <button onClick={() => go(index + 1)} aria-label="Next question" className={cn(arrow, "bg-white text-black hover:bg-neutral-200")}>
+              <ArrowRight className="w-5 h-5" />
+            </button>
+          </>
+        )}
+      </nav>
+    </>
   );
 };
+
+const Answer = ({ who, tone, text }: { who: string; tone: string; text?: string }) => (
+  <div className="rounded-2xl bg-black/25 border border-white/10 px-4 py-3.5 space-y-1.5">
+    <p className={cn("font-bebas text-sm tracking-widest uppercase", tone)}>{who}</p>
+    <p className="font-outfit text-sm leading-relaxed text-white/95 break-words whitespace-pre-wrap">{text || "No answer"}</p>
+  </div>
+);
