@@ -8,7 +8,7 @@
     "start": "next start",
     "lint": "eslint",
     "test:rules": "firebase emulators:exec --only firestore --project demo-honest-mailbox \"node --test tests/firestore.rules.test.mjs\"",
-    "test:unit": "node --test tests/dates.test.mjs tests/games.test.mjs tests/profile.test.mjs tests/thoughts.test.mjs tests/strokes.test.mjs",
+    "test:unit": "node --test tests/dates.test.mjs tests/games.test.mjs tests/profile.test.mjs tests/thoughts.test.mjs tests/strokes.test.mjs tests/seo.test.mjs",
     "test": "npm run test:unit && npm run test:rules",
     "emulators": "firebase emulators:start --only auth,firestore --project demo-honest-mailbox",
     "dev:emulators": "NEXT_PUBLIC_USE_EMULATORS=1 next dev"
