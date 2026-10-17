@@ -132,3 +132,14 @@ Buttons say what happens ("Send Request", "Disconnect From Raj"), not "OK" or "S
 - **Our Thoughts** lists the thoughts you two sent in the last 7 days. A time capsule counts from the moment it opens, and one that hasn't opened yet always shows. Older thoughts leave the list but are not deleted.
 - **Pills:** "This week" and "Saved", in the same filter-pill style as Partner Notes (`px-4 py-2 rounded-full border text-xs`, selected is white). The line under them says thoughts leave after a week and how to keep one.
 - **Save pill:** in the corner of each thought card, `px-2.5 py-1 rounded-full font-bebas text-[11px] tracking-widest uppercase` with a bookmark. Unsaved it is a quiet dark pill, saved it is white. Saving is private to whoever saved it, and keeps the thought on their Saved view for good.
+
+## Public content pages (games, questions, conflict-resolution, features)
+
+Server components only — no `MailboxProvider`, no framer-motion. Shared header/footer nav lives in `app/(site)/layout.tsx`; page bodies use `components/seo/PillarPage.tsx` or `ChildPage.tsx`, driven entirely by the registry in `lib/seo/pages.ts`. Add a new public page there, not as a one-off component.
+
+- **Breadcrumbs:** `text-[10px] font-bebas tracking-[0.3em] text-neutral-500 uppercase`, `ChevronRight` separators, current page in `text-neutral-300`. Renders `BreadcrumbList` JSON-LD.
+- **Sample card / highlight tile:** `bg-white/5 border border-white/5 rounded-xl p-4 text-sm text-neutral-300 font-outfit leading-relaxed` — same family as a settings row, just without the icon tile.
+- **FAQ:** native `<details>`/`<summary>` (`bg-white/5 border border-white/5 rounded-2xl p-5`), question in Bebas uppercase, answer in `text-neutral-400 text-sm`. Renders `FAQPage` JSON-LD for exactly the Q&A visible on the page — never more.
+- **Related links grid:** `bg-white/5 border border-white/10 rounded-2xl p-4`, label + `ArrowRight`, two columns on wider screens.
+- **Crisis note** (conflict-resolution pages only): a quiet closing line, never a warning box — "not therapy, not a crisis service," one neutral link to a helpline directory. Matches the tone rule above: no diagnosis, no alarm.
+- **Pillar → child card:** same row style as "Pick One," Bebas title + one line of description, `ArrowRight` on the right.

@@ -1,6 +1,7 @@
 "use client";
 
 import React, { useEffect } from "react";
+import Image from "next/image";
 import { useMailbox } from "@/context/MailboxContext";
 import { MailboxScreen } from "@/components/features/mailbox/MailboxScreen";
 import { BottomDock } from "@/components/layout/BottomDock";
@@ -9,7 +10,7 @@ import { ResetRequestOverlay } from "@/components/features/mailbox/ResetRequestO
 import { useRouter } from "next/navigation";
 import { motion, AnimatePresence } from "framer-motion";
 import { useTabObserver } from "@/hooks/useTabObserver";
-import { Heart, Loader2, LogOut, MessageSquareHeart, User as UserIcon, Users, Settings } from "lucide-react";
+import { Loader2, MessageSquareHeart, Settings } from "lucide-react";
 import { AmbientBackground } from "@/components/ui/AmbientBackground";
 import { NotificationToastManager } from "@/components/features/notifications/NotificationToastManager";
 import { NotificationCenter } from "@/components/features/notifications/NotificationCenter";
@@ -40,21 +41,27 @@ const PartnerLeftOverlay = dynamic(() => import("@/components/features/mailbox/P
 const WhiteFlagOverlay = dynamic(() => import("@/components/features/mailbox/WhiteFlagOverlay").then(m => m.WhiteFlagOverlay));
 const EmpathyNudge = dynamic(() => import("@/components/features/checkin/EmpathyNudge").then(m => m.EmpathyNudge));
 const SingleHub = dynamic(() => import("@/components/features/mailbox/SingleHub").then(m => m.SingleHub));
-const LandingPage = dynamic(() => import("@/components/features/auth/LandingPage").then(m => m.LandingPage));
 
-export default function Home() {
-  const { 
+// The server-rendered <LandingPage /> (in app/page.tsx) always sits underneath this
+// component so crawlers and signed-out, no-JS clients see real content. Everything
+// this component renders is a full-screen, opaque cover so a signed-in (or
+// still-resolving) visitor never sees the landing page behind it — same visual
+// result as before, just layered instead of swapped.
+const COVER = "fixed inset-0 z-[90] overflow-y-auto";
+
+export function HomeClient() {
+  const {
     fbUser,
-    user, 
+    user,
     partner,
-    loading, 
-    hasOnboarded, 
-    isPaired, 
-    activeSafeSpace, 
+    loading,
+    hasOnboarded,
+    isPaired,
+    activeSafeSpace,
     liveGames,
     questionGames,
     safeSpaceHasNew,
-    logout, 
+    logout,
     clearPartnerLeftStatus,
     sendMessage,
     messages,
@@ -107,7 +114,7 @@ export default function Home() {
   }, [activeSafeSpace]);
   const [takeLongerThanUsual, setTakeLongerThanUsual] = React.useState(false);
   const [mounted, setMounted] = React.useState(false);
-  
+
   const router = useRouter();
   const { isHidden } = useTabObserver();
   const previousMessagesLength = React.useRef(messages.length);
@@ -198,11 +205,11 @@ export default function Home() {
     const handleOpenQuestions = (e: Event) => setOpenQuestionsId((e as CustomEvent<{ id: string }>).detail.id);
     window.addEventListener('openGame', handleOpenGame);
     window.addEventListener('openQuestions', handleOpenQuestions);
-    
+
     window.addEventListener('popupStateChange', handlePopup);
     window.addEventListener('openSignalSelector', handleOpenSelector);
     window.addEventListener('openSafeSpace', handleOpenSafeSpace);
-    
+
     return () => {
         window.removeEventListener('popupStateChange', handlePopup);
         window.removeEventListener('openSignalSelector', handleOpenSelector);
@@ -269,41 +276,45 @@ export default function Home() {
     }
   }, [fbUser]);
 
-  // 1. Auth is still determining (initial check) OR server-side hydration guard
+  // 1. Auth is still determining (initial check) OR server-side hydration guard.
+  // An opaque, full-screen cover over the server-rendered landing page underneath
+  // — not a DOM replacement, so crawlers and no-JS clients still get the landing
+  // content, and a signed-in visitor sees only this (no flash of the landing copy).
   if (!mounted || fbUser === "loading") {
     return (
-      <div className="min-h-screen bg-[#0a0a0a] flex items-center justify-center">
+      <div aria-hidden="true" className={`${COVER} bg-[#0a0a0a] flex items-center justify-center`}>
         <motion.div
           animate={{ opacity: [0.3, 0.6, 0.3], scale: [0.95, 1, 0.95] }}
           transition={{ repeat: Infinity, duration: 2, ease: "easeInOut" }}
         >
-          <img src="/logo.png" alt="HM Logo" className="w-12 h-auto grayscale opacity-50" />
+          <Image src="/logo.png" alt="HM Logo" width={256} height={256} className="w-12 h-auto grayscale opacity-50" />
         </motion.div>
       </div>
     );
   }
 
-  // 2. Explicitly logged out — show Landing Page immediately
+  // 2. Explicitly logged out — the server-rendered <LandingPage /> underneath is
+  // already the full signed-out experience (including its own sign-in button).
   if (fbUser === null) {
-      return <LandingPage />;
+    return null;
   }
 
   // 3. Logged in but profile/data is still syncing
   if (!hasLoadedInitially && (loading || !user || (!hasOnboarded && !user.leftByPartner))) {
     return (
-      <div className="min-h-screen bg-[#0a0a0a] flex items-center justify-center">
+      <div className={`${COVER} bg-[#0a0a0a] flex items-center justify-center`}>
         <div className="flex flex-col items-center gap-6">
           <div className="flex items-center justify-center mb-2">
-            <img src="/logo.png" alt="HM Logo" className="w-16 h-auto drop-shadow-lg" />
+            <Image src="/logo.png" alt="HM Logo" width={256} height={256} className="w-16 h-auto drop-shadow-lg" />
           </div>
           <div className="flex flex-col items-center gap-6">
             <div className="flex items-center gap-3">
               <Loader2 className="w-4 h-4 text-neutral-600 animate-spin" />
               <div className="font-bebas text-neutral-500 tracking-[0.3em] uppercase text-sm">Synchronizing...</div>
             </div>
-            
+
             {takeLongerThanUsual && (
-              <motion.div 
+              <motion.div
                 initial={{ opacity: 0, y: 10 }}
                 animate={{ opacity: 1, y: 0 }}
                 className="flex flex-col items-center gap-4 px-8 text-center"
@@ -311,7 +322,7 @@ export default function Home() {
                 <p className="text-neutral-600 text-[10px] uppercase font-outfit tracking-widest leading-relaxed">
                   The connection is taking longer than usual.<br />Check your internet or try refreshing.
                 </p>
-                <button 
+                <button
                   onClick={() => window.location.reload()}
                   className="px-6 py-2 rounded-xl bg-white/5 border border-white/10 text-neutral-400 font-bebas text-xs tracking-widest hover:bg-white/10 hover:text-white transition-all shadow-xl"
                 >
@@ -328,25 +339,26 @@ export default function Home() {
   // If not paired, show the Single Hub
   if (!isPaired) {
     return (
-        <>
+        <div className={`${COVER} bg-[#0a0a0a]`}>
             <SingleHub />
             <AnimatePresence>
                 {(user?.leftByPartner && !overlayDismissed) ? (
-                    <PartnerLeftOverlay 
+                    <PartnerLeftOverlay
                         key="partner-left-overlay-single"
                         onClearData={async () => {
                             await clearPartnerLeftStatus();
-                        }} 
+                        }}
                         onClose={() => setOverlayDismissed(true)}
                     />
                 ) : null}
             </AnimatePresence>
-        </>
+        </div>
     );
   }
 
+  // A plain cover div, not <main> — the server-rendered <LandingPage /> underneath already owns that landmark.
   return (
-    <main className="min-h-screen bg-[#0a0a0a] text-white">
+    <div className={`${COVER} bg-[#0a0a0a] text-white`}>
       {/* ─── Persistent Background Ambiance ─── */}
       <div className="fixed inset-0 pointer-events-none overflow-hidden z-0">
         <AmbientBackground variant="bright" />
@@ -357,35 +369,35 @@ export default function Home() {
 
       <AnimatePresence>
         {!effectivelyPopupOpen && (
-          <motion.header 
+          <motion.header
             initial={{ y: -100, opacity: 0 }}
             animate={{ y: 0, opacity: 1 }}
             exit={{ y: -100, opacity: 0 }}
             className="flex justify-between items-center w-full fixed top-0 left-0 p-8 z-50 bg-gradient-to-b from-black/80 to-transparent backdrop-blur-sm pointer-events-none"
           >
             <div className="flex items-center gap-3 pointer-events-auto">
-              <img src="/logo.png" alt="HM Logo" className="w-6 h-auto" />
+              <Image src="/logo.png" alt="HM Logo" width={256} height={256} className="w-6 h-auto" />
               <span className="font-bebas text-xl tracking-widest text-white uppercase">Honest Mailbox</span>
             </div>
-            
+
             <div className="flex items-center gap-2 pointer-events-auto">
                {/* Notification Bell */}
-               <button 
+               <button
                 aria-label="Notifications"
                 onClick={() => { setShowNotiCenter(true); }}
                 className="w-10 h-10 rounded-full bg-white/5 border border-white/5 flex items-center justify-center hover:bg-white/10 transition-all text-neutral-400 hover:text-white shadow-2xl relative"
               >
                 <Bell className="w-5 h-5" />
                 {unreadNotificationsCount > 0 && (
-                    <motion.div 
+                    <motion.div
                         initial={{ scale: 0 }}
                         animate={{ scale: 1 }}
-                        className="absolute top-0 right-0 w-3 h-3 bg-pink-500 rounded-full border-2 border-[#0a0a0a]" 
+                        className="absolute top-0 right-0 w-3 h-3 bg-pink-500 rounded-full border-2 border-[#0a0a0a]"
                     />
                 )}
               </button>
 
-              <button 
+              <button
                 aria-label="Settings"
                 onClick={() => router.push("/settings")}
                 className="w-10 h-10 rounded-full bg-white/5 border border-white/5 flex items-center justify-center hover:bg-white/10 transition-all text-neutral-400 hover:text-white shadow-2xl"
@@ -408,8 +420,8 @@ export default function Home() {
                     exit={{ opacity: 0, x: 20 }}
                     transition={{ duration: 0.2 }}
                 >
-                    <MailboxScreen 
-                        onOpenCheckIn={() => setShowCheckInPopup(true)} 
+                    <MailboxScreen
+                        onOpenCheckIn={() => setShowCheckInPopup(true)}
                         onComposeClick={() => setShowCompose(true)}
                     />
                 </motion.div>
@@ -422,7 +434,7 @@ export default function Home() {
                     exit={{ opacity: 0, x: -20 }}
                     transition={{ duration: 0.2 }}
                 >
-                    <ArchiveDashboard 
+                    <ArchiveDashboard
                         onOpenInbox={() => setActiveView("mailbox")}
                         onOpenCheckIn={() => setShowCheckInPopup(true)}
                         onOpenSignals={() => setShowReactions(true)}
@@ -435,9 +447,9 @@ export default function Home() {
       {/* ─── Overlays & Modals ─── */}
       <AnimatePresence>
         {showCompose ? (
-            <ComposeMessage 
+            <ComposeMessage
                 key="compose-modal"
-                onClose={() => setShowCompose(false)} 
+                onClose={() => setShowCompose(false)}
             />
         ) : null}
         {showReactions ? (
@@ -447,7 +459,7 @@ export default function Home() {
             <DailyCheckInPopup key="checkin-popup" onClose={() => setShowCheckInPopup(false)} />
         ) : null}
 
-        {/* These components handle their own conditional rendering internally, 
+        {/* These components handle their own conditional rendering internally,
             but giving them keys here for AnimatePresence tracking */}
         <ResetRequestOverlay key="reset-overlay" />
         {(couple?.whiteFlagBy && couple.whiteFlagBy !== user?.uid) && (
@@ -511,17 +523,17 @@ export default function Home() {
             </motion.div>
         )}
         {user?.leftByPartner && !overlayDismissed ? (
-            <PartnerLeftOverlay 
+            <PartnerLeftOverlay
                 key="partner-left-overlay"
                 onClearData={async () => {
                     await clearPartnerLeftStatus();
-                }} 
+                }}
                 onClose={() => setOverlayDismissed(true)}
             />
         ) : null}
-        
+
         {showEmpathyNudge && (
-            <EmpathyNudge 
+            <EmpathyNudge
                 key="empathy-nudge"
                 onWriteNote={() => {
                     localStorage.setItem(`nudge_shown_${todayId}`, 'true');
@@ -538,7 +550,7 @@ export default function Home() {
 
       {/* ─── The Dock ─── */}
       {!effectivelyPopupOpen && (
-        <BottomDock 
+        <BottomDock
           activeView={activeView}
           onViewChange={setActiveView}
           onChatClick={() => setChatOpen(true)}
@@ -547,6 +559,6 @@ export default function Home() {
           onEmojiClick={() => setShowReactions(true)}
         />
       )}
-    </main>
+    </div>
   );
 }
