@@ -356,8 +356,9 @@ export function HomeClient() {
     );
   }
 
+  // A plain cover div, not <main> — the server-rendered <LandingPage /> underneath already owns that landmark.
   return (
-    <main className={`${COVER} bg-[#0a0a0a] text-white`}>
+    <div className={`${COVER} bg-[#0a0a0a] text-white`}>
       {/* ─── Persistent Background Ambiance ─── */}
       <div className="fixed inset-0 pointer-events-none overflow-hidden z-0">
         <AmbientBackground variant="bright" />
@@ -558,6 +559,6 @@ export function HomeClient() {
           onEmojiClick={() => setShowReactions(true)}
         />
       )}
-    </main>
+    </div>
   );
 }

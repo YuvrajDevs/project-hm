@@ -93,7 +93,7 @@ export const LandingPage = () => {
   };
 
   return (
-    <div className="min-h-screen bg-[#0a0a0a] text-white">
+    <main className="min-h-screen bg-[#0a0a0a] text-white">
       <AmbientBackground />
 
       {/* Hero Section */}
@@ -269,6 +269,6 @@ export const LandingPage = () => {
           </p>
         </div>
       </footer>
-    </div>
+    </main>
   );
 };
