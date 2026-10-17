@@ -5,6 +5,7 @@ import { auth, googleProvider } from "@/lib/firebase";
 import { signInWithPopup, signInWithRedirect, getRedirectResult } from "firebase/auth";
 import { ensureUserDoc } from "@/lib/firestore-helpers";
 import { motion, useScroll, useTransform } from "framer-motion";
+import Image from "next/image";
 import Link from "next/link";
 import { Heart, Sparkles, MessageCircle, Zap, Shield, ArrowDown } from "lucide-react";
 import { AmbientBackground } from "@/components/ui/AmbientBackground";
@@ -104,7 +105,7 @@ export const LandingPage = () => {
             animate={{ opacity: 1, y: 0 }}
             className="flex items-center gap-2 mb-4"
           >
-            <img src="/logo.png" alt="HM Logo" className="w-4 h-auto" />
+            <Image src="/logo.png" alt="HM Logo" width={256} height={256} className="w-4 h-auto" />
             <span className="font-bebas text-sm tracking-[0.4em] text-neutral-500 uppercase">Honest Mailbox</span>
           </motion.div>
 
@@ -119,7 +120,7 @@ export const LandingPage = () => {
               whileHover={{ scale: 1.05, rotate: 2 }}
               className="flex items-center justify-center mb-4"
             >
-              <img src="/logo.png" alt="Logo" className="w-20 h-auto object-contain drop-shadow-2xl" />
+              <Image src="/logo.png" alt="Honest Mailbox logo" width={256} height={256} priority className="w-20 h-auto object-contain drop-shadow-2xl" />
             </motion.div>
 
             <div>
@@ -128,6 +129,9 @@ export const LandingPage = () => {
               </h1>
               <p className="text-neutral-500 font-outfit text-xs mt-4 tracking-[0.3em] uppercase leading-relaxed">
                 A private mailbox<br />for two hearts
+              </p>
+              <p className="text-neutral-400 font-outfit text-sm mt-3 max-w-xs leading-relaxed">
+                Games, daily check-ins and a safe space to talk things through, made for the two of you.
               </p>
             </div>
           </motion.div>
@@ -249,7 +253,7 @@ export const LandingPage = () => {
       <footer className="py-20 px-6 border-t border-white/5 bg-black/50 backdrop-blur-xl">
         <div className="max-w-4xl mx-auto flex flex-col items-center gap-12">
           <div className="flex items-center gap-3 grayscale opacity-30">
-            <img src="/logo.png" alt="HM Logo" className="w-5 h-auto" />
+            <Image src="/logo.png" alt="HM Logo" width={256} height={256} className="w-5 h-auto" />
             <span className="font-bebas text-lg tracking-widest">Honest Mailbox</span>
           </div>
 
