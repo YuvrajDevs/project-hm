@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import { Bebas_Neue, Outfit, Inter } from "next/font/google";
 import { SITE_URL, SITE_NAME } from "@/lib/seo";
 import "./globals.css";
+import "./theme.css";
 
 const bebasNeue = Bebas_Neue({
   weight: "400",
