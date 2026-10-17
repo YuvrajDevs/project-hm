@@ -28,9 +28,9 @@ export const MoodStatusHub = () => {
             <button
                 onClick={openSignalSelector}
                 className={cn(
-                    "w-full tone-pink rounded-[2rem] p-6 text-left transition-all relative overflow-hidden flex flex-col justify-center min-h-[140px]",
+                    "w-full tone-red rounded-[2rem] p-6 text-left transition-all relative overflow-hidden flex flex-col justify-center min-h-[140px]",
                     needsUpdate 
-                        ? "ring-2 ring-pink-400/60" 
+                        ? "ring-2 ring-yellow-300" 
                         : "hover:brightness-110"
                 )}
             >

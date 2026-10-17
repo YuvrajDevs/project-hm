@@ -209,7 +209,7 @@ export default function ProfilePage() {
   const love = profile.loveLanguages || [];
   const likes = profile.interests || [];
   const dislikes = profile.dislikes || [];
-  const heroTone = isMe ? "tone-pink" : "tone-blue";
+  const heroTone = isMe ? "tone-red" : "tone-blue";
   const nextUp = progress.missing[0];
 
   return (

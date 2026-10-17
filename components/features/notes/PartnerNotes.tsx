@@ -25,9 +25,9 @@ type Kind = "private" | "shared" | "theirs";
 
 // One look per kind of note, in the same tinted style as the game cards
 const STYLE: Record<Kind, { card: string; tag: string }> = {
-  private: { card: "from-indigo-700 to-indigo-900", tag: "bg-white/10 text-white/80" },
-  shared: { card: "from-pink-700 to-pink-900", tag: "bg-pink-400/20 text-pink-100" },
-  theirs: { card: "from-sky-700 to-sky-900", tag: "bg-sky-400/20 text-sky-100" },
+  private: { card: "from-indigo-600 to-indigo-700", tag: "bg-white/10 text-white/80" },
+  shared: { card: "from-red-700 to-red-800", tag: "bg-pink-400/20 text-pink-100" },
+  theirs: { card: "from-sky-600 to-sky-700", tag: "bg-sky-400/20 text-sky-100" },
 };
 
 const shortDate = (iso: string) =>

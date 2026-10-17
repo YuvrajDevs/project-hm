@@ -80,17 +80,33 @@ h1, h2, h3, h4, h5, h6 {
   border: 1px solid #262626;
 }
 
-/* Coloured cards: a deep solid colour with the faintest gradient and a hairline border one shade lighter.
-   Text on them is white; secondary text is white at 60%. */
+/* Coloured cards: bold, flat colour with only the faintest gradient. Blue and red are the two brand swatches;
+   yellow is the third; the rest are supporting colours for variety. Names are kept stable (amber is the yellow,
+   rose is the red) so existing cards keep working. */
 .tone-slate   { background: linear-gradient(145deg, #1b1b1d, #141415); border: 1px solid #262628; }
-.tone-amber   { background: linear-gradient(145deg, #4a2a10, #2e1a09); border: 1px solid #5b3515; }
-.tone-pink    { background: linear-gradient(145deg, #4b1a31, #2f1020); border: 1px solid #5d2340; }
-.tone-rose    { background: linear-gradient(145deg, #4c1a22, #2f1016); border: 1px solid #5f222c; }
-.tone-blue    { background: linear-gradient(145deg, #17294d, #0f1b36); border: 1px solid #213a68; }
-.tone-indigo  { background: linear-gradient(145deg, #25235a, #171538); border: 1px solid #33307a; }
-.tone-violet  { background: linear-gradient(145deg, #34205a, #211338); border: 1px solid #47297a; }
-.tone-emerald { background: linear-gradient(145deg, #103b2d, #0a2820); border: 1px solid #17503c; }
-.tone-teal    { background: linear-gradient(145deg, #0f3a3e, #0a2629); border: 1px solid #165157; }
+.tone-blue    { background: linear-gradient(145deg, #4034c4, #3329a6); border: 1px solid #5a4fd8; }
+.tone-indigo  { background: linear-gradient(145deg, #3b2fb6, #2d2391); border: 1px solid #5246d0; }
+.tone-rose    { background: linear-gradient(145deg, #b3241f, #961c18); border: 1px solid #cc3a34; }
+.tone-red     { background: linear-gradient(145deg, #b3241f, #961c18); border: 1px solid #cc3a34; }
+.tone-amber   { background: linear-gradient(145deg, #f8cb1f, #eab40d); border: 1px solid #ffdc55; }
+.tone-pink    { background: linear-gradient(145deg, #d6336c, #b92558); border: 1px solid #ea5a8d; }
+.tone-violet  { background: linear-gradient(145deg, #6d3fd6, #5a2fb8); border: 1px solid #8860ea; }
+.tone-emerald { background: linear-gradient(145deg, #178a46, #107238); border: 1px solid #2aa862; }
+.tone-teal    { background: linear-gradient(145deg, #0f8f94, #0a7378); border: 1px solid #25adb2; }
+
+/* On a bold card, white text stays white and the quieter text is lifted so it is still easy to read */
+:is(.tone-blue, .tone-indigo, .tone-rose, .tone-red, .tone-pink, .tone-violet, .tone-emerald, .tone-teal) { color: #fff; }
+:is(.tone-blue, .tone-indigo, .tone-rose, .tone-red, .tone-pink, .tone-violet, .tone-emerald, .tone-teal)
+  :is([class*="text-white/"], [class*="text-neutral-"], [class*="text-blue-"], [class*="text-indigo-"], [class*="text-pink-"], [class*="text-rose-"], [class*="text-emerald-"], [class*="text-amber-"]) {
+  color: rgba(255, 255, 255, 0.86);
+}
+
+/* Yellow is bright, so everything on it is dark instead */
+.tone-amber { color: #17140a; }
+.tone-amber [class*="text-"] { color: #17140a; }
+.tone-amber :is([class*="text-white/"], [class*="text-neutral-"], [class*="text-amber-"]) { color: rgba(23, 20, 10, 0.72); }
+.tone-amber [class*="text-yellow-"] { color: #6b4a00; }
+.tone-amber [class*="bg-white/"], .tone-amber [class*="bg-black/"] { background-color: rgba(23, 20, 10, 0.1); }
 
 /* Subtle Shadows */
 .shadow-soft {
