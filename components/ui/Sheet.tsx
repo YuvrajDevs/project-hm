@@ -44,7 +44,7 @@ export const Sheet = ({ title, subtitle, onClose, tint, children, footer }: {
         exit={{ opacity: 0, y: 20, scale: 0.98 }}
         transition={{ type: "spring", damping: 22, stiffness: 160 }}
         onClick={(e) => e.stopPropagation()}
-        className="relative w-full max-w-md max-h-[88dvh] overlay-panel rounded-[2.5rem] overflow-hidden flex flex-col"
+        className="relative w-full max-w-md max-h-[88dvh] overlay-panel rounded-[1.5rem] overflow-hidden flex flex-col"
       >
         {tint && <div className={cn("pointer-events-none absolute inset-0 bg-gradient-to-br", tint)} />}
         <header className="relative flex items-start justify-between gap-4 p-6 pb-3 shrink-0">
@@ -56,7 +56,7 @@ export const Sheet = ({ title, subtitle, onClose, tint, children, footer }: {
             type="button"
             onClick={onClose}
             aria-label="Close"
-            className="w-10 h-10 shrink-0 rounded-full bg-white/5 border border-white/5 flex items-center justify-center text-neutral-400 hover:text-white transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/50"
+            className="w-10 h-10 shrink-0 rounded-full bg-[#1c1c1c] border border-[#232323] flex items-center justify-center text-neutral-400 hover:text-white transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/50"
           >
             <X className="w-4 h-4" />
           </button>

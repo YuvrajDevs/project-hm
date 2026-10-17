@@ -54,8 +54,8 @@ export const WhiteFlagButton = () => {
                     isMyFlag 
                         ? "bg-white border-white text-black"
                         : isFlagUp
-                            ? "bg-white/5 border-white/5 text-neutral-600"
-                            : "bg-white/5 border-white/10 text-neutral-400 hover:border-white/30 hover:bg-white/10"
+                            ? "bg-[#1c1c1c] border-[#232323] text-neutral-600"
+                            : "bg-[#1c1c1c] border-[#2a2a2a] text-neutral-400 hover:border-white/30 hover:bg-[#242424]"
                 )}
             >
                 {loading ? (

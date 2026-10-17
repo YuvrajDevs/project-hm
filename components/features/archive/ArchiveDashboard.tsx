@@ -156,10 +156,10 @@ export const ArchiveDashboard: React.FC<ArchiveDashboardProps> = ({ onOpenInbox,
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ delay: 0.3 + idx * 0.05 }}
-            className="bg-white/5 border border-white/10 rounded-[2.5rem] p-6 md:p-10 space-y-4 md:space-y-6 hover:bg-white/10 active:scale-[0.98] transition-all cursor-pointer group text-left flex flex-col"
+            className="bg-[#161616] border border-[#2a2a2a] rounded-[1.5rem] p-6 md:p-10 space-y-4 md:space-y-6 hover:bg-[#242424] active:scale-[0.98] transition-all cursor-pointer group text-left flex flex-col"
           >
             <div className="flex justify-between items-start">
-              <div className="p-2.5 rounded-2xl bg-white/5 group-hover:scale-110 transition-transform">
+              <div className="p-2.5 rounded-2xl bg-[#161616] group-hover:scale-110 transition-transform">
                 {card.icon}
               </div>
             </div>

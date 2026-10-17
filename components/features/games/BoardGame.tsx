@@ -72,7 +72,7 @@ export const BoardGame = ({ game, uid, partnerUid, partnerName, coupleId, onLeav
       <div className="flex-1 min-h-0 w-full flex items-center justify-center" style={{ containerType: "size" }}>
         {connect4 ? (
           <div
-            className={cn("rounded-[1.75rem] bg-gradient-to-br p-2.5 grid gap-1.5", DECK_BY_ID[game.deck].cards[0])}
+            className={cn("rounded-[1.5rem] bg-gradient-to-br p-2.5 grid gap-1.5", DECK_BY_ID[game.deck].cards[0])}
             style={{
               gridTemplateColumns: `repeat(${C4_COLS}, minmax(0, 1fr))`,
               width: `min(100cqw, calc(100cqh * ${C4_COLS} / ${C4_ROWS}), 440px)`,
@@ -114,7 +114,7 @@ export const BoardGame = ({ game, uid, partnerUid, partnerName, coupleId, onLeav
                 onClick={() => move(i)}
                 disabled={!myTurn || busy || !!owner}
                 className={cn(
-                  "aspect-square rounded-[1.75rem] flex items-center justify-center transition-all",
+                  "aspect-square rounded-[1.5rem] flex items-center justify-center transition-all",
                   line?.includes(i) ? "bg-white/20" : "bg-white/[0.06] border border-white/10",
                   myTurn && !owner && "hover:bg-white/10 active:scale-95"
                 )}

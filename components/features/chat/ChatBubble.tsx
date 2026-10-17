@@ -11,7 +11,7 @@ export const clockTime = (iso: string) =>
   new Date(iso).toLocaleTimeString(undefined, { hour: "numeric", minute: "2-digit" });
 
 const actionButton =
-  "h-9 px-3.5 rounded-full bg-white/5 border border-white/10 flex items-center gap-1.5 font-outfit text-xs text-neutral-300 hover:text-white hover:bg-white/10 active:scale-95 transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/50";
+  "h-9 px-3.5 rounded-full bg-[#1c1c1c] border border-[#2a2a2a] flex items-center gap-1.5 font-outfit text-xs text-neutral-300 hover:text-white hover:bg-[#242424] active:scale-95 transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/50";
 
 const Actions = ({ message, mine, saved, onSave, onUnsend }: {
   message: ChatMessage; mine: boolean; saved: boolean; onSave: () => void; onUnsend: () => void;

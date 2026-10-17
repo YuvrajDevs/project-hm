@@ -80,10 +80,8 @@ export const QuestionDeckScreen = ({ gameId, onLeave }: { gameId: string; onLeav
       initial={{ opacity: 0 }}
       animate={{ opacity: 1 }}
       exit={{ opacity: 0 }}
-      className="fixed inset-0 z-[105] bg-[#0a0a0a] text-white"
+      className="fixed inset-0 z-[105] bg-[var(--page)] text-white"
     >
-      <div className={cn("pointer-events-none absolute inset-x-0 top-0 h-[40vh] bg-gradient-to-b opacity-60", deck.gradient)} />
-      <div className="pointer-events-none absolute inset-x-0 top-[18vh] h-[22vh] bg-gradient-to-b from-transparent to-[#0a0a0a]" />
 
       <div className="relative h-[100dvh] max-w-md mx-auto px-5 pt-6 pb-6 flex flex-col gap-4">
         {/* Header */}
@@ -127,7 +125,7 @@ export const QuestionDeckScreen = ({ gameId, onLeave }: { gameId: string; onLeav
           />
         ) : iAmDone ? (
           <div className="flex-1 min-h-0 flex flex-col">
-            <div className={cn("flex-1 min-h-0 rounded-[2.5rem] bg-gradient-to-br px-8 py-10 flex flex-col justify-center gap-3", deck.cards[0])}>
+            <div className={cn("flex-1 min-h-0 rounded-[1.5rem] bg-gradient-to-br px-8 py-10 flex flex-col justify-center gap-3", deck.cards[0])}>
               <p className="text-[10px] text-white/80 font-bebas tracking-[0.4em] uppercase">All yours are in</p>
               <h2 className="font-bebas uppercase tracking-wide text-[2.4rem] leading-[1.05]">
                 {`${partnerName} has ${total - theirs} left`}
@@ -176,7 +174,7 @@ export const QuestionDeckScreen = ({ gameId, onLeave }: { gameId: string; onLeav
             onClick={() => setConfirmEnd(false)}
             className="fixed inset-0 z-[110] flex items-center justify-center p-6 overlay-backdrop"
           >
-            <div onClick={(e) => e.stopPropagation()} className="w-full max-w-sm overlay-panel rounded-[2.5rem] p-8 text-center space-y-6">
+            <div onClick={(e) => e.stopPropagation()} className="w-full max-w-sm overlay-panel rounded-[1.5rem] p-8 text-center space-y-6">
               <div className="space-y-2">
                 <h3 className="text-3xl font-bebas tracking-widest uppercase leading-none">End This Deck?</h3>
                 <p className="text-neutral-400 font-outfit text-sm leading-relaxed">
@@ -231,7 +229,7 @@ const AnswerCard = ({ text, number, total, gradient, busy, partnerName, isLast, 
       transition={{ duration: 0.25, ease: "easeOut" }}
       className="flex-1 min-h-0 flex flex-col gap-3"
     >
-      <div className={cn("flex-1 min-h-0 rounded-[2.5rem] bg-gradient-to-br px-8 py-10 flex flex-col justify-center gap-3 overflow-y-auto", gradient)}>
+      <div className={cn("flex-1 min-h-0 rounded-[1.5rem] bg-gradient-to-br px-8 py-10 flex flex-col justify-center gap-3 overflow-y-auto", gradient)}>
         <p className="text-[10px] text-white/80 font-bebas tracking-[0.4em] uppercase">{`Question ${number} of ${total}`}</p>
         <h2 className={cn("font-bebas uppercase tracking-wide", text.length > 70 ? "text-[2rem]" : "text-[2.5rem]", "leading-[1.05]")}>{text}</h2>
       </div>
@@ -249,7 +247,7 @@ const AnswerCard = ({ text, number, total, gradient, busy, partnerName, isLast, 
           }
         }}
         placeholder={`Your answer. ${partnerName} sees it when you've both finished.`}
-        className="h-[6.5rem] shrink-0 w-full bg-white/5 border border-white/10 rounded-2xl px-5 py-4 font-outfit text-sm text-white focus:outline-none focus:border-white/30 placeholder:text-neutral-500 resize-none"
+        className="h-[6.5rem] shrink-0 w-full bg-[#161616] border border-[#2a2a2a] rounded-2xl px-5 py-4 font-outfit text-sm text-white focus:outline-none focus:border-white/30 placeholder:text-neutral-500 resize-none"
       />
       <button
         onClick={() => onSave(draft.trim())}
@@ -308,7 +306,7 @@ const Results = ({ game, uid, partnerUid, partnerName, gradient, busy, onFinish,
             dragConstraints={{ left: 0, right: 0 }}
             dragElastic={0.25}
             onDragEnd={(_, info) => { if (info.offset.x < -70) go(index + 1); else if (info.offset.x > 70) go(index - 1); }}
-            className={cn("absolute inset-0 rounded-[2.5rem] bg-gradient-to-br p-7 flex flex-col gap-5 overflow-y-auto", gradient)}
+            className={cn("absolute inset-0 rounded-[1.5rem] bg-gradient-to-br p-7 flex flex-col gap-5 overflow-y-auto", gradient)}
           >
             <div className="space-y-2">
               <p className="text-[10px] text-white/80 font-bebas tracking-[0.4em] uppercase">{`Question ${index + 1} of ${total}`}</p>
@@ -323,7 +321,7 @@ const Results = ({ game, uid, partnerUid, partnerName, gradient, busy, onFinish,
       </div>
 
       <nav aria-label="Questions" className={cn("shrink-0 grid gap-3", isLast ? "grid-cols-[3.5rem_1fr_1fr]" : "grid-cols-[3.5rem_1fr_3.5rem]")}>
-        <button onClick={() => go(index - 1)} disabled={index === 0} aria-label="Previous question" className={cn(arrow, "bg-white/5 border border-white/10 text-white hover:bg-white/10")}>
+        <button onClick={() => go(index - 1)} disabled={index === 0} aria-label="Previous question" className={cn(arrow, "bg-[#1c1c1c] border border-[#2a2a2a] text-white hover:bg-[#242424]")}>
           <ArrowLeft className="w-5 h-5" />
         </button>
         {isLast ? (
@@ -331,7 +329,7 @@ const Results = ({ game, uid, partnerUid, partnerName, gradient, busy, onFinish,
             <button
               onClick={onFinish}
               disabled={busy}
-              className="h-14 rounded-2xl bg-white/5 border border-white/10 font-bebas tracking-widest uppercase hover:bg-white/10 active:scale-95 disabled:opacity-30 transition-all"
+              className="h-14 rounded-2xl bg-[#161616] border border-[#2a2a2a] font-bebas tracking-widest uppercase hover:bg-[#242424] active:scale-95 disabled:opacity-30 transition-all"
             >
               Finish
             </button>

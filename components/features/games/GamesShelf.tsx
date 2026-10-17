@@ -68,7 +68,7 @@ export const GamesShelf = () => {
       ))}
       <button
         onClick={() => setShowPast(true)}
-        className="w-full flex items-center justify-between rounded-2xl bg-white/5 border border-white/10 p-5 hover:bg-white/10 active:scale-[0.98] transition-all"
+        className="w-full flex items-center justify-between rounded-2xl bg-[#161616] border border-[#2a2a2a] p-5 hover:bg-[#242424] active:scale-[0.98] transition-all"
       >
         <span className="flex items-center gap-3">
           <History className="w-5 h-5 text-neutral-400" />
@@ -100,7 +100,7 @@ const ScoreTally = () => {
   const theirs = partner?.uid ? scores[partner.uid] ?? 0 : 0;
   const partnerName = partner?.displayName?.split(" ")[0] || "Partner";
   return (
-    <div className="shrink-0 rounded-2xl bg-white/5 border border-white/10 px-3.5 py-2 text-center" aria-label={`Score: you ${mine}, ${partnerName} ${theirs}`}>
+    <div className="shrink-0 rounded-2xl bg-[#161616] border border-[#2a2a2a] px-3.5 py-2 text-center" aria-label={`Score: you ${mine}, ${partnerName} ${theirs}`}>
       {/* Yours first in pink, theirs in blue: "1:2" */}
       <p className="font-bebas text-2xl leading-none tracking-wide whitespace-nowrap">
         <span className="text-pink-300">{mine}</span>
@@ -125,7 +125,7 @@ const PendingRow = ({ games, noun, onOpen }: { games: ActiveGame[]; noun: string
     <button
       onClick={() => { playTick(); vibrateTick(); onOpen(); }}
       className={cn(
-        "w-full rounded-[2rem] p-5 flex items-center justify-between gap-4 border border-white/10 bg-gradient-to-br text-left active:scale-[0.98] transition-all",
+        "w-full rounded-[1.5rem] p-5 flex items-center justify-between gap-4 border border-white/10 bg-gradient-to-br text-left active:scale-[0.98] transition-all",
         newest.gradient
       )}
     >
@@ -168,7 +168,7 @@ const GameRow = ({ game }: { game: ActiveGame }) => {
     <button
       onClick={() => { playTick(); vibrateTick(); openAny(game); }}
       className={cn(
-        "w-full rounded-[2rem] p-5 flex items-center justify-between gap-4 border border-white/10 bg-gradient-to-br text-left active:scale-[0.98] transition-all",
+        "w-full rounded-[1.5rem] p-5 flex items-center justify-between gap-4 border border-white/10 bg-gradient-to-br text-left active:scale-[0.98] transition-all",
         deck.gradient
       )}
     >
@@ -200,7 +200,7 @@ const PendingList = ({ games, busy, onClose, onOpen }: { games: ActiveGame[]; bu
         const GIcon = DECK_ICONS[g.deck];
         const oldest = games.length > 1 && i === games.length - 1;
         return (
-          <div key={g.id} className="flex items-center gap-3 rounded-2xl bg-white/5 border border-white/10 p-3">
+          <div key={g.id} className="flex items-center gap-3 rounded-2xl bg-[#161616] border border-[#2a2a2a] p-3">
             <button onClick={() => { onOpen(); openAny(g); }} className="flex-1 min-w-0 flex items-center gap-3 text-left">
               <div className={cn("w-9 h-9 rounded-xl bg-gradient-to-br flex items-center justify-center shrink-0", gDeck.cards[0])}>
                 <GIcon className="w-4 h-4 text-white" />
@@ -264,7 +264,7 @@ const PendingDialog = ({ kind, onClose }: { kind: "game" | "deck"; onClose: () =
         exit={{ opacity: 0, y: 20 }}
         transition={{ type: "spring", damping: 20, stiffness: 100 }}
         onClick={(e) => e.stopPropagation()}
-        className="relative w-full max-w-sm max-h-[90vh] overflow-y-auto overlay-panel rounded-[2.5rem] p-8 space-y-5"
+        className="relative w-full max-w-sm max-h-[90vh] overflow-y-auto overlay-panel rounded-[1.5rem] p-8 space-y-5"
       >
         <div className="flex items-start justify-between gap-4">
           <div className="space-y-1">
@@ -276,7 +276,7 @@ const PendingDialog = ({ kind, onClose }: { kind: "game" | "deck"; onClose: () =
           <button
             aria-label="Close"
             onClick={onClose}
-            className="w-10 h-10 shrink-0 rounded-full bg-white/5 border border-white/5 flex items-center justify-center text-neutral-400 hover:text-white transition-all"
+            className="w-10 h-10 shrink-0 rounded-full bg-[#1c1c1c] border border-[#232323] flex items-center justify-center text-neutral-400 hover:text-white transition-all"
           >
             <X className="w-4 h-4" />
           </button>
@@ -315,7 +315,7 @@ const DeckSection = ({ title, subtitle, decks, active, noun, showScore, onPick, 
               key={deck.id}
               onClick={() => { playTick(); vibrateTick(); onPick(deck); }}
               className={cn(
-                "relative shrink-0 snap-start w-[9.5rem] h-[11rem] md:w-44 md:h-[12.5rem] rounded-[1.75rem] p-4 flex flex-col justify-between text-left overflow-hidden",
+                "relative shrink-0 snap-start w-[9.5rem] h-[11rem] md:w-44 md:h-[12.5rem] rounded-[1.5rem] p-4 flex flex-col justify-between text-left overflow-hidden",
                 "border border-white/10 bg-gradient-to-br active:scale-[0.97] hover:border-white/20 transition-all",
                 deck.gradient
               )}
@@ -418,7 +418,7 @@ const GameLobby = ({ deck, onClose }: { deck: DeckInfo; onClose: () => void }) =
         exit={{ opacity: 0, y: 20 }}
         transition={{ type: "spring", damping: 20, stiffness: 100 }}
         onClick={(e) => e.stopPropagation()}
-        className="relative w-full max-w-sm max-h-[90vh] overflow-y-auto overlay-panel rounded-[2.5rem]"
+        className="relative w-full max-w-sm max-h-[90vh] overflow-y-auto overlay-panel rounded-[1.5rem]"
       >
         <div className={cn("bg-gradient-to-br p-8 pb-6 space-y-4", deck.gradient)}>
           <div className="flex items-start justify-between">

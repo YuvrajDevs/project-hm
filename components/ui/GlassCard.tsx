@@ -12,7 +12,7 @@ export const GlassCard: React.FC<GlassCardProps> = ({ children, className, varia
     yellow: "card-contrast-yellow shadow-soft",
     blue: "card-contrast-blue shadow-soft",
     dark: "card-neutral shadow-soft",
-    none: "bg-white/5 border border-white/10",
+    none: "bg-[#1c1c1c] border border-[#2a2a2a]",
   }[variant];
 
   return (

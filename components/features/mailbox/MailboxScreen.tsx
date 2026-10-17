@@ -9,7 +9,7 @@ import { SafeSpaceEntry } from "../safespace/SafeSpaceEntry";
 import { WhiteFlagButton } from "./WhiteFlagButton";
 import { PartnerNotes } from "../notes/PartnerNotes";
 import { motion, AnimatePresence } from "framer-motion";
-import { Heart, Sparkles } from "lucide-react";
+import { Heart } from "lucide-react";
 
 import { AmbientBackground } from "../../ui/AmbientBackground";
 import { cn } from "@/lib/utils";
@@ -38,52 +38,27 @@ export const MailboxScreen: React.FC<MailboxScreenProps> = ({ onOpenCheckIn, onC
                 </div>
             </header>
 
-            {/* Streak Hero Section */}
-            {metrics && (
-                <section className="relative">
-                    <div className="absolute inset-0 rounded-[2.5rem]" style={{ backgroundImage: "radial-gradient(ellipse at center, rgba(249,115,22,0.1), transparent 70%)" }} />
-                    <motion.div 
-                        initial={{ opacity: 0, y: 20 }}
-                        animate={{ opacity: 1, y: 0 }}
-                        className="relative bg-white/5 border border-white/10 rounded-[2.5rem] p-8 overflow-hidden flex items-center justify-between"
-                    >
-                        <div className="space-y-4">
-                            <div className="flex items-center gap-2">
-                                <Sparkles className="w-4 h-4 text-yellow-400" />
-                                <span className="text-[10px] font-bebas tracking-[0.4em] text-neutral-500 uppercase">Check-in Streak</span>
-                            </div>
-                            <div className="space-y-1">
-                                <h2 className="text-7xl font-bebas text-white leading-none tracking-tight">
-                                    {metrics.streak} <span className="text-2xl text-neutral-600">{metrics.streak === 1 ? "Day" : "Days"}</span>
-                                </h2>
-                                <p className="text-neutral-500 font-outfit text-xs uppercase tracking-widest leading-relaxed">
-                                    {metrics.streak > 0 
-                                        ? "Days in a row you both checked in." 
-                                        : "Check in together today to start a streak."}
-                                </p>
-                            </div>
-                        </div>
-
-                        <div className="relative group">
-                            <div className="absolute inset-0 opacity-20 group-hover:opacity-40 transition-opacity" style={{ backgroundImage: "radial-gradient(circle at center, rgba(249,115,22,0.5), transparent 70%)" }} />
-                            <div className="relative w-24 h-24 rounded-full border-2 border-white/10 flex items-center justify-center bg-black/40">
-                                <motion.div 
-                                    animate={{ scale: [1, 1.1, 1], rotate: [0, 5, -5, 0] }}
-                                    transition={{ duration: 4, repeat: Infinity }}
-                                >
-                                    <Heart className={cn(
-                                        "w-10 h-10",
-                                        metrics.streak > 0 ? "text-orange-500 fill-orange-500/20" : "text-neutral-700"
-                                    )} />
-                                </motion.div>
-                            </div>
-                        </div>
-                    </motion.div>
-                </section>
-            )}
-
-            {/* Mood Hub Section */}
-            <section className="relative">
+            {/* Today at a glance: the streak on the left, how each of you is feeling stacked on the right, all one height */}
+            <section className="grid grid-cols-2 gap-3 items-stretch">
+                <motion.div
+                    initial={{ opacity: 0, y: 12 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    className="tone-amber rounded-[1.5rem] px-4 py-4 flex flex-col justify-between gap-2 min-h-[16rem] md:min-h-[18rem]"
+                >
+                    <div className="flex items-center justify-between gap-2">
+                        <span className="font-bebas text-[10px] tracking-[0.18em] uppercase leading-none opacity-70 truncate">Check-in streak</span>
+                        <span className="w-8 h-8 shrink-0 rounded-full bg-black/10 flex items-center justify-center" aria-hidden="true">
+                            <Heart className={cn("w-4 h-4", (metrics?.streak ?? 0) > 0 ? "text-[#b4300b] fill-[#b4300b]" : "opacity-50")} />
+                        </span>
+                    </div>
+                    <p className="font-bebas leading-none tabular-nums flex items-baseline gap-2">
+                        <span className="text-[8.5rem] md:text-[10rem]">{metrics?.streak ?? 0}</span>
+                        <span className="text-2xl md:text-3xl tracking-wide opacity-70">{(metrics?.streak ?? 0) === 1 ? "day" : "days"}</span>
+                    </p>
+                    <p className="font-outfit text-xs leading-snug opacity-75 text-pretty">
+                        {(metrics?.streak ?? 0) > 0 ? "In a row, both of you." : "Check in together to start one."}
+                    </p>
+                </motion.div>
                 <MoodStatusHub />
             </section>
 
@@ -99,7 +74,7 @@ export const MailboxScreen: React.FC<MailboxScreenProps> = ({ onOpenCheckIn, onC
             </section>
 
             {/* White Flag: a one-tap way to pause an argument */}
-            <section className="bg-white/5 border border-white/5 rounded-[2rem] p-6 flex flex-col md:flex-row md:items-center justify-between gap-4">
+            <section className="tone-slate rounded-[1.5rem] p-6 flex flex-col md:flex-row md:items-center justify-between gap-4">
                 <div className="space-y-1">
                     <h2 className="text-2xl font-bebas text-white tracking-widest uppercase leading-none">White Flag</h2>
                     <p className="text-neutral-500 font-outfit text-xs leading-relaxed">

@@ -4,14 +4,17 @@ import React, { useState } from "react";
 import { useRouter } from "next/navigation";
 import { useMailbox } from "@/context/MailboxContext";
 import { motion, AnimatePresence } from "framer-motion";
-import { ArrowLeft, Bell, BellOff, UserX, AlertTriangle, User, LogOut, RotateCcw, Heart, ChevronRight, EyeOff, Users, ShieldCheck } from "lucide-react";
+import { ArrowLeft, Bell, BellOff, Moon, Sun, UserX, AlertTriangle, User, LogOut, RotateCcw, Heart, ChevronRight, EyeOff, Users, ShieldCheck } from "lucide-react";
 import Link from "next/link";
 import { AmbientBackground } from "@/components/ui/AmbientBackground";
 import { useAuthGuard } from "@/hooks/useAuthGuard";
+import { useTheme } from "@/hooks/useTheme";
+import { cn } from "@/lib/utils";
 import { LeavePartnerModal } from "@/components/features/profile/LeavePartnerModal";
 
 export default function SettingsPage() {
   const router = useRouter();
+  const { theme, setTheme } = useTheme();
   const { user, partner, wipeoutUserAccount, logout, couple, leavePartner, requestReset, cancelReset, notificationsEnabled, toggleNotifications } = useMailbox();
   const [showWipeoutConfirm, setShowWipeoutConfirm] = useState(false);
   const [showUnpairConfirm, setShowUnpairConfirm] = useState(false);
@@ -73,11 +76,11 @@ export default function SettingsPage() {
   };
 
   return (
-    <div className="min-h-screen bg-[#070707] text-white overflow-y-auto font-outfit relative">
+    <div className="min-h-screen bg-[var(--page)] text-white overflow-y-auto font-outfit relative">
       <AmbientBackground variant="standard" />
 
       {/* Header */}
-      <header className="sticky top-0 left-0 right-0 p-6 z-50 flex items-center justify-between bg-gradient-to-b from-black to-transparent">
+      <header className="sticky top-0 left-0 right-0 p-6 z-50 flex items-center justify-between bg-gradient-to-b from-[var(--page)] to-transparent">
         <button 
           onClick={() => router.push("/")}
           className="flex items-center gap-2 text-neutral-400 hover:text-white transition-colors uppercase tracking-[0.2em] font-bebas text-sm group"
@@ -94,7 +97,7 @@ export default function SettingsPage() {
         {/* Account Info */}
         <section className="space-y-4">
           <h2 className="text-sm font-bebas text-neutral-500 tracking-[0.2em] uppercase">Account</h2>
-          <div className="bg-white/5 border border-white/10 rounded-2xl p-6 flex items-center justify-between">
+          <div className="bg-[#161616] border border-[#2a2a2a] rounded-2xl p-6 flex items-center justify-between">
             <div className="flex items-center gap-4">
               <div className="w-12 h-12 rounded-full bg-white/10 flex items-center justify-center">
                 <User className="w-6 h-6 text-white" />
@@ -118,9 +121,9 @@ export default function SettingsPage() {
         <section className="space-y-4">
           <h2 className="text-sm font-bebas text-neutral-500 tracking-[0.2em] uppercase">You & Your Partner</h2>
           <div className="space-y-2">
-            <Link href="/profile" className="bg-white/5 border border-white/10 rounded-2xl p-5 flex items-center justify-between hover:bg-white/10 transition-all">
+            <Link href="/profile" className="bg-[#161616] border border-[#2a2a2a] rounded-2xl p-5 flex items-center justify-between hover:bg-[#242424] transition-all">
               <div className="flex items-center gap-4">
-                <div className="p-3 bg-white/5 rounded-xl"><User className="w-5 h-5 text-white" /></div>
+                <div className="p-3 bg-[#1c1c1c] rounded-xl"><User className="w-5 h-5 text-white" /></div>
                 <div>
                   <p className="font-bebas tracking-widest uppercase text-lg">Your Profile</p>
                   <p className="text-xs text-neutral-400">What you like, what you need, how to show up for you</p>
@@ -129,17 +132,17 @@ export default function SettingsPage() {
               <ChevronRight className="w-4 h-4 text-neutral-500" />
             </Link>
             {couple ? (
-              <div className="bg-white/5 border border-white/10 rounded-2xl p-5 flex items-center gap-4">
-                <div className="p-3 bg-white/5 rounded-xl"><Heart className="w-5 h-5 text-pink-400" /></div>
+              <div className="bg-[#161616] border border-[#2a2a2a] rounded-2xl p-5 flex items-center gap-4">
+                <div className="p-3 bg-[#1c1c1c] rounded-xl"><Heart className="w-5 h-5 text-pink-400" /></div>
                 <div>
                   <p className="font-bebas tracking-widest uppercase text-lg">Connected with {partnerName}</p>
                   <p className="text-xs text-neutral-400">Only the two of you can see this space</p>
                 </div>
               </div>
             ) : (
-              <Link href="/pair" className="bg-white/5 border border-white/10 rounded-2xl p-5 flex items-center justify-between hover:bg-white/10 transition-all">
+              <Link href="/pair" className="bg-[#161616] border border-[#2a2a2a] rounded-2xl p-5 flex items-center justify-between hover:bg-[#242424] transition-all">
                 <div className="flex items-center gap-4">
-                  <div className="p-3 bg-white/5 rounded-xl"><Heart className="w-5 h-5 text-pink-400" /></div>
+                  <div className="p-3 bg-[#1c1c1c] rounded-xl"><Heart className="w-5 h-5 text-pink-400" /></div>
                   <div>
                     <p className="font-bebas tracking-widest uppercase text-lg">Connect With Your Partner</p>
                     <p className="text-xs text-neutral-400">Send an invite link or enter their code</p>
@@ -155,9 +158,37 @@ export default function SettingsPage() {
         <section className="space-y-4">
           <h2 className="text-sm font-bebas text-neutral-500 tracking-[0.2em] uppercase">Preferences</h2>
           <div className="space-y-2">
-            <div className="bg-white/5 border border-white/10 rounded-2xl p-5 flex items-center justify-between hover:bg-white/10 transition-all">
+            <div className="bg-[#161616] border border-[#2a2a2a] rounded-2xl p-5 flex items-center justify-between gap-4">
+              <div className="flex items-center gap-4 min-w-0">
+                <div className="p-3 bg-[#1c1c1c] rounded-xl shrink-0">
+                  {theme === "light" ? <Sun className="w-5 h-5 text-white" /> : <Moon className="w-5 h-5 text-white" />}
+                </div>
+                <div className="min-w-0">
+                  <p className="font-bebas tracking-widest uppercase text-lg">Appearance</p>
+                  <p className="text-xs text-neutral-400">Dark, or light with a cream page</p>
+                </div>
+              </div>
+              <div role="radiogroup" aria-label="Appearance" className="flex p-1 rounded-full bg-[#1c1c1c] shrink-0">
+                {(["dark", "light"] as const).map((t) => (
+                  <button
+                    key={t}
+                    type="button"
+                    role="radio"
+                    aria-checked={theme === t}
+                    onClick={() => setTheme(t)}
+                    className={cn(
+                      "px-4 py-2 rounded-full font-bebas text-xs tracking-widest uppercase transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/50",
+                      theme === t ? "bg-white text-black" : "text-neutral-400 hover:text-white"
+                    )}
+                  >
+                    {t}
+                  </button>
+                ))}
+              </div>
+            </div>
+            <div className="bg-[#161616] border border-[#2a2a2a] rounded-2xl p-5 flex items-center justify-between hover:bg-[#242424] transition-all">
               <div className="flex items-center gap-4">
-                <div className="p-3 bg-white/5 rounded-xl">
+                <div className="p-3 bg-[#1c1c1c] rounded-xl">
                   {notificationsEnabled ? <Bell className="w-5 h-5 text-white" /> : <BellOff className="w-5 h-5 text-neutral-500" />}
                 </div>
                 <div>
@@ -181,7 +212,7 @@ export default function SettingsPage() {
         {/* Privacy, in plain words */}
         <section className="space-y-4">
           <h2 className="text-sm font-bebas text-neutral-500 tracking-[0.2em] uppercase">Who Sees What</h2>
-          <div className="bg-white/5 border border-white/10 rounded-2xl p-6 space-y-5">
+          <div className="bg-[#161616] border border-[#2a2a2a] rounded-2xl p-6 space-y-5">
             <div className="flex items-start gap-4">
               <Users className="w-5 h-5 text-neutral-400 shrink-0 mt-0.5" />
               <p className="text-xs text-neutral-300 leading-relaxed"><span className="text-white">You and your partner</span> both see notes, responses, check-ins, signals, special days and each other&apos;s profile.</p>
@@ -201,19 +232,19 @@ export default function SettingsPage() {
         <section className="space-y-4">
           <h2 className="text-sm font-bebas text-neutral-500 tracking-[0.2em] uppercase">Legal & Support</h2>
           <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-            <Link href="/terms-of-service" className="bg-white/5 border border-white/10 rounded-2xl p-5 hover:bg-white/10 transition-all group block">
+            <Link href="/terms-of-service" className="bg-[#161616] border border-[#2a2a2a] rounded-2xl p-5 hover:bg-[#242424] transition-all group block">
               <p className="font-bebas tracking-widest uppercase text-lg">Terms of Service</p>
               <p className="text-xs text-neutral-400">Our rules of the house</p>
             </Link>
-            <Link href="/privacy-policy" className="bg-white/5 border border-white/10 rounded-2xl p-5 hover:bg-white/10 transition-all group block">
+            <Link href="/privacy-policy" className="bg-[#161616] border border-[#2a2a2a] rounded-2xl p-5 hover:bg-[#242424] transition-all group block">
               <p className="font-bebas tracking-widest uppercase text-lg">Privacy Policy</p>
               <p className="text-xs text-neutral-400">Data protection & security</p>
             </Link>
-            <Link href="/cookie-policy" className="bg-white/5 border border-white/10 rounded-2xl p-5 hover:bg-white/10 transition-all group block">
+            <Link href="/cookie-policy" className="bg-[#161616] border border-[#2a2a2a] rounded-2xl p-5 hover:bg-[#242424] transition-all group block">
               <p className="font-bebas tracking-widest uppercase text-lg">Cookie Policy</p>
               <p className="text-xs text-neutral-400">How we use cookies</p>
             </Link>
-            <Link href="/contact" className="bg-white/5 border border-white/10 rounded-2xl p-5 hover:bg-white/10 transition-all group block">
+            <Link href="/contact" className="bg-[#161616] border border-[#2a2a2a] rounded-2xl p-5 hover:bg-[#242424] transition-all group block">
               <p className="font-bebas tracking-widest uppercase text-lg">Contact Us</p>
               <p className="text-xs text-neutral-400">Need help? Get in touch</p>
             </Link>
@@ -231,9 +262,9 @@ export default function SettingsPage() {
           <div className="space-y-4">
             {/* 1. Reset Shared History */}
             {couple && (
-                <div className="border border-white/10 bg-white/5 rounded-2xl p-6">
+                <div className="border border-[#2a2a2a] bg-[#161616] rounded-2xl p-6">
                     <div className="flex items-start gap-4 mb-6">
-                        <div className="p-3 bg-white/5 rounded-xl">
+                        <div className="p-3 bg-[#1c1c1c] rounded-xl">
                             <RotateCcw className="w-5 h-5 text-neutral-400" />
                         </div>
                         <div>
@@ -276,13 +307,13 @@ export default function SettingsPage() {
                     {/* Pending Request / Rejection Messages */}
                     <AnimatePresence>
                         {couple.resetStatus === "pending" && couple.resetBy === user.uid && (
-                            <motion.div initial={{ opacity: 0, height: 0 }} animate={{ opacity: 1, height: "auto" }} className="mt-4 p-4 bg-white/5 border border-white/10 rounded-xl text-center">
+                            <motion.div initial={{ opacity: 0, height: 0 }} animate={{ opacity: 1, height: "auto" }} className="mt-4 p-4 bg-[#1c1c1c] border border-[#2a2a2a] rounded-xl text-center">
                                 <p className="text-xs text-neutral-400 font-outfit uppercase tracking-wider">Awaiting your partner&apos;s agreement...</p>
                                 <button onClick={handleCancelReset} className="mt-2 text-[10px] text-pink-500 font-bebas uppercase tracking-widest hover:underline">Cancel Request</button>
                             </motion.div>
                         )}
                         {couple.resetStatus === "declined" && couple.resetBy === user.uid && (
-                             <motion.div initial={{ opacity: 0, height: 0 }} animate={{ opacity: 1, height: "auto" }} className="mt-4 p-4 bg-white/5 border border-white/10 rounded-xl text-center">
+                             <motion.div initial={{ opacity: 0, height: 0 }} animate={{ opacity: 1, height: "auto" }} className="mt-4 p-4 bg-[#1c1c1c] border border-[#2a2a2a] rounded-xl text-center">
                                 <p className="text-xs text-neutral-300 font-outfit leading-relaxed">
                                     Your partner would rather keep your history for now.
                                 </p>

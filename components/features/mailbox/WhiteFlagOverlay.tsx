@@ -68,7 +68,7 @@ export const WhiteFlagOverlay = () => {
                         <button 
                             disabled={busy}
                             onClick={() => run(lowerFlag)}
-                            className="w-full bg-black text-white font-bebas text-xl py-4 rounded-[2rem] flex items-center justify-center gap-3 hover:bg-neutral-800 active:scale-[0.98] transition-all shadow-2xl"
+                            className="w-full bg-black text-white font-bebas text-xl py-4 rounded-[1.5rem] flex items-center justify-center gap-3 hover:bg-neutral-800 active:scale-[0.98] transition-all shadow-2xl"
                         >
                             <Sparkles className="w-5 h-5" /> Let&apos;s Find Peace
                         </button>
@@ -81,7 +81,7 @@ export const WhiteFlagOverlay = () => {
                                 setOverlayActive(false);
                                 window.dispatchEvent(new CustomEvent('openSafeSpace'));
                             })}
-                            className="w-full bg-white border border-neutral-200 text-black font-bebas text-xl py-4 rounded-[2rem] flex items-center justify-center gap-3 hover:bg-neutral-50 active:scale-[0.98] transition-all shadow-lg"
+                            className="w-full bg-white border border-neutral-200 text-black font-bebas text-xl py-4 rounded-[1.5rem] flex items-center justify-center gap-3 hover:bg-neutral-50 active:scale-[0.98] transition-all shadow-lg"
                         >
                             <MessageSquareHeart className="w-5 h-5" /> Let&apos;s talk in Safe Space
                         </button>

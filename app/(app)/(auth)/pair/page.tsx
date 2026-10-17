@@ -19,7 +19,7 @@ const INVITE_ERRORS: Record<InviteError, string> = {
 
 export default function PairPage() {
   return (
-    <Suspense fallback={<div className="h-screen w-screen bg-[#0a0a0a]" />}>
+    <Suspense fallback={<div className="h-screen w-screen bg-[var(--page)]" />}>
       <Pair />
     </Suspense>
   );
@@ -149,7 +149,7 @@ function Pair() {
   };
 
   return (
-    <div className="h-screen w-screen bg-[#0a0a0a] flex flex-col overflow-hidden relative">
+    <div className="h-screen w-screen bg-[var(--page)] flex flex-col overflow-hidden relative">
       {/* Top rainbow stripe */}
       <div className="flex-none h-0.5 bg-gradient-to-r from-pink-500 via-blue-500 to-yellow-400" />
 
@@ -162,14 +162,14 @@ function Pair() {
         {mode !== "choice" ? (
           <button
             onClick={() => { setMode("choice"); setError(""); setInputCode(""); setInviteCode(""); }}
-            className="flex items-center gap-2 px-4 py-2 bg-white/5 border border-white/10 rounded-full font-bebas text-xs tracking-widest text-neutral-400 uppercase hover:text-white hover:bg-white/10 transition-all active:scale-95"
+            className="flex items-center gap-2 px-4 py-2 bg-[#1c1c1c] border border-[#2a2a2a] rounded-full font-bebas text-xs tracking-widest text-neutral-400 uppercase hover:text-white hover:bg-[#242424] transition-all active:scale-95"
           >
             ← Back
           </button>
         ) : (
           <button
             onClick={() => router.push("/")}
-            className="flex items-center gap-2 px-4 py-2 bg-white/5 border border-white/10 rounded-full font-bebas text-xs tracking-widest text-neutral-400 uppercase hover:text-white hover:bg-white/10 transition-all active:scale-95"
+            className="flex items-center gap-2 px-4 py-2 bg-[#1c1c1c] border border-[#2a2a2a] rounded-full font-bebas text-xs tracking-widest text-neutral-400 uppercase hover:text-white hover:bg-[#242424] transition-all active:scale-95"
           >
             ← Home
           </button>
@@ -199,26 +199,26 @@ function Pair() {
                 <button
                   onClick={handleCreateInvite}
                   disabled={loading}
-                  className="w-full p-7 bg-white/5 border border-white/10 rounded-3xl hover:bg-white/10 hover:border-white/20 transition-all text-left flex items-center justify-between group active:scale-[0.98]"
+                  className="w-full p-7 bg-[#161616] border border-[#2a2a2a] rounded-3xl hover:bg-[#242424] hover:border-white/20 transition-all text-left flex items-center justify-between group active:scale-[0.98]"
                 >
                   <div>
                     <h3 className="text-xl font-bebas text-white tracking-widest uppercase mb-1">Invite Partner</h3>
                     <p className="text-neutral-500 font-outfit text-xs">Send a private link or code</p>
                   </div>
-                  <div className="p-3 rounded-2xl bg-white/5 group-hover:bg-pink-500/20 group-hover:text-pink-400 transition-all text-neutral-500">
+                  <div className="p-3 rounded-2xl bg-[#161616] group-hover:bg-pink-500/20 group-hover:text-pink-400 transition-all text-neutral-500">
                     {loading ? <Loader2 className="w-5 h-5 animate-spin" /> : <Share2 className="w-5 h-5" />}
                   </div>
                 </button>
 
                 <button
                   onClick={() => setMode("join")}
-                  className="w-full p-7 bg-white/5 border border-white/10 rounded-3xl hover:bg-white/10 hover:border-white/20 transition-all text-left flex items-center justify-between group active:scale-[0.98]"
+                  className="w-full p-7 bg-[#161616] border border-[#2a2a2a] rounded-3xl hover:bg-[#242424] hover:border-white/20 transition-all text-left flex items-center justify-between group active:scale-[0.98]"
                 >
                   <div>
                     <h3 className="text-xl font-bebas text-white tracking-widest uppercase mb-1">Enter Code</h3>
                     <p className="text-neutral-500 font-outfit text-xs">Join your partner&apos;s space</p>
                   </div>
-                  <div className="p-3 rounded-2xl bg-white/5 group-hover:bg-blue-500/20 group-hover:text-blue-400 transition-all text-neutral-500">
+                  <div className="p-3 rounded-2xl bg-[#161616] group-hover:bg-blue-500/20 group-hover:text-blue-400 transition-all text-neutral-500">
                     <LinkIcon className="w-5 h-5" />
                   </div>
                 </button>
@@ -246,7 +246,7 @@ function Pair() {
                   <p className="text-neutral-500 font-outfit text-xs uppercase tracking-[0.3em]">Send the link, or read out the code</p>
                 </div>
 
-                <div className="w-full bg-white/5 border border-white/10 rounded-3xl p-8 flex flex-col items-center gap-6">
+                <div className="w-full bg-[#161616] border border-[#2a2a2a] rounded-3xl p-8 flex flex-col items-center gap-6">
                   <div className="text-6xl font-mono font-bold tracking-[0.25em] text-white">
                     {inviteCode}
                   </div>
@@ -288,7 +288,7 @@ function Pair() {
                   onChange={(e) => setInputCode(e.target.value.toUpperCase())}
                   placeholder="· · · · · ·"
                   autoFocus
-                  className="w-full bg-white/5 border border-white/10 rounded-2xl py-6 text-center text-4xl font-mono tracking-[0.6em] text-white focus:outline-none focus:border-blue-500/40 transition-all placeholder:text-neutral-800"
+                  className="w-full bg-[#161616] border border-[#2a2a2a] rounded-2xl py-6 text-center text-4xl font-mono tracking-[0.6em] text-white focus:outline-none focus:border-blue-500/40 transition-all placeholder:text-neutral-800"
                 />
 
                 {error && (
@@ -345,7 +345,7 @@ function Pair() {
                             value={anniversaryDate}
                             max={new Date().toISOString().split("T")[0]}
                             onChange={(e) => setAnniversaryDate(e.target.value)}
-                            className="w-full bg-white/5 border border-white/10 rounded-2xl py-4 px-6 text-center text-white font-outfit focus:outline-none focus:border-pink-500/40 transition-all [color-scheme:dark]"
+                            className="w-full bg-[#161616] border border-[#2a2a2a] rounded-2xl py-4 px-6 text-center text-white font-outfit focus:outline-none focus:border-pink-500/40 transition-all [color-scheme:dark]"
                         />
                     </div>
 

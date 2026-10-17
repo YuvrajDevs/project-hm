@@ -31,7 +31,7 @@ const SavedCard = ({ message, who, partnerName, onUnsave, onOpenImage }: {
       initial={{ opacity: 0, y: 12 }}
       animate={{ opacity: 1, y: 0 }}
       exit={{ opacity: 0, scale: 0.97 }}
-      className="bg-white/5 border border-white/5 rounded-[2rem] p-5 space-y-4"
+      className="bg-[#161616] border border-[#232323] rounded-[1.5rem] p-5 space-y-4"
     >
       <div className="flex items-baseline justify-between gap-3">
         <span className="font-bebas text-sm tracking-widest uppercase text-neutral-300">{who}</span>
@@ -44,7 +44,7 @@ const SavedCard = ({ message, who, partnerName, onUnsave, onOpenImage }: {
         <button
           type="button"
           onClick={onUnsave}
-          className="h-9 px-3.5 rounded-full bg-white/5 border border-white/10 flex items-center gap-1.5 font-outfit text-xs text-neutral-300 hover:text-white hover:bg-white/10 active:scale-95 transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/50"
+          className="h-9 px-3.5 rounded-full bg-[#1c1c1c] border border-[#2a2a2a] flex items-center gap-1.5 font-outfit text-xs text-neutral-300 hover:text-white hover:bg-[#242424] active:scale-95 transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/50"
         >
           <Bookmark className="w-3.5 h-3.5" fill="currentColor" /> Remove
         </button>
@@ -52,7 +52,7 @@ const SavedCard = ({ message, who, partnerName, onUnsave, onOpenImage }: {
           <button
             type="button"
             onClick={copy}
-            className="h-9 px-3.5 rounded-full bg-white/5 border border-white/10 flex items-center gap-1.5 font-outfit text-xs text-neutral-300 hover:text-white hover:bg-white/10 active:scale-95 transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/50"
+            className="h-9 px-3.5 rounded-full bg-[#1c1c1c] border border-[#2a2a2a] flex items-center gap-1.5 font-outfit text-xs text-neutral-300 hover:text-white hover:bg-[#242424] active:scale-95 transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/50"
           >
             {copied ? <Check className="w-3.5 h-3.5" /> : <Copy className="w-3.5 h-3.5" />}
             {copied ? "Copied" : "Copy"}
@@ -87,8 +87,8 @@ export const SavedMessages = ({ onOpenChat }: { onOpenChat: () => void }) => {
       {items === null ? (
         <div className="h-48 flex items-center justify-center text-neutral-600"><Loader2 className="w-5 h-5 animate-spin" aria-label="Loading" /></div>
       ) : items.length === 0 ? (
-        <div className="py-14 px-6 flex flex-col items-center gap-5 bg-white/5 border border-white/5 border-dashed rounded-[2.5rem] text-center">
-          <div className="p-4 rounded-2xl bg-white/5 text-neutral-400"><Bookmark className="w-6 h-6" /></div>
+        <div className="py-14 px-6 flex flex-col items-center gap-5 bg-[#161616] border border-[#232323] border-dashed rounded-[1.5rem] text-center">
+          <div className="p-4 rounded-2xl bg-[#161616] text-neutral-400"><Bookmark className="w-6 h-6" /></div>
           <div className="space-y-1.5">
             <p className="font-bebas text-2xl tracking-widest uppercase">Nothing saved yet</p>
             <p className="font-outfit text-sm text-neutral-500 leading-relaxed text-pretty max-w-xs">

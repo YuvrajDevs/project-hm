@@ -142,7 +142,7 @@ export const StreakGrid: React.FC<StreakGridProps> = ({ history }) => {
       case "aligned": return "bg-yellow-400 shadow-[0_0_15px_rgba(250,204,21,0.4)] border-transparent";
       case "neutral": return "bg-orange-500 shadow-[0_0_15px_rgba(249,115,22,0.3)] border-transparent";
       case "rough": return "bg-red-500 shadow-[0_0_15px_rgba(239,68,68,0.3)] border-transparent";
-      default: return "bg-white/5 border border-white/5";
+      default: return "bg-[#1c1c1c] border border-[#232323]";
     }
   };
 
@@ -156,7 +156,7 @@ export const StreakGrid: React.FC<StreakGridProps> = ({ history }) => {
       <div className="flex items-center justify-between px-2">
         <button 
             onClick={handlePrevMonth}
-            className="p-3 rounded-2xl bg-white/5 border border-white/10 hover:bg-white/10 transition-all active:scale-90"
+            className="p-3 rounded-2xl bg-[#161616] border border-[#2a2a2a] hover:bg-[#242424] transition-all active:scale-90"
         >
             <ChevronLeft className="w-4 h-4 text-neutral-400" />
         </button>
@@ -165,14 +165,14 @@ export const StreakGrid: React.FC<StreakGridProps> = ({ history }) => {
 
         <button 
             onClick={handleNextMonth}
-            className="p-3 rounded-2xl bg-white/5 border border-white/10 hover:bg-white/10 transition-all active:scale-90"
+            className="p-3 rounded-2xl bg-[#161616] border border-[#2a2a2a] hover:bg-[#242424] transition-all active:scale-90"
         >
             <ChevronRight className="w-4 h-4 text-neutral-400" />
         </button>
       </div>
 
       {/* Calendar Grid Container */}
-      <div className="bg-white/5 p-8 md:p-16 rounded-[2.5rem] md:rounded-[4rem] border border-white/5 relative overflow-hidden group/grid">
+      <div className="bg-[#161616] p-8 md:p-16 rounded-[1.5rem] md:rounded-[4rem] border border-[#232323] relative overflow-hidden group/grid">
         {/* Master Grid (Header + Dates) */}
         <div className="grid grid-cols-7 gap-y-10 md:gap-y-14 gap-x-4 md:gap-x-12 place-items-center relative z-10 h-full">
             {/* Row 1: Days Header */}
@@ -256,7 +256,7 @@ export const StreakGrid: React.FC<StreakGridProps> = ({ history }) => {
                     initial={{ scale: 0.9, y: 20 }}
                     animate={{ scale: 1, y: 0 }}
                     exit={{ scale: 0.9, y: 20 }}
-                    className="w-full max-w-[320px] md:max-w-xl bg-neutral-900 border border-white/10 rounded-[2.5rem] overflow-hidden shadow-2xl flex flex-col max-h-[85vh]"
+                    className="w-full max-w-[320px] md:max-w-xl bg-neutral-900 border border-white/10 rounded-[1.5rem] overflow-hidden shadow-2xl flex flex-col max-h-[85vh]"
                     onClick={e => e.stopPropagation()}
                 >
                     {/* Modal Header */}
@@ -266,7 +266,7 @@ export const StreakGrid: React.FC<StreakGridProps> = ({ history }) => {
                                 setSelectedDate(null);
                                 setIsAddingEvent(false);
                             }}
-                            className="absolute top-6 right-6 p-2 rounded-full bg-white/5 hover:bg-white/10 transition-colors"
+                            className="absolute top-6 right-6 p-2 rounded-full bg-[#1c1c1c] hover:bg-[#242424] transition-colors"
                         >
                             <X className="w-4 h-4 text-neutral-400" />
                         </button>
@@ -294,7 +294,7 @@ export const StreakGrid: React.FC<StreakGridProps> = ({ history }) => {
                                             maxLength={100}
                                             onChange={e => setEventTitle(e.target.value)}
                                             placeholder="E.g. Anniversary Dinner"
-                                            className="w-full bg-white/5 border border-white/10 rounded-2xl px-4 py-3 text-sm text-white focus:outline-none focus:border-white/30"
+                                            className="w-full bg-[#161616] border border-[#2a2a2a] rounded-2xl px-4 py-3 text-sm text-white focus:outline-none focus:border-white/30"
                                         />
                                     </div>
                                     <div className="space-y-1">
@@ -304,7 +304,7 @@ export const StreakGrid: React.FC<StreakGridProps> = ({ history }) => {
                                             maxLength={500}
                                             onChange={e => setEventNote(e.target.value)}
                                             placeholder="Small details here..."
-                                            className="w-full bg-white/5 border border-white/10 rounded-2xl px-4 py-3 text-sm text-white h-24 focus:outline-none focus:border-white/30 resize-none"
+                                            className="w-full bg-[#161616] border border-[#2a2a2a] rounded-2xl px-4 py-3 text-sm text-white h-24 focus:outline-none focus:border-white/30 resize-none"
                                         />
                                     </div>
                                     
@@ -314,7 +314,7 @@ export const StreakGrid: React.FC<StreakGridProps> = ({ history }) => {
                                             <select 
                                                 value={eventRepeat}
                                                 onChange={e => setEventRepeat(e.target.value as "none" | "monthly" | "yearly")}
-                                                className="w-full bg-white/5 border border-white/10 rounded-xl px-3 py-3 text-xs text-white focus:outline-none focus:border-white/30 appearance-none font-bebas tracking-wider"
+                                                className="w-full bg-[#1c1c1c] border border-[#2a2a2a] rounded-xl px-3 py-3 text-xs text-white focus:outline-none focus:border-white/30 appearance-none font-bebas tracking-wider"
                                             >
                                                 <option value="none">Once</option>
                                                 <option value="monthly">Monthly</option>
@@ -327,7 +327,7 @@ export const StreakGrid: React.FC<StreakGridProps> = ({ history }) => {
                                                 onClick={() => setIsSurprise(!isSurprise)}
                                                 className={cn(
                                                     "w-full px-4 py-3 rounded-xl border transition-all flex items-center justify-center gap-2 font-bebas text-xs tracking-wider uppercase",
-                                                    isSurprise ? "bg-cyan-500/20 border-cyan-500 text-cyan-400" : "bg-white/5 border-white/10 text-neutral-500"
+                                                    isSurprise ? "bg-cyan-500/20 border-cyan-500 text-cyan-400" : "bg-[#1c1c1c] border-[#2a2a2a] text-neutral-500"
                                                 )}
                                             >
                                                 <Gift className="w-3.5 h-3.5" />
@@ -340,7 +340,7 @@ export const StreakGrid: React.FC<StreakGridProps> = ({ history }) => {
                                 <div className="flex gap-3">
                                     <button 
                                         onClick={() => setIsAddingEvent(false)}
-                                        className="flex-1 py-4 rounded-2xl bg-white/5 text-neutral-500 font-bebas tracking-widest uppercase text-sm"
+                                        className="flex-1 py-4 rounded-2xl bg-[#161616] text-neutral-500 font-bebas tracking-widest uppercase text-sm"
                                     >
                                         Cancel
                                     </button>
@@ -358,14 +358,14 @@ export const StreakGrid: React.FC<StreakGridProps> = ({ history }) => {
                             <div className="space-y-8">
                                 {/* Grouped Sync Section (Calculated Cards) */}
                                 {selectedData && (
-                                    <div className="bg-white/5 border border-white/10 rounded-[2.5rem] overflow-hidden">
+                                    <div className="bg-[#161616] border border-[#2a2a2a] rounded-[1.5rem] overflow-hidden">
                                         {/* Sync Score Row */}
-                                        <div className="flex justify-between items-center bg-white/5 p-6 border-b border-white/5">
+                                        <div className="flex justify-between items-center bg-[#1c1c1c] p-6 border-b border-[#232323]">
                                             <div className="space-y-1">
                                                 <span className="font-bebas text-[10px] tracking-widest text-neutral-500 uppercase">{selectedData.count >= 2 ? "Connection (average)" : "Connection (one check-in)"}</span>
                                                 <div className="text-5xl font-bebas text-white">{selectedData.syncScore.toFixed(1)}/10</div>
                                             </div>
-                                            <div className="w-12 h-12 rounded-full flex items-center justify-center bg-white/5">
+                                            <div className="w-12 h-12 rounded-full flex items-center justify-center bg-[#1c1c1c]">
                                                 {selectedData.syncScore >= 7 ? <Star className="w-6 h-6 text-yellow-400 fill-current" /> : 
                                                 selectedData.syncScore >= 4 ? <Sun className="w-6 h-6 text-orange-400" /> : 
                                                 <CloudRain className="w-6 h-6 text-red-400" />}
@@ -413,7 +413,7 @@ export const StreakGrid: React.FC<StreakGridProps> = ({ history }) => {
                                     {/* Existing Event Cards */}
                                     <div className="space-y-3">
                                         {selectedEvents.map(event => (
-                                            <div key={event.id} className="p-5 bg-white/5 border border-white/10 rounded-3xl space-y-4 group/card relative overflow-hidden">
+                                            <div key={event.id} className="p-5 bg-[#161616] border border-[#2a2a2a] rounded-3xl space-y-4 group/card relative overflow-hidden">
                                                 {event.isSurprise && (
                                                     <div className="absolute top-0 right-0 px-3 py-1 bg-cyan-500/10 text-cyan-500 text-[8px] font-bebas tracking-widest uppercase rounded-bl-xl border-l border-b border-cyan-500/20">
                                                         <Sparkles className="w-2.5 h-2.5 inline mr-1" /> Surprise
@@ -440,7 +440,7 @@ export const StreakGrid: React.FC<StreakGridProps> = ({ history }) => {
                                         {/* Add/Nothing Planned Card */}
                                         <button 
                                             onClick={() => setIsAddingEvent(true)}
-                                            className="w-full p-6 bg-white/5 border border-dashed border-white/10 rounded-3xl group hover:bg-white/10 transition-all active:scale-[0.98]"
+                                            className="w-full p-6 bg-[#161616] border border-dashed border-[#2a2a2a] rounded-3xl group hover:bg-[#242424] transition-all active:scale-[0.98]"
                                         >
                                             <div className="flex justify-between items-center">
                                                 <p className={cn(
@@ -461,7 +461,7 @@ export const StreakGrid: React.FC<StreakGridProps> = ({ history }) => {
                     </div>
 
                     {!isAddingEvent && (
-                        <div className="p-4 bg-white/5 text-center shrink-0">
+                        <div className="p-4 bg-[#1c1c1c] text-center shrink-0">
                             <button 
                                 onClick={() => setSelectedDate(null)}
                                 className="text-[10px] font-bebas tracking-widest text-neutral-600 uppercase hover:text-white transition-colors"

@@ -17,21 +17,21 @@ export type SectionId = "play" | "know" | "spicy" | "wyr" | "tod" | "connect";
 
 // Tailwind only ships classes it can see written out, so every colour is spelled in full here
 const HUES = {
-  sky: { tint: "from-sky-500/30 to-sky-600/20", card: "from-sky-500 to-sky-600" },
-  teal: { tint: "from-teal-500/30 to-teal-600/20", card: "from-teal-500 to-teal-600" },
-  emerald: { tint: "from-emerald-500/30 to-emerald-600/20", card: "from-emerald-500 to-emerald-600" },
-  amber: { tint: "from-amber-500/30 to-amber-600/20", card: "from-amber-600 to-amber-700" },
-  orange: { tint: "from-orange-500/30 to-orange-600/20", card: "from-orange-500 to-orange-600" },
-  indigo: { tint: "from-indigo-500/30 to-indigo-600/20", card: "from-indigo-500 to-indigo-600" },
-  violet: { tint: "from-violet-500/30 to-violet-600/20", card: "from-violet-500 to-violet-600" },
-  purple: { tint: "from-purple-500/30 to-purple-600/20", card: "from-purple-500 to-purple-600" },
-  fuchsia: { tint: "from-fuchsia-500/30 to-fuchsia-600/20", card: "from-fuchsia-500 to-fuchsia-600" },
-  pink: { tint: "from-pink-500/30 to-pink-600/20", card: "from-pink-500 to-pink-600" },
-  rose: { tint: "from-rose-500/30 to-rose-600/20", card: "from-rose-500 to-rose-600" },
-  red: { tint: "from-red-500/30 to-red-600/20", card: "from-red-600 to-red-700" },
-  slate: { tint: "from-slate-500/30 to-slate-600/20", card: "from-slate-500 to-slate-600" },
-  blue: { tint: "from-blue-500/30 to-blue-600/20", card: "from-blue-500 to-blue-600" },
-  cyan: { tint: "from-cyan-500/30 to-cyan-600/20", card: "from-cyan-600 to-cyan-700" },
+  sky: { tint: "from-sky-600 to-sky-700", card: "from-sky-500 to-sky-600" },
+  teal: { tint: "from-teal-600 to-teal-700", card: "from-teal-500 to-teal-600" },
+  emerald: { tint: "from-emerald-600 to-emerald-700", card: "from-emerald-500 to-emerald-600" },
+  amber: { tint: "from-amber-600 to-amber-700", card: "from-amber-600 to-amber-700" },
+  orange: { tint: "from-orange-600 to-orange-700", card: "from-orange-500 to-orange-600" },
+  indigo: { tint: "from-indigo-600 to-indigo-700", card: "from-indigo-500 to-indigo-600" },
+  violet: { tint: "from-violet-600 to-violet-700", card: "from-violet-500 to-violet-600" },
+  purple: { tint: "from-purple-600 to-purple-700", card: "from-purple-500 to-purple-600" },
+  fuchsia: { tint: "from-fuchsia-600 to-fuchsia-700", card: "from-fuchsia-500 to-fuchsia-600" },
+  pink: { tint: "from-pink-600 to-pink-700", card: "from-pink-500 to-pink-600" },
+  rose: { tint: "from-rose-600 to-rose-700", card: "from-rose-500 to-rose-600" },
+  red: { tint: "from-red-600 to-red-700", card: "from-red-600 to-red-700" },
+  slate: { tint: "from-slate-600 to-slate-700", card: "from-slate-500 to-slate-600" },
+  blue: { tint: "from-blue-600 to-blue-700", card: "from-blue-500 to-blue-600" },
+  cyan: { tint: "from-cyan-600 to-cyan-700", card: "from-cyan-600 to-cyan-700" },
 } as const;
 type Hue = keyof typeof HUES;
 

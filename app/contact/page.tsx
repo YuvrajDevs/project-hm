@@ -34,7 +34,7 @@ export default function ContactPage() {
   };
 
   return (
-    <div className="min-h-screen bg-[#0a0a0a] text-neutral-300 font-inter selection:bg-pink-500/30 overflow-x-hidden">
+    <div className="min-h-screen bg-[var(--page)] text-neutral-300 font-inter selection:bg-pink-500/30 overflow-x-hidden">
       <div className="fixed inset-0 z-0 pointer-events-none opacity-40">
         <AmbientBackground variant="standard" />
       </div>
@@ -52,7 +52,7 @@ export default function ContactPage() {
           </div>
           <h1 className="text-4xl md:text-5xl font-inter font-bold tracking-widest uppercase text-white mb-4">Contact & Support</h1>
           
-          <div className="bg-white/5 border-l-2 border-pink-500/50 p-6 rounded-r-2xl mt-8">
+          <div className="bg-[#1c1c1c] border-l-2 border-pink-500/50 p-6 rounded-r-2xl mt-8">
             <p className="text-sm text-neutral-300 leading-relaxed font-inter">
               If you have questions about your account, need help using the app, or want to request access, updates, or deletion of your personal data, you can contact us here.
             </p>
@@ -65,7 +65,7 @@ export default function ContactPage() {
               key="sent"
               initial={{ opacity: 0, scale: 0.95 }}
               animate={{ opacity: 1, scale: 1 }}
-              className="bg-white/5 border border-white/10 rounded-[2.5rem] p-12 text-center space-y-6"
+              className="bg-[#161616] border border-[#2a2a2a] rounded-[1.5rem] p-12 text-center space-y-6"
             >
               <div className="w-20 h-20 bg-green-500/10 rounded-full flex items-center justify-center mx-auto text-green-500">
                 <CheckCircle2 className="w-10 h-10" />
@@ -112,7 +112,7 @@ export default function ContactPage() {
                   value={formData.name}
                   onChange={(e) => setFormData({...formData, name: e.target.value})}
                   placeholder="Your name"
-                  className="w-full bg-white/5 border border-white/10 rounded-xl px-5 py-3.5 text-white focus:outline-none focus:border-white/30 transition-all font-inter text-sm"
+                  className="w-full bg-[#1c1c1c] border border-[#2a2a2a] rounded-xl px-5 py-3.5 text-white focus:outline-none focus:border-white/30 transition-all font-inter text-sm"
                 />
               </div>
               <div className="space-y-2">
@@ -123,7 +123,7 @@ export default function ContactPage() {
                   value={formData.email}
                   onChange={(e) => setFormData({...formData, email: e.target.value})}
                   placeholder="you@example.com"
-                  className="w-full bg-white/5 border border-white/10 rounded-xl px-5 py-3.5 text-white focus:outline-none focus:border-white/30 transition-all font-inter text-sm"
+                  className="w-full bg-[#1c1c1c] border border-[#2a2a2a] rounded-xl px-5 py-3.5 text-white focus:outline-none focus:border-white/30 transition-all font-inter text-sm"
                 />
               </div>
             </div>
@@ -133,7 +133,7 @@ export default function ContactPage() {
               <select 
                 value={formData.purpose}
                 onChange={(e) => setFormData({...formData, purpose: e.target.value})}
-                className="w-full bg-[#0f0f0f] border border-white/10 rounded-xl px-5 py-3.5 text-neutral-300 focus:outline-none focus:border-white/30 transition-all font-inter text-sm appearance-none"
+                className="w-full bg-[#151515] border border-white/10 rounded-xl px-5 py-3.5 text-neutral-300 focus:outline-none focus:border-white/30 transition-all font-inter text-sm appearance-none"
               >
                 <option value="general">General Support / Questions</option>
                 <option value="data_request">Privacy / Data Request (Access, Update, Delete)</option>
@@ -149,7 +149,7 @@ export default function ContactPage() {
                 value={formData.message}
                 onChange={(e) => setFormData({...formData, message: e.target.value})}
                 placeholder="How can we help?"
-                className="w-full bg-white/5 border border-white/10 rounded-2xl px-5 py-3.5 text-white focus:outline-none focus:border-white/30 transition-all font-inter text-sm resize-none"
+                className="w-full bg-[#161616] border border-[#2a2a2a] rounded-2xl px-5 py-3.5 text-white focus:outline-none focus:border-white/30 transition-all font-inter text-sm resize-none"
               />
             </div>
 
@@ -170,7 +170,7 @@ export default function ContactPage() {
 
               {/* Compliance Badges */}
               <div className="pt-8 space-y-4 border-t border-white/5">
-                <div className="flex gap-4 p-4 rounded-xl bg-white/5 border border-white/5">
+                <div className="flex gap-4 p-4 rounded-xl bg-[#1c1c1c] border border-[#232323]">
                   <ShieldCheck className="w-5 h-5 text-neutral-600 shrink-0" />
                   <p className="text-[11px] text-neutral-500 leading-relaxed font-outfit">
                     <strong>Privacy Notice:</strong> We will use the information you provide only to respond to your request, including any inquiries related to your personal data.

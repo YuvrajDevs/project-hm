@@ -69,7 +69,7 @@ export const BucketList = () => {
       {error && <p className="text-rose-500 font-outfit text-xs">{error}</p>}
 
       {items.length === 0 ? (
-        <div className="py-8 px-6 flex items-center justify-center bg-white/5 border border-white/5 border-dashed rounded-[2rem] text-center">
+        <div className="py-8 px-6 flex items-center justify-center bg-[#161616] border border-[#232323] border-dashed rounded-[1.5rem] text-center">
           <p className="font-outfit text-sm text-neutral-500 leading-relaxed">
             {`Places, plans and little adventures you want to share with ${partnerName}. You both see the same list.`}
           </p>
@@ -135,7 +135,7 @@ const AddItem = ({ coupleId, onError }: { coupleId: string; onError: (msg: strin
         onChange={(e) => setText(e.target.value)}
         maxLength={120}
         placeholder="Watch the sunrise in Goa…"
-        className="flex-1 min-w-0 bg-white/5 border border-white/10 rounded-2xl px-5 py-4 text-sm text-white font-outfit focus:outline-none focus:border-white/30 placeholder:text-neutral-600"
+        className="flex-1 min-w-0 bg-[#161616] border border-[#2a2a2a] rounded-2xl px-5 py-4 text-sm text-white font-outfit focus:outline-none focus:border-white/30 placeholder:text-neutral-600"
       />
       <button
         type="submit"
@@ -159,7 +159,7 @@ const ItemRow = ({ item, uid, partnerName, onToggle, onRemove }: {
     exit={{ opacity: 0, height: 0, marginTop: 0 }}
     className={cn(
       "group flex items-center gap-4 rounded-2xl border p-4 transition-colors",
-      item.done ? "bg-white/[0.03] border-white/5" : "bg-white/5 border-white/10"
+      item.done ? "tone-slate" : "tone-emerald"
     )}
   >
     <button
@@ -209,7 +209,7 @@ const AllItems = ({ count, doneCount, onClose, children }: { count: number; done
         exit={{ opacity: 0, y: 20 }}
         transition={{ type: "spring", damping: 20, stiffness: 100 }}
         onClick={(e) => e.stopPropagation()}
-        className="w-full max-w-md h-[75vh] max-h-[680px] overlay-panel rounded-[2.5rem] p-6 flex flex-col gap-4"
+        className="w-full max-w-md h-[75vh] max-h-[680px] overlay-panel rounded-[1.5rem] p-6 flex flex-col gap-4"
       >
         <div className="flex items-center justify-between gap-3 shrink-0">
           <div>
@@ -219,7 +219,7 @@ const AllItems = ({ count, doneCount, onClose, children }: { count: number; done
           <button
             aria-label="Close"
             onClick={onClose}
-            className="w-10 h-10 rounded-full bg-white/5 border border-white/5 flex items-center justify-center text-neutral-400 hover:text-white transition-all"
+            className="w-10 h-10 rounded-full bg-[#1c1c1c] border border-[#232323] flex items-center justify-center text-neutral-400 hover:text-white transition-all"
           >
             <X className="w-4 h-4" />
           </button>

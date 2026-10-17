@@ -128,7 +128,7 @@ export const ComposeMessage = ({ onClose }: { onClose: () => void }) => {
       exit={{ opacity: 0 }}
       className="fixed inset-0 z-50 flex items-center justify-center p-4 overlay-backdrop"
     >
-      <div className="w-full max-w-md bg-[#0f0f0f] border border-white/10 rounded-[2rem] overflow-hidden flex flex-col max-h-[90vh] shadow-2xl">
+      <div className="w-full max-w-md bg-[#151515] border border-white/10 rounded-[1.5rem] overflow-hidden flex flex-col max-h-[90vh] shadow-2xl">
         <header className="p-4 border-b border-white/5 flex justify-between items-center">
           <h2 className="font-bebas text-xl tracking-widest text-white">Compose Heart</h2>
           <button onClick={onClose} className="p-1.5 hover:bg-white/5 rounded-full transition-colors text-neutral-500 hover:text-white">
@@ -151,7 +151,7 @@ export const ComposeMessage = ({ onClose }: { onClose: () => void }) => {
                   className={`flex flex-col items-center justify-center p-3 rounded-2xl border transition-all aspect-square gap-2 group relative overflow-hidden ${
                     status === s.id 
                       ? "border-white bg-white/10" 
-                      : "border-white/5 bg-white/5 text-neutral-500 hover:border-white/20 hover:bg-white/[0.07]"
+                      : "border-[#232323] bg-[#1c1c1c] text-neutral-500 hover:border-white/20 hover:bg-white/[0.07]"
                   }`}
                 >
                   {status === s.id && (
@@ -187,7 +187,7 @@ export const ComposeMessage = ({ onClose }: { onClose: () => void }) => {
                   className={`px-4 py-2.5 rounded-full border text-xs font-outfit transition-all flex items-center gap-2 ${
                     intent === i.id 
                       ? "bg-white text-black border-white" 
-                      : "bg-white/5 border-white/5 text-neutral-400 hover:border-white/20"
+                      : "bg-[#1c1c1c] border-[#232323] text-neutral-400 hover:border-white/20"
                   }`}
                  >
                    <img src={i.url} alt={i.label} className="w-5 h-5 object-contain" /> {i.label}
@@ -206,7 +206,7 @@ export const ComposeMessage = ({ onClose }: { onClose: () => void }) => {
               value={note}
               onChange={(e) => setNote(e.target.value)}
               placeholder="Keep it brief..."
-              className="w-full bg-white/5 border border-white/10 rounded-xl p-3 text-white font-outfit text-sm focus:outline-none focus:border-white/30 transition-all min-h-[80px] resize-none"
+              className="w-full bg-[#1c1c1c] border border-[#2a2a2a] rounded-xl p-3 text-white font-outfit text-sm focus:outline-none focus:border-white/30 transition-all min-h-[80px] resize-none"
               maxLength={140}
             />
           </section>
@@ -241,7 +241,7 @@ export const ComposeMessage = ({ onClose }: { onClose: () => void }) => {
                                     {isDifferentTZ ? "Set by clock of:" : "Unlock Date & Time"}
                                 </label>
                                 {isDifferentTZ && (
-                                    <div className="flex bg-white/5 rounded-lg p-0.5 border border-white/10">
+                                    <div className="flex bg-[#1c1c1c] rounded-lg p-0.5 border border-[#2a2a2a]">
                                         <button 
                                             onClick={() => { vibrateTick(); setTimezoneMode("MINE"); }}
                                             className={`px-3 py-1 rounded-md text-[9px] font-bebas tracking-widest uppercase transition-all ${timezoneMode === "MINE" ? "bg-white text-black shadow-lg" : "text-neutral-500"}`}
@@ -262,7 +262,7 @@ export const ComposeMessage = ({ onClose }: { onClose: () => void }) => {
                                     type="datetime-local" 
                                     value={unlockAt}
                                     onChange={(e) => setUnlockAt(e.target.value)}
-                                    className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-3 text-white font-outfit text-sm focus:outline-none focus:border-pink-500/50 transition-colors"
+                                    className="w-full bg-[#1c1c1c] border border-[#2a2a2a] rounded-xl px-4 py-3 text-white font-outfit text-sm focus:outline-none focus:border-pink-500/50 transition-colors"
                                 />
                                 {unlockAt && isDifferentTZ && (
                                     <motion.div 
@@ -291,7 +291,7 @@ export const ComposeMessage = ({ onClose }: { onClose: () => void }) => {
                                 vibrateTick();
                                 setIsSecretBeforeUnlock(!isSecretBeforeUnlock);
                             }}
-                            className="w-full bg-white/5 border border-white/10 rounded-xl p-4 flex items-center justify-between hover:bg-white/10 transition-all text-left"
+                            className="w-full bg-[#1c1c1c] border border-[#2a2a2a] rounded-xl p-4 flex items-center justify-between hover:bg-[#242424] transition-all text-left"
                         >
                             <div>
                                 <p className="font-bebas text-sm tracking-widest uppercase text-white">

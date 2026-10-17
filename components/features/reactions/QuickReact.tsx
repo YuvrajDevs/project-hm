@@ -87,7 +87,7 @@ export const QuickReact = ({ onClose }: { onClose: () => void }) => {
         initial={{ opacity: 0, scale: 0.95, y: 20 }}
         animate={{ opacity: 1, scale: 1, y: 0 }}
         exit={{ opacity: 0, scale: 0.95, y: 20 }}
-        className="w-full max-w-sm md:max-w-xl bg-neutral-900 border border-white/10 rounded-[2.5rem] overflow-hidden shadow-2xl relative"
+        className="w-full max-w-sm md:max-w-xl bg-neutral-900 border border-white/10 rounded-[1.5rem] overflow-hidden shadow-2xl relative"
         onClick={(e) => e.stopPropagation()}
       >
         {!selected ? (
@@ -102,7 +102,7 @@ export const QuickReact = ({ onClose }: { onClose: () => void }) => {
                         <button
                             key={r.type}
                             onClick={() => setSelected(r)}
-                            className="flex flex-col items-center justify-center p-4 bg-white/5 border border-white/5 rounded-3xl hover:bg-white/10 transition-all group active:scale-95 space-y-2"
+                            className="flex flex-col items-center justify-center p-4 bg-[#161616] border border-[#232323] rounded-3xl hover:bg-[#242424] transition-all group active:scale-95 space-y-2"
                         >
                             <img 
                                 src={r.url} 
@@ -118,7 +118,7 @@ export const QuickReact = ({ onClose }: { onClose: () => void }) => {
                 
                 <button 
                     onClick={onClose}
-                    className="w-full py-4 bg-white/5 text-neutral-500 font-bebas text-xs tracking-widest uppercase rounded-2xl hover:bg-white/10 transition-all"
+                    className="w-full py-4 bg-[#161616] text-neutral-500 font-bebas text-xs tracking-widest uppercase rounded-2xl hover:bg-[#242424] transition-all"
                 >
                     Dismiss
                 </button>
@@ -141,7 +141,7 @@ export const QuickReact = ({ onClose }: { onClose: () => void }) => {
                         value={note}
                         onChange={(e) => setNote(e.target.value.substring(0, 50))}
                         placeholder="Optional short note..."
-                        className="w-full h-24 bg-white/5 border border-white/10 rounded-2xl p-4 text-sm font-outfit placeholder:text-neutral-700 text-white focus:outline-none focus:border-white/20 transition-all resize-none"
+                        className="w-full h-24 bg-[#161616] border border-[#2a2a2a] rounded-2xl p-4 text-sm font-outfit placeholder:text-neutral-700 text-white focus:outline-none focus:border-white/20 transition-all resize-none"
                     />
                     <div className="flex justify-end pr-2">
                         <span className="text-[10px] text-neutral-600 font-outfit">{note.length}/50</span>
@@ -267,7 +267,7 @@ export const IncomingReactionIndicator = () => {
                                 initial={{ opacity: 0, y: 10 }}
                                 animate={{ opacity: 1, y: 0 }}
                                 transition={{ delay: 0.3 }}
-                                className="inline-block px-8 py-4 text-white rounded-[2rem] shadow-xl font-outfit text-base italic"
+                                className="inline-block px-8 py-4 text-white rounded-[1.5rem] shadow-xl font-outfit text-base italic"
                                 style={{ backgroundColor: reactionConfig.color === '#ffffff' ? '#171717' : reactionConfig.color }}
                             >
                                 &quot;{activeSplash.note}&quot;

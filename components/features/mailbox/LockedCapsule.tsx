@@ -69,8 +69,8 @@ export const LockedCapsule = ({ message }: { message: MailboxMessage }) => {
       initial={{ opacity: 0, scale: 0.95 }}
       animate={{ opacity: 1, scale: 1 }}
       className={cn(
-        "w-full rounded-[1.5rem] p-6 md:p-8 relative overflow-hidden flex flex-col items-center justify-center min-h-[160px]",
-        "bg-white/5 border border-white/10 shadow-xl group"
+        "w-full h-full rounded-[1.5rem] p-6 relative overflow-hidden flex flex-col items-center justify-center min-h-[200px]",
+        "bg-[#1c1c1c] border border-[#2a2a2a] shadow-xl group"
       )}
     >
       {/* Background Decor */}

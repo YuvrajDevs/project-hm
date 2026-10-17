@@ -12,7 +12,7 @@ import type { MailboxIntent } from "@/lib/types";
 const primary =
   "w-full bg-white text-black font-bebas tracking-widest uppercase rounded-2xl py-4 hover:bg-neutral-200 active:scale-95 disabled:opacity-30 transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/60";
 const input =
-  "w-full bg-white/5 border border-white/10 rounded-xl px-4 py-3 text-[16px] sm:text-sm text-white font-outfit focus:outline-none focus:border-white/30 placeholder:text-neutral-700 [color-scheme:dark]";
+  "w-full bg-[#1c1c1c] border border-[#2a2a2a] rounded-xl px-4 py-3 text-[16px] sm:text-sm text-white font-outfit focus:outline-none focus:border-white/30 placeholder:text-neutral-700 [color-scheme:dark]";
 const label = "text-[10px] font-bebas text-neutral-500 uppercase tracking-widest ml-1";
 const chip = (on: boolean) =>
   cn(

@@ -17,14 +17,14 @@ export const EmpathyNudge: React.FC<EmpathyNudgeProps> = ({ onWriteNote, onDismi
             exit={{ opacity: 0, scale: 0.9 }}
             className="fixed bottom-24 left-6 right-6 z-[110] flex justify-center pointer-events-none"
         >
-            <div className="w-full max-w-sm md:max-w-lg bg-neutral-900 border border-white/10 rounded-[2rem] p-6 shadow-2xl pointer-events-auto relative overflow-hidden">
+            <div className="w-full max-w-sm md:max-w-lg bg-neutral-900 border border-white/10 rounded-[1.5rem] p-6 shadow-2xl pointer-events-auto relative overflow-hidden">
                 <div className="absolute top-0 right-0 p-4 opacity-5 pointer-events-none">
                     <Sparkles className="w-20 h-20" />
                 </div>
 
                 <button 
                     onClick={onDismiss}
-                    className="absolute top-4 right-4 p-1.5 rounded-full bg-white/5 hover:bg-white/10 transition-colors text-neutral-500 hover:text-white"
+                    className="absolute top-4 right-4 p-1.5 rounded-full bg-[#1c1c1c] hover:bg-[#242424] transition-colors text-neutral-500 hover:text-white"
                 >
                     <X className="w-3.5 h-3.5" />
                 </button>

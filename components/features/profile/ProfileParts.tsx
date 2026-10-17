@@ -3,19 +3,18 @@ import { Pencil, Plus } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 // A card for one part of the profile: a small icon tile, a title, and a pencil when it's yours to edit
-export const SectionCard = ({ icon, title, onEdit, tint, className, children }: {
+export const SectionCard = ({ icon, title, onEdit, tone = "tone-slate", className, children }: {
   icon: string;
   title: string;
   onEdit?: () => void;
-  tint?: string;
+  tone?: string; // one of the .tone-* coloured card classes
   className?: string;
   children: React.ReactNode;
 }) => (
-  <section className={cn("relative overflow-hidden rounded-[2.5rem] bg-white/5 border border-white/5 p-8 space-y-6", className)}>
-    {tint && <div className={cn("pointer-events-none absolute inset-0 bg-gradient-to-br", tint)} />}
+  <section className={cn("relative overflow-hidden rounded-[1.5rem] p-8 space-y-6", tone, className)}>
     <div className="relative flex items-center justify-between gap-3">
       <div className="flex items-center gap-3 min-w-0">
-        <span className="w-10 h-10 shrink-0 rounded-xl bg-white/5 flex items-center justify-center" aria-hidden="true">
+        <span className="w-10 h-10 shrink-0 rounded-xl bg-black/25 flex items-center justify-center" aria-hidden="true">
           {/* eslint-disable-next-line @next/next/no-img-element */}
           <img src={icon} alt="" className="w-7 h-7 object-contain" />
         </span>
@@ -32,7 +31,7 @@ export const EditButton = ({ onClick, label }: { onClick: () => void; label: str
     type="button"
     onClick={onClick}
     aria-label={label}
-    className="w-10 h-10 shrink-0 rounded-full bg-white/5 border border-white/5 flex items-center justify-center text-neutral-400 hover:text-white hover:bg-white/10 active:scale-90 transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/50"
+    className="w-10 h-10 shrink-0 rounded-full bg-[#1c1c1c] border border-[#232323] flex items-center justify-center text-neutral-400 hover:text-white hover:bg-[#242424] active:scale-90 transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/50"
   >
     <Pencil className="w-4 h-4" />
   </button>
@@ -41,13 +40,13 @@ export const EditButton = ({ onClick, label }: { onClick: () => void; label: str
 // A small uppercase label above a block inside a card
 export const Eyebrow = ({ children, onEdit, editLabel }: { children: React.ReactNode; onEdit?: () => void; editLabel?: string }) => (
   <div className="flex items-center justify-between gap-3">
-    <p className="font-bebas text-[10px] tracking-[0.3em] uppercase text-neutral-500">{children}</p>
+    <p className="font-bebas text-[10px] tracking-[0.3em] uppercase text-white/55">{children}</p>
     {onEdit && (
       <button
         type="button"
         onClick={onEdit}
         aria-label={editLabel}
-        className="-my-2 -mr-2 w-9 h-9 rounded-full flex items-center justify-center text-neutral-500 hover:text-white transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/50"
+        className="-my-2 -mr-2 w-9 h-9 rounded-full flex items-center justify-center text-white/55 hover:text-white transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/50"
       >
         <Pencil className="w-3.5 h-3.5" />
       </button>

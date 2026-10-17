@@ -95,7 +95,7 @@ export const LandingPage = () => {
   };
 
   return (
-    <main className="min-h-screen bg-[#0a0a0a] text-white">
+    <main className="min-h-screen bg-[var(--page)] text-white">
       <AmbientBackground />
 
       {/* Hero Section */}
@@ -170,7 +170,7 @@ export const LandingPage = () => {
             )}
 
             {inAppBrowser && (
-              <div className="mt-4 bg-white/5 border border-white/10 rounded-2xl p-4 text-center space-y-3">
+              <div className="mt-4 bg-[#161616] border border-[#2a2a2a] rounded-2xl p-4 text-center space-y-3">
                 <p className="text-xs text-neutral-300 font-outfit leading-relaxed">
                   Google sign-in doesn&apos;t work inside this app&apos;s browser. Open this page in Safari or Chrome: tap the menu (⋯) and choose “Open in browser”, or copy the link.
                 </p>
@@ -214,9 +214,9 @@ export const LandingPage = () => {
                 whileInView={{ opacity: 1, y: 0 }}
                 viewport={{ once: true }}
                 transition={{ delay: i * 0.1 }}
-                className={`p-8 rounded-[2rem] border border-white/5 bg-gradient-to-b ${card.color} space-y-6 relative group hover:border-white/10 transition-colors`}
+                className={`p-8 rounded-[1.5rem] border border-white/5 bg-gradient-to-b ${card.color} space-y-6 relative group hover:border-white/10 transition-colors`}
               >
-                <div className="w-12 h-12 rounded-2xl bg-white/5 flex items-center justify-center group-hover:scale-110 transition-transform">
+                <div className="w-12 h-12 rounded-2xl bg-[#161616] flex items-center justify-center group-hover:scale-110 transition-transform">
                   {card.icon}
                 </div>
                 <div className="space-y-2">
@@ -231,7 +231,7 @@ export const LandingPage = () => {
             <motion.div
               whileInView={{ scale: [0.95, 1], opacity: [0, 1] }}
               viewport={{ once: true }}
-              className="p-12 rounded-[3rem] bg-white/[0.02] border border-white/5 space-y-6"
+              className="p-12 rounded-[1.5rem] bg-white/[0.02] border border-white/5 space-y-6"
             >
               <Heart className="w-8 h-8 text-rose-500 mx-auto animate-pulse" />
               <div className="space-y-2">
@@ -259,7 +259,7 @@ export const LandingPage = () => {
       </section>
 
       {/* Footer */}
-      <footer className="py-20 px-6 border-t border-white/5 bg-black/50 backdrop-blur-xl">
+      <footer className="py-20 px-6 border-t border-white/5 bg-[var(--page)]">
         <div className="max-w-4xl mx-auto flex flex-col items-center gap-12">
           <div className="flex items-center gap-3 grayscale opacity-30">
             <Image src="/logo.png" alt="HM Logo" width={256} height={256} className="w-5 h-auto" />

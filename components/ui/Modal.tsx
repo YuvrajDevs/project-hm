@@ -48,7 +48,7 @@ export const Modal: React.FC<ModalProps> = ({ isOpen, onClose, title, children, 
               className
             )}
           >
-            <div className="bg-[#0f0f0f] border border-white/10 rounded-3xl shadow-2xl flex flex-col max-h-full overflow-hidden">
+            <div className="bg-[#151515] border border-white/10 rounded-3xl shadow-2xl flex flex-col max-h-full overflow-hidden">
               <div className="flex items-center justify-between p-6 border-b border-white/5 shrink-0">
                 <h3 className="text-2xl font-bebas tracking-widest text-white uppercase">{title}</h3>
                 <button

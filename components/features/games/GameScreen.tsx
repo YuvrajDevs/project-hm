@@ -102,11 +102,9 @@ export const GameScreen = ({ gameId, onLeave }: { gameId: string; onLeave: () =>
       initial={{ opacity: 0 }}
       animate={{ opacity: 1 }}
       exit={{ opacity: 0 }}
-      className="fixed inset-0 z-[105] bg-[#0a0a0a] text-white"
+      className="fixed inset-0 z-[105] bg-[var(--page)] text-white"
     >
       {/* Soft wash in the game's colours */}
-      <div className={cn("pointer-events-none absolute inset-x-0 top-0 h-[45vh] bg-gradient-to-b opacity-60", deck.gradient)} />
-      <div className="pointer-events-none absolute inset-x-0 top-[20vh] h-[25vh] bg-gradient-to-b from-transparent to-[#0a0a0a]" />
 
       <div className="relative h-[100dvh] max-w-md mx-auto px-5 pt-6 pb-6 flex flex-col gap-4">
         {/* Header */}
@@ -216,7 +214,7 @@ export const GameScreen = ({ gameId, onLeave }: { gameId: string; onLeave: () =>
             onClick={() => setConfirmEnd(false)}
             className="fixed inset-0 z-[110] flex items-center justify-center p-6 overlay-backdrop"
           >
-            <div onClick={(e) => e.stopPropagation()} className="w-full max-w-sm overlay-panel rounded-[2.5rem] p-8 text-center space-y-6">
+            <div onClick={(e) => e.stopPropagation()} className="w-full max-w-sm overlay-panel rounded-[1.5rem] p-8 text-center space-y-6">
               <div className="space-y-2">
                 <h3 className="text-3xl font-bebas tracking-widest uppercase leading-none">End This Game?</h3>
                 <p className="text-neutral-400 font-outfit text-sm leading-relaxed">
@@ -318,7 +316,7 @@ const StatusText = ({ children, pulse }: { children: React.ReactNode; pulse?: bo
 // Shared face: one colour easing into a slightly darker tone
 const CardFace = ({ gradient, className, children }: { gradient: string; className?: string; children: React.ReactNode }) => (
   <div className={cn(
-    "relative overflow-hidden rounded-[2.5rem] bg-gradient-to-br shadow-[0_20px_50px_rgba(0,0,0,0.4)]",
+    "relative overflow-hidden rounded-[1.5rem] bg-gradient-to-br shadow-[0_20px_50px_rgba(0,0,0,0.4)]",
     gradient,
     className
   )}>
@@ -332,7 +330,7 @@ const cardTextSize = (text: string) =>
 // The main card for single-question games, with a second card peeking out behind it
 const StackCard = ({ deck, text, eyebrow, children }: { deck: DeckInfo; text: string; eyebrow?: string; children?: React.ReactNode }) => (
   <div className="relative flex-1 min-h-0">
-    <div className={cn("absolute inset-0 rounded-[2.5rem] bg-gradient-to-br opacity-50 -rotate-[4deg] scale-[0.97] translate-x-1", deck.cards[1])} />
+    <div className={cn("absolute inset-0 rounded-[1.5rem] bg-gradient-to-br opacity-50 -rotate-[4deg] scale-[0.97] translate-x-1", deck.cards[1])} />
     <CardFace gradient={deck.cards[0]} className="h-full">
       {children ?? (
         <div className="h-full flex flex-col justify-center gap-3 px-8 py-10 overflow-y-auto">
@@ -359,7 +357,7 @@ const AnswerButton = ({ label, selected, dimmed, onClick, disabled, badges }: {
     onClick={onClick}
     disabled={disabled || !onClick}
     className={cn(
-      "relative h-[6.5rem] rounded-[1.75rem] border px-4 flex flex-col items-center justify-center gap-2 transition-all",
+      "relative h-[6.5rem] rounded-[1.5rem] border px-4 flex flex-col items-center justify-center gap-2 transition-all",
       "font-bebas text-2xl tracking-widest uppercase leading-none text-center",
       selected ? "bg-white text-black border-white" : "bg-white/[0.06] border-white/10 text-white",
       dimmed && "opacity-35",
@@ -416,7 +414,7 @@ const PairRound = ({ game, card, round, uid, partnerUid, partnerName, complete, 
         {/* Between the cards: "or", and "+1" once you've matched */}
         <span className={cn(
           "pointer-events-none absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 w-12 h-12 rounded-full border flex items-center justify-center font-bebas text-sm tracking-widest transition-colors",
-          matched ? "bg-white text-black border-white" : "bg-[#0a0a0a] text-white/80 border-white/15"
+          matched ? "bg-white text-black border-white" : "bg-[var(--page)] text-white/80 border-white/15"
         )}>
           {matched ? "+1" : "OR"}
         </span>

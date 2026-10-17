@@ -1,8 +1,7 @@
 "use client";
 
-import React, { useEffect, useMemo, useState } from "react";
-import { AnimatePresence, motion } from "framer-motion";
-import { Bookmark, Inbox, Plus } from "lucide-react";
+import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { ArrowLeft, ArrowRight, Bookmark, Inbox, Plus } from "lucide-react";
 import { useMailbox } from "@/context/MailboxContext";
 import { subscribeToSavedThoughts } from "@/lib/firestore-helpers";
 import { THOUGHT_DAYS, isLockedThought, isThisWeek } from "@/lib/thoughts";
@@ -13,7 +12,24 @@ import { MessageCard } from "./MessageCard";
 
 type Filter = "week" | "saved";
 
-const PREVIEW = 3;
+// At most this many thoughts sit in the carousel; "Show all" lays out the rest
+const MAX_CARDS = 4;
+const GAP = 16;
+
+// How many cards fit on one page: two stacked on a phone, two side by side on a tablet, three on a wide screen
+const usePerPage = () => {
+  const [perPage, setPerPage] = useState(2);
+  useEffect(() => {
+    const wide = window.matchMedia("(min-width: 1024px)");
+    const update = () => setPerPage(wide.matches ? 3 : 2);
+    update();
+    wide.addEventListener("change", update);
+    return () => wide.removeEventListener("change", update);
+  }, []);
+  return perPage;
+};
+
+const GRID = "grid gap-4 grid-cols-1 md:grid-cols-2 lg:grid-cols-3 items-stretch";
 
 const FILTERS: [Filter, string][] = [["week", "This week"], ["saved", "Saved"]];
 
@@ -34,12 +50,33 @@ export const OurThoughts = ({ onComposeClick }: { onComposeClick?: () => void })
 
   const week = useMemo(() => messages.filter((m) => isThisWeek(m, now)), [messages, now]);
   const list = filter === "week" ? week : saved;
-  const shown = list && !expanded ? list.slice(0, PREVIEW) : list;
+  const perPage = usePerPage();
+  const carousel = list ? list.slice(0, MAX_CARDS) : [];
+  const pages = useMemo(() => {
+    const out: MailboxMessage[][] = [];
+    for (let i = 0; i < carousel.length; i += perPage) out.push(carousel.slice(i, i + perPage));
+    return out;
+  }, [carousel, perPage]);
+  const [page, setPage] = useState(0);
+  const track = useRef<HTMLDivElement>(null);
+
+  const goTo = useCallback((i: number) => {
+    const el = track.current;
+    if (!el) return;
+    const next = Math.max(0, Math.min(pages.length - 1, i));
+    el.scrollTo({ left: next * (el.clientWidth + GAP), behavior: "smooth" });
+  }, [pages.length]);
+  const onScroll = () => {
+    const el = track.current;
+    if (el) setPage(Math.round(el.scrollLeft / (el.clientWidth + GAP)));
+  };
+  // A new list or a new screen size starts again from the first page
+  useEffect(() => { track.current?.scrollTo({ left: 0 }); }, [filter, perPage]);
 
   const renderItem = (msg: MailboxMessage) => (
-    <motion.div key={msg.id} layout="position" initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, scale: 0.97 }}>
+    <div key={msg.id} className="h-full">
       {isLockedThought(msg, now) ? <LockedCapsule message={msg} /> : <MessageCard message={msg} />}
-    </motion.div>
+    </div>
   );
 
   return (
@@ -87,19 +124,64 @@ export const OurThoughts = ({ onComposeClick }: { onComposeClick?: () => void })
 
       <div className="space-y-4">
         {list === null ? (
-          <div className="h-32 rounded-[2rem] bg-white/5 animate-pulse" aria-label="Loading" />
-        ) : shown && shown.length > 0 ? (
-          <AnimatePresence initial={false} mode="popLayout">{shown.map(renderItem)}</AnimatePresence>
-        ) : (
-          <div className="h-40 flex flex-col items-center justify-center bg-white/5 border border-white/5 rounded-[2rem] text-neutral-500 gap-2 px-6 text-center">
+          <div className="h-48 rounded-[1.5rem] bg-black/5 animate-pulse" aria-label="Loading" />
+        ) : list.length === 0 ? (
+          <div className="h-40 flex flex-col items-center justify-center bg-[#161616] border border-[#232323] rounded-[1.5rem] text-neutral-500 gap-2 px-6 text-center">
             {filter === "week" ? <Inbox className="w-8 h-8 opacity-30" /> : <Bookmark className="w-8 h-8 opacity-30" />}
             <p className="font-outfit text-sm leading-relaxed text-pretty">
               {filter === "week" ? "No thoughts this week. Write one when you're ready." : "Nothing saved yet. Tap Save on a thought to keep it here."}
             </p>
           </div>
+        ) : expanded ? (
+          <div className={GRID}>{list.map(renderItem)}</div>
+        ) : (
+          <>
+            {/* Pages slide sideways: swipe, or use the arrows below */}
+            <div
+              ref={track}
+              onScroll={onScroll}
+              role="region"
+              aria-label="Thoughts"
+              className="flex gap-4 overflow-x-auto snap-x snap-mandatory [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
+            >
+              {pages.map((cards, i) => (
+                <div key={i} className={cn(GRID, "shrink-0 w-full snap-start content-start")} aria-label={`Page ${i + 1} of ${pages.length}`}>
+                  {cards.map(renderItem)}
+                </div>
+              ))}
+            </div>
+
+            {pages.length > 1 && (
+              <div className="flex items-center justify-center gap-4">
+                <button
+                  type="button"
+                  onClick={() => goTo(page - 1)}
+                  disabled={page === 0}
+                  aria-label="Previous thoughts"
+                  className="w-10 h-10 rounded-full bg-[#1c1c1c] border border-[#2a2a2a] flex items-center justify-center text-neutral-300 hover:text-white active:scale-90 disabled:opacity-30 transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/50"
+                >
+                  <ArrowLeft className="w-4 h-4" />
+                </button>
+                <div className="flex items-center gap-2" aria-hidden="true">
+                  {pages.map((_, i) => (
+                    <span key={i} className={cn("h-1.5 rounded-full transition-all", i === page ? "w-6 bg-white" : "w-1.5 bg-white/30")} />
+                  ))}
+                </div>
+                <button
+                  type="button"
+                  onClick={() => goTo(page + 1)}
+                  disabled={page >= pages.length - 1}
+                  aria-label="Next thoughts"
+                  className="w-10 h-10 rounded-full bg-[#1c1c1c] border border-[#2a2a2a] flex items-center justify-center text-neutral-300 hover:text-white active:scale-90 disabled:opacity-30 transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/50"
+                >
+                  <ArrowRight className="w-4 h-4" />
+                </button>
+              </div>
+            )}
+          </>
         )}
 
-        {list && list.length > PREVIEW && (
+        {list && list.length > MAX_CARDS && (
           <button
             type="button"
             onClick={() => setExpanded((e) => !e)}

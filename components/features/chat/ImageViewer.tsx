@@ -38,7 +38,7 @@ export const ImageViewer = ({ message, onClose }: { message: ChatMessage; onClos
           download="honest-mailbox-photo.jpg"
           onClick={(e) => e.stopPropagation()}
           aria-label="Download photo"
-          className="w-10 h-10 rounded-full bg-white/5 border border-white/10 flex items-center justify-center text-neutral-300 hover:text-white hover:bg-white/10 transition-all"
+          className="w-10 h-10 rounded-full bg-[#1c1c1c] border border-[#2a2a2a] flex items-center justify-center text-neutral-300 hover:text-white hover:bg-[#242424] transition-all"
         >
           <Download className="w-4 h-4" />
         </a>
@@ -46,7 +46,7 @@ export const ImageViewer = ({ message, onClose }: { message: ChatMessage; onClos
           type="button"
           onClick={onClose}
           aria-label="Close"
-          className="w-10 h-10 rounded-full bg-white/5 border border-white/10 flex items-center justify-center text-neutral-300 hover:text-white hover:bg-white/10 transition-all"
+          className="w-10 h-10 rounded-full bg-[#1c1c1c] border border-[#2a2a2a] flex items-center justify-center text-neutral-300 hover:text-white hover:bg-[#242424] transition-all"
         >
           <X className="w-4 h-4" />
         </button>
@@ -56,7 +56,7 @@ export const ImageViewer = ({ message, onClose }: { message: ChatMessage; onClos
         src={src}
         alt="Photo from the chat"
         onClick={(e) => e.stopPropagation()}
-        className="max-w-full max-h-[85dvh] rounded-[2rem] object-contain shadow-2xl"
+        className="max-w-full max-h-[85dvh] rounded-[1.5rem] object-contain shadow-2xl"
       />
     </motion.div>,
     document.body

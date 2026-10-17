@@ -74,7 +74,7 @@ export const EditMessage = ({
                 initial={{ opacity: 0, scale: 0.9, y: 20 }}
                 animate={{ opacity: 1, scale: 1, y: 0 }}
                 exit={{ opacity: 0, scale: 0.9, y: 20 }}
-                className="fixed inset-x-4 bottom-8 md:inset-auto md:left-1/2 md:top-1/2 md:-translate-x-1/2 md:-translate-y-1/2 md:w-full md:max-w-xl bg-neutral-900 border border-white/10 rounded-[3rem] p-8 z-[101] shadow-2xl overflow-hidden"
+                className="fixed inset-x-4 bottom-8 md:inset-auto md:left-1/2 md:top-1/2 md:-translate-x-1/2 md:-translate-y-1/2 md:w-full md:max-w-xl bg-neutral-900 border border-white/10 rounded-[1.5rem] p-8 z-[101] shadow-2xl overflow-hidden"
             >
                 <div className="absolute inset-0 opacity-10 pointer-events-none" style={{ backgroundImage: "linear-gradient(45deg, #ef476f, #ffd166, #06d6a0, #118ab2, #073b4c)" }} />
                 
@@ -84,7 +84,7 @@ export const EditMessage = ({
                             <h2 className="text-4xl font-bebas text-white tracking-widest uppercase leading-none">Edit Thought</h2>
                             <p className="text-[10px] text-neutral-500 font-bebas tracking-[.3em] uppercase mt-2">Adjust your intent or status</p>
                         </div>
-                        <button onClick={onClose} className="p-3 bg-white/5 rounded-full hover:bg-white/10 transition-colors">
+                        <button onClick={onClose} className="p-3 bg-[#1c1c1c] rounded-full hover:bg-[#242424] transition-colors">
                             <X className="w-6 h-6 text-white/50" />
                         </button>
                     </header>
@@ -98,7 +98,7 @@ export const EditMessage = ({
                                     key={s.id}
                                     onClick={() => { playPop(); setStatus(s.id); }}
                                     className={`flex flex-col items-center gap-3 p-4 rounded-2xl border transition-all relative overflow-hidden ${
-                                        status === s.id ? "bg-white border-white scale-105 shadow-xl" : "bg-white/5 border-white/5 hover:bg-white/[0.07] hover:border-white/20"
+                                        status === s.id ? "bg-white border-white scale-105 shadow-xl" : "bg-[#1c1c1c] border-[#232323] hover:bg-white/[0.07] hover:border-white/20"
                                     }`}
                                 >
                                     {status === s.id && (
@@ -146,7 +146,7 @@ export const EditMessage = ({
                             value={note}
                             onChange={(e) => setNote(e.target.value.substring(0, 140))}
                             placeholder="Optional message..."
-                            className="w-full bg-white/5 border border-white/10 rounded-2xl p-4 text-white font-outfit text-sm min-h-[100px] focus:outline-none focus:border-white/30 transition-colors shadow-inner resize-none"
+                            className="w-full bg-[#161616] border border-[#2a2a2a] rounded-2xl p-4 text-white font-outfit text-sm min-h-[100px] focus:outline-none focus:border-white/30 transition-colors shadow-inner resize-none"
                         />
                     </div>
 
