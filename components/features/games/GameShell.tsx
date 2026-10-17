@@ -9,6 +9,7 @@ import type { ActiveGame } from "@/lib/types";
 import { cn } from "@/lib/utils";
 import { DECK_ICONS, titleFont } from "./deckIcons";
 import { useScrollLock } from "@/hooks/useScrollLock";
+import { DeckTitle } from "./DeckTitle";
 
 // The frame around the board and drawing games: header, the two scores, a status line, and "end for both".
 export const GameShell = ({ game, coupleId, partnerUid, partnerName, scores, scoreLabel, status, onLeave, children }: {
@@ -57,7 +58,7 @@ export const GameShell = ({ game, coupleId, partnerUid, partnerName, scores, sco
           </button>
           <div className="flex items-center gap-2 min-w-0">
             <Icon className="w-4 h-4 text-white/80 shrink-0" />
-            <span className={cn("font-bebas text-lg tracking-widest uppercase truncate", titleFont(deck.id))}>{deck.title}</span>
+            <span className={cn("font-bebas text-lg tracking-widest uppercase truncate", titleFont(deck.id))}><DeckTitle title={deck.title} /></span>
           </div>
           <button
             onClick={() => setConfirmEnd(true)}

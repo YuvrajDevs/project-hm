@@ -117,7 +117,9 @@ Buttons say what happens ("Send Request", "Disconnect From Raj"), not "OK" or "S
 ## Icons
 
 - UI icons: `lucide-react`, `w-5 h-5` in rows, `w-4 h-4` in buttons.
-- Feelings, needs and signals: bundled Fluent Emoji in `public/icons`, referenced only through `PREMIUM_ICONS`, `INTENT_ICONS` and `REACTION_ICONS` in `lib/constants.ts`. Never hot-link images from another site.
+- Feelings, needs, signals and the small decorative emoji: pixel-art PNGs in `public/icons`, referenced through `PREMIUM_ICONS` (feelings, `feeling_*`), `INTENT_ICONS` (needs, `need_*`) and `REACTION_ICONS` (signals, `signal_*`) in `lib/constants.ts`. Feelings and signals are envelope characters whose face carries the emotion; needs and interface icons are small objects. Never hot-link images from another site.
+- Profile cards, love-language tiles, the white flag, the heart in the nudge text and the chili on spicier decks use the `ui_*`, `love_*`, `white_flag`, `heart_inline` and `marker_after_dark` icons. Show them with `object-contain` and `shrink-0`, so a long title next to one can never squash it.
+- Icons are 256×256 palette PNGs on a transparent background, drawn on a 32×32 grid, and must still read at 16px. A new icon keeps the thick black outline and the shared palette.
 
 ## Dates and names
 

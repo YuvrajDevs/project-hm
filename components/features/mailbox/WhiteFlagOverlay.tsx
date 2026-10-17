@@ -49,7 +49,8 @@ export const WhiteFlagOverlay = () => {
                             className="absolute inset-0 bg-pink-500/10 rounded-full blur-3xl"
                         />
                         <div className="relative bg-white border border-neutral-100 rounded-full w-full h-full flex items-center justify-center shadow-xl">
-                            <span className="text-6xl select-none">🏳️</span>
+                            {/* eslint-disable-next-line @next/next/no-img-element */}
+                            <img src="/icons/white_flag.png" alt="" className="w-3/5 h-3/5 object-contain select-none" draggable={false} />
                         </div>
                     </div>
 

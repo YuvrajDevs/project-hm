@@ -16,7 +16,7 @@ import { doc, updateDoc } from "firebase/firestore";
 import { db } from "@/lib/firebase";
 import { INTENT_ICONS, REACTION_ICONS } from "@/lib/constants";
 import {
-  CATEGORIES, FACTS, LOVE_EMOJI, MAX_TAGS, completion, daysSince, daysUntilBirthday, formatDate, isFilled, localTime,
+  CATEGORIES, FACTS, LOVE_CUSTOM_ICON, LOVE_ICONS, MAX_TAGS, completion, daysSince, daysUntilBirthday, formatDate, isFilled, localTime,
   type SectionId, type TagCategoryId,
 } from "@/lib/profile";
 import type { EmotionalProfile, MailboxIntent } from "@/lib/types";
@@ -388,7 +388,7 @@ export default function ProfilePage() {
           {/* ─── When things get hard ─── */}
           {(isMe || hasHard) && (
             <SectionCard
-              icon="🫶"
+              icon="/icons/ui_section_hard.png"
               title={isMe ? "When things get hard" : `When ${firstName} is struggling`}
               tint="from-rose-500/15 via-orange-500/5 to-transparent"
             >
@@ -425,12 +425,13 @@ export default function ProfilePage() {
           {(isMe || love.length > 0 || (profile.personality || []).length > 0) && (
             <div className="grid gap-6 md:grid-cols-2 md:items-start">
               {(isMe || love.length > 0) && (
-                <SectionCard icon="❤️" title={isMe ? "How I feel loved" : `How ${firstName} feels loved`} onEdit={edit && (() => open({ kind: "tags", id: "loveLanguages" }))}>
+                <SectionCard icon="/icons/ui_section_loved.png" title={isMe ? "How I feel loved" : `How ${firstName} feels loved`} onEdit={edit && (() => open({ kind: "tags", id: "loveLanguages" }))}>
                   {love.length > 0 ? (
                     <ul className="grid grid-cols-2 gap-2">
                       {love.map((l) => (
                         <li key={l} className="flex items-center gap-3 px-4 py-3.5 rounded-2xl bg-white/10 border border-white/5">
-                          <span aria-hidden="true">{LOVE_EMOJI[l] || "✨"}</span>
+                          {/* eslint-disable-next-line @next/next/no-img-element */}
+                          <img src={LOVE_ICONS[l] || LOVE_CUSTOM_ICON} alt="" className="w-6 h-6 object-contain shrink-0" />
                           <span className="font-outfit text-sm text-white min-w-0 break-words">{l}</span>
                         </li>
                       ))}
@@ -441,7 +442,7 @@ export default function ProfilePage() {
                 </SectionCard>
               )}
               {(isMe || (profile.personality || []).length > 0) && (
-                <SectionCard icon="🎯" title={isMe ? "A bit about me" : `A bit about ${firstName}`} onEdit={edit && (() => open({ kind: "tags", id: "personality" }))}>
+                <SectionCard icon="/icons/ui_section_about.png" title={isMe ? "A bit about me" : `A bit about ${firstName}`} onEdit={edit && (() => open({ kind: "tags", id: "personality" }))}>
                   {(profile.personality || []).length > 0 ? <Tags tags={profile.personality!} /> : <AddPrompt onClick={() => open({ kind: "tags", id: "personality" })}>A few words about you</AddPrompt>}
                 </SectionCard>
               )}
@@ -450,7 +451,7 @@ export default function ProfilePage() {
 
           {/* ─── Likes and dislikes ─── */}
           {(isMe || likes.length > 0 || dislikes.length > 0) && (
-            <SectionCard icon="🎮" title={isMe ? "Likes and dislikes" : `What ${firstName} likes`}>
+            <SectionCard icon="/icons/ui_section_likes.png" title={isMe ? "Likes and dislikes" : `What ${firstName} likes`}>
               <div className="grid gap-6 md:grid-cols-2">
                 {(isMe || likes.length > 0) && (
                   <div className="space-y-3">
@@ -470,7 +471,7 @@ export default function ProfilePage() {
 
           {/* ─── Little things ─── */}
           {(isMe || facts.length > 0) && (
-            <SectionCard icon="📌" title={isMe ? "Little things" : `Little things about ${firstName}`} onEdit={edit && (() => open({ kind: "facts" }))}>
+            <SectionCard icon="/icons/ui_section_little.png" title={isMe ? "Little things" : `Little things about ${firstName}`} onEdit={edit && (() => open({ kind: "facts" }))}>
               {facts.length > 0 ? (
                 <dl className="divide-y divide-white/5 -my-2">
                   {facts.map((fact) => {

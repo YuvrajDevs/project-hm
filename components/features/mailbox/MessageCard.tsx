@@ -133,12 +133,12 @@ export const MessageCard = ({ message }: { message: MailboxMessage }) => {
               {isSender ? "You Sent" : `From ${partner?.displayName?.split(" ")[0] || "Your Partner"}`}
           </span>
           <div className="flex items-center gap-3">
-              <div className="relative group">
+              <div className="relative group shrink-0">
                   <div className="absolute inset-0 bg-white/20 blur-2xl rounded-full opacity-0 group-hover:opacity-40 transition-opacity" />
                   <img 
                     src={config.url} 
                     alt={config.label}
-                    className="w-12 h-12 md:w-16 md:h-16 relative z-10 drop-shadow-2xl"
+                    className="w-14 h-14 md:w-20 md:h-20 relative z-10 shrink-0 object-contain drop-shadow-2xl"
                   />
               </div>
               <h2 className="text-3xl md:text-4xl font-bebas tracking-tight uppercase leading-none">

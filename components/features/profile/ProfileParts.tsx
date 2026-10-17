@@ -15,7 +15,10 @@ export const SectionCard = ({ icon, title, onEdit, tint, className, children }: 
     {tint && <div className={cn("pointer-events-none absolute inset-0 bg-gradient-to-br", tint)} />}
     <div className="relative flex items-center justify-between gap-3">
       <div className="flex items-center gap-3 min-w-0">
-        <span className="w-10 h-10 shrink-0 rounded-xl bg-white/5 flex items-center justify-center text-lg" aria-hidden="true">{icon}</span>
+        <span className="w-10 h-10 shrink-0 rounded-xl bg-white/5 flex items-center justify-center" aria-hidden="true">
+          {/* eslint-disable-next-line @next/next/no-img-element */}
+          <img src={icon} alt="" className="w-7 h-7 object-contain" />
+        </span>
         <h3 className="font-bebas text-2xl tracking-widest uppercase leading-none text-balance">{title}</h3>
       </div>
       {onEdit && <EditButton onClick={onEdit} label={`Edit ${title}`} />}
