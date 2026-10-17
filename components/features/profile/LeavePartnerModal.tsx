@@ -57,7 +57,7 @@ export const LeavePartnerModal: React.FC<LeavePartnerModalProps> = ({
             initial={{ opacity: 0, scale: 0.9, y: 20 }}
             animate={{ opacity: 1, scale: 1, y: 0 }}
             exit={{ opacity: 0, scale: 0.9, y: 20 }}
-            className="relative w-full max-w-sm bg-[#151515] border border-white/5 rounded-[2.5rem] p-8 overflow-hidden shadow-2xl"
+            className="relative w-full max-w-sm bg-[#151515] border border-white/5 rounded-[1.5rem] p-8 overflow-hidden shadow-2xl"
           >
             {/* Visual Ambiance */}
             <div className="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-transparent via-red-500/50 to-transparent" />

@@ -163,7 +163,7 @@ export default function Onboarding() {
   );
 
   return (
-    <div className="h-screen w-screen bg-[#0e0e0e] flex flex-col overflow-hidden relative">
+    <div className="h-screen w-screen bg-[var(--page)] flex flex-col overflow-hidden relative">
       {/* Ambient gradient — driven by current profileStep color */}
       <div
         className={`absolute inset-0 bg-gradient-to-br ${currentProfile?.color ?? "from-pink-500/5 to-transparent"} pointer-events-none transition-all duration-700`}

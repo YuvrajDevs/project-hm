@@ -4,13 +4,20 @@ import React, { useState, useEffect, useRef } from "react";
 import { MailboxMessage, ResponseMode } from "@/lib/types";
 import { motion, AnimatePresence } from "framer-motion";
 import { useMailbox } from "@/context/MailboxContext";
-import { Heart, Clock, CheckCircle2, MessageCircle, Ear, Users, Send, ChevronLeft, Trash2, Edit3, Eye, MoreVertical, Bookmark } from "lucide-react";
+import { Clock, CheckCircle2, Ear, Users, Send, ChevronLeft, Trash2, Edit3, Eye, MoreVertical, Bookmark } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useSensoryFeedback } from "@/hooks/useSensoryFeedback";
 import { EditMessage } from "./EditMessage";
 import { setThoughtSaved } from "@/lib/firestore-helpers";
 
 import { PREMIUM_ICONS, INTENT_LABELS } from "@/lib/constants";
+
+// Light card colours (yellow, cyan, green...) read better with dark text; the rest keep white
+const isLightColour = (hex: string) => {
+  const n = parseInt(hex.slice(1), 16);
+  const [r, g, b] = [(n >> 16) & 255, (n >> 8) & 255, n & 255].map((v) => { const c = v / 255; return c <= 0.03928 ? c / 12.92 : Math.pow((c + 0.055) / 1.055, 2.4); });
+  return 0.2126 * r + 0.7152 * g + 0.0722 * b > 0.28;
+};
 
 export const MessageCard = ({ message }: { message: MailboxMessage }) => {
   const { user, partner, markAsRead, deleteForMe, respondToNote } = useMailbox();
@@ -111,259 +118,220 @@ export const MessageCard = ({ message }: { message: MailboxMessage }) => {
   };
 
 
+  const hex = /#[0-9a-fA-F]{6}/.exec(config.color)?.[0];
+  const light = !!hex && isLightColour(hex);
+  const ink = light ? "text-[#17140a]" : "text-white";
+  const chip = light ? "bg-black/10" : "bg-black/20";
+  const rule = light ? "border-black/10" : "border-white/20";
+  const action = light ? "bg-black/10 hover:bg-black/15" : "bg-black/20 hover:bg-black/30";
+  const when = `${new Date(message.createdAt).toLocaleDateString([], { month: "short", day: "numeric" })} · ${new Date(message.createdAt).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}`;
+  const partnerFirst = partner?.displayName?.split(" ")[0] || "Your partner";
+
   return (
     <motion.div
       ref={cardRef}
-      initial={{ opacity: 0, scale: 0.95 }}
+      initial={{ opacity: 0, scale: 0.97 }}
       animate={{ opacity: 1, scale: 1 }}
-      className={cn(
-        "w-full rounded-[1.5rem] p-6 md:p-8 relative overflow-hidden flex flex-col gap-4 min-h-[140px]",
-        config.color,
-        "text-white shadow-xl"
-      )}
+      className={cn("w-full h-full rounded-[1.5rem] p-5 relative flex flex-col gap-4", config.color, ink)}
     >
-      {/* Background Decor */}
-      <div className="absolute top-0 right-12 p-6 opacity-10 rotate-12 pointer-events-none">
-        <Heart className="w-32 h-32 fill-current" />
-      </div>
+      {/* Who and when, with save and options tucked in the corner */}
+      <div className="flex items-center justify-between gap-2">
+        <div className="min-w-0">
+          <p className="font-bebas text-xs tracking-[0.2em] uppercase leading-none truncate">{isSender ? "You sent" : `From ${partnerFirst}`}</p>
+          <p className="font-outfit text-xs opacity-60 mt-1 tabular-nums truncate">{when}</p>
+        </div>
+        <div className="flex items-center gap-1 shrink-0">
+          {/* Kept for a week on Our Thoughts; saving keeps it. Private to whoever saves it. */}
+          {!message.sealed && (
+            <button
+              type="button"
+              onClick={() => {
+                if (!user?.coupleId) return;
+                vibrateTick();
+                setThoughtSaved(user.coupleId, message.id, user.uid, !saved).catch((err) => { console.error(err); setError("Couldn't save that. Try again."); });
+              }}
+              aria-pressed={saved}
+              aria-label={saved ? "Remove from saved" : "Save this thought"}
+              className={cn(
+                "inline-flex items-center gap-1 h-8 px-2.5 rounded-full font-bebas text-[11px] tracking-widest uppercase transition-all active:scale-95 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-current",
+                saved ? (light ? "bg-black text-white" : "bg-white text-black") : cn(chip, "hover:bg-black/25")
+              )}
+            >
+              <Bookmark className="w-3.5 h-3.5" fill={saved ? "currentColor" : "none"} />
+              {saved ? "Saved" : "Save"}
+            </button>
+          )}
+          <div className="relative" ref={optionsRef}>
+            <button
+              onClick={() => { vibrateTick(); setShowOptions(!showOptions); setConfirmHide(false); }}
+              aria-label="Thought options"
+              className="w-8 h-8 rounded-full flex items-center justify-center hover:bg-black/10 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-current"
+            >
+              <MoreVertical className="w-4 h-4" />
+            </button>
 
-      <div className="flex justify-between items-start relative z-10">
-        <div className="flex flex-col gap-1">
-          <span className="font-bebas text-[10px] tracking-[0.3em] uppercase opacity-60">
-              {isSender ? "You Sent" : `From ${partner?.displayName?.split(" ")[0] || "Your Partner"}`}
-          </span>
-          <div className="flex items-center gap-3">
-              <div className="relative group shrink-0">
-                  <div className="absolute inset-0 bg-white/20 blur-2xl rounded-full opacity-0 group-hover:opacity-40 transition-opacity" />
-                  <img 
-                    src={config.url} 
-                    alt={config.label}
-                    className="w-14 h-14 md:w-20 md:h-20 relative z-10 shrink-0 object-contain drop-shadow-2xl"
-                  />
-              </div>
-              <h2 className="text-3xl md:text-4xl font-bebas tracking-tight uppercase leading-none">
-                  {config.label}
-              </h2>
+            <AnimatePresence>
+              {showOptions && (
+                <motion.div
+                  initial={{ opacity: 0, y: 10, scale: 0.9 }}
+                  animate={{ opacity: 1, y: 0, scale: 1 }}
+                  exit={{ opacity: 0, y: 10, scale: 0.9 }}
+                  className="absolute right-0 top-full mt-2 w-48 z-30 bg-neutral-900 border border-white/10 rounded-2xl shadow-2xl p-2 flex flex-col gap-1 text-white"
+                >
+                  {isSender && !message.readAt && !message.response && (
+                    <button
+                      onClick={() => { setIsEditing(true); setShowOptions(false); }}
+                      className="w-full flex items-center gap-3 px-3 py-2.5 hover:bg-white/5 rounded-xl text-left transition-colors"
+                    >
+                      <Edit3 className="w-4 h-4 text-blue-400" />
+                      <span className="font-bebas text-sm uppercase tracking-widest">Edit Thought</span>
+                    </button>
+                  )}
+                  <button
+                    onClick={() => {
+                      if (!confirmHide) { setConfirmHide(true); return; }
+                      deleteForMe(message.id).catch(console.error);
+                      setShowOptions(false);
+                      setConfirmHide(false);
+                    }}
+                    className="w-full flex items-center gap-3 px-3 py-2.5 hover:bg-red-500/10 rounded-xl text-left transition-colors"
+                  >
+                    <Trash2 className="w-4 h-4 text-red-400" />
+                    <span className="font-bebas text-sm uppercase tracking-widest text-red-200">{confirmHide ? "Tap Again to Hide" : "Hide for Me"}</span>
+                  </button>
+                </motion.div>
+              )}
+            </AnimatePresence>
           </div>
         </div>
-        <div className="flex flex-col items-end gap-2 relative z-20">
-         <div className="flex items-center gap-3">
-            <div className="whitespace-nowrap text-[10px] font-bebas tracking-widest opacity-60 bg-black/10 px-3 py-1.5 rounded-full border border-white/5">
-                {new Date(message.createdAt).toLocaleDateString([], { month: 'short', day: 'numeric' })}, {new Date(message.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
-            </div>
-            
-            <div className="relative" ref={optionsRef}>
-                <button 
-                  onClick={() => { vibrateTick(); setShowOptions(!showOptions); setConfirmHide(false); }}
-                  aria-label="Note options"
-                  className="p-1.5 rounded-full hover:bg-black/10 transition-colors"
-                >
-                    <MoreVertical className="w-4 h-4" />
-                </button>
-                
-                <AnimatePresence>
-                  {showOptions && (
-                    <motion.div 
-                      initial={{ opacity: 0, y: 10, scale: 0.9 }}
-                      animate={{ opacity: 1, y: 0, scale: 1 }}
-                      exit={{ opacity: 0, y: 10, scale: 0.9 }}
-                      className="absolute right-0 top-full mt-2 w-48 bg-neutral-900 border border-white/10 rounded-2xl shadow-2xl p-2 flex flex-col gap-1"
-                    >
-                        {isSender && !message.readAt && !message.response && (
-                          <button 
-                            onClick={() => { setIsEditing(true); setShowOptions(false); }}
-                            className="w-full flex items-center gap-3 px-3 py-2.5 hover:bg-white/5 rounded-xl text-left transition-colors"
-                          >
-                            <Edit3 className="w-4 h-4 text-blue-400" />
-                            <span className="font-bebas text-sm uppercase tracking-widest">Edit Thought</span>
-                          </button>
-                        )}
-                        <button 
-                          onClick={() => {
-                            if (!confirmHide) { setConfirmHide(true); return; }
-                            deleteForMe(message.id).catch(console.error);
-                            setShowOptions(false);
-                            setConfirmHide(false);
-                          }}
-                          className="w-full flex items-center gap-3 px-3 py-2.5 hover:bg-red-500/10 rounded-xl text-left transition-colors"
-                        >
-                          <Trash2 className="w-4 h-4 text-red-400" />
-                          <span className="font-bebas text-sm uppercase tracking-widest text-red-200">{confirmHide ? "Tap Again to Hide" : "Hide for Me"}</span>
-                        </button>
-                    </motion.div>
-                  )}
-                </AnimatePresence>
-            </div>
-         </div>
-         {/* Kept for a week on Our Thoughts; saving keeps it. Private to whoever saves it. */}
-         {!message.sealed && (
-           <button
-             type="button"
-             onClick={() => {
-               if (!user?.coupleId) return;
-               vibrateTick();
-               setThoughtSaved(user.coupleId, message.id, user.uid, !saved).catch((err) => { console.error(err); setError("Couldn't save that. Try again."); });
-             }}
-             aria-pressed={saved}
-             className={cn(
-               "inline-flex items-center gap-1 px-2.5 py-1 rounded-full border font-bebas text-[11px] tracking-widest uppercase transition-all active:scale-95 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/60",
-               saved ? "bg-white text-black border-white" : "bg-black/15 border-white/10 text-white/80 hover:bg-black/25 hover:text-white"
-             )}
-           >
-             <Bookmark className="w-3 h-3" fill={saved ? "currentColor" : "none"} />
-             {saved ? "Saved" : "Save"}
-           </button>
-         )}
-        </div>
       </div>
 
-      <div className="space-y-4 relative z-10 flex-1">
-        <div className="inline-block px-3 py-1 rounded-full bg-black/10 border border-white/10 font-bebas text-[10px] tracking-widest uppercase">
+      {/* The feeling: a big icon, its name, and what they need */}
+      <div className="flex items-center gap-4">
+        {/* eslint-disable-next-line @next/next/no-img-element */}
+        <img src={config.url} alt="" className="w-20 h-20 md:w-24 md:h-24 shrink-0 object-contain drop-shadow-xl" />
+        <div className="min-w-0 space-y-2">
+          <h2 className="text-3xl md:text-[2rem] font-bebas tracking-wide uppercase leading-[0.95] text-balance">{config.label}</h2>
+          <span className={cn("inline-block px-2.5 py-1 rounded-full font-bebas text-[10px] tracking-widest uppercase", chip)}>
             {INTENT_LABELS[message.intent]}
+          </span>
         </div>
-        
-        {message.note && (
-            <p className="font-outfit text-sm md:text-base font-light leading-snug opacity-90">
-                &quot;{message.note}&quot;
-            </p>
-        )}
       </div>
 
-      <div className="pt-4 border-t border-white/10 relative z-10">
-        {error && (
-          <p className="text-white text-xs font-outfit bg-black/30 rounded-xl px-3 py-2 mb-3">{error}</p>
-        )}
+      {message.note && (
+        <p className="font-outfit text-[15px] leading-snug text-pretty">&quot;{message.note}&quot;</p>
+      )}
+
+      {/* The reply, pinned to the bottom of the card */}
+      <div className={cn("mt-auto pt-4 border-t", rule)}>
+        {error && <p className={cn("text-xs font-outfit rounded-xl px-3 py-2 mb-3", chip)}>{error}</p>}
 
         {!message.response ? (
           isSender ? (
-            <div className="flex items-center justify-between w-full">
-                <div className="flex items-center gap-3 text-white/50 animate-pulse">
-                    <Clock className="w-5 h-5" />
-                    <span className="font-bebas text-lg tracking-widest uppercase">Waiting for response...</span>
-                </div>
-                {message.readAt && (
-                  <div className="flex items-center gap-1.5 px-3 py-1 rounded-full bg-[#1c1c1c] border border-[#2a2a2a]">
-                    <Eye className="w-3 h-3 text-blue-400" />
-                    <span className="text-[9px] font-bebas tracking-widest uppercase text-blue-200">Partner Read</span>
-                  </div>
-                )}
+            <div className="flex items-center justify-between gap-3">
+              <div className="flex items-center gap-2 opacity-70">
+                <Clock className="w-4 h-4" />
+                <span className="font-bebas text-sm tracking-widest uppercase">Waiting for a reply</span>
+              </div>
+              {message.readAt && (
+                <span className={cn("inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full font-bebas text-[10px] tracking-widest uppercase", chip)}>
+                  <Eye className="w-3 h-3" /> Read
+                </span>
+              )}
             </div>
           ) : (
-            <div className="relative">
-                <AnimatePresence mode="wait">
-                    {!isComposing ? (
-                        <motion.div 
-                            key="buttons"
-                            initial={{ opacity: 0, scale: 0.95 }}
-                            animate={{ opacity: 1, scale: 1 }}
-                            exit={{ opacity: 0, scale: 0.95 }}
-                            className="flex flex-col sm:flex-row gap-4"
-                        >
-                            <button 
-                                onClick={() => setIsComposing(true)}
-                                disabled={responding}
-                                className="flex-1 bg-black/10 hover:bg-black/20 border border-white/20 py-4 rounded-2xl flex flex-col items-center gap-2 transition-all group active:scale-95"
-                            >
-                                <Users className="w-6 h-6 group-hover:scale-110 transition-transform" />
-                                <span className="font-bebas text-lg uppercase tracking-widest">I&apos;m Here</span>
-                            </button>
-                            <button 
-                                onClick={() => handleResponse("MINUTE")}
-                                disabled={responding}
-                                className="flex-1 bg-black/10 hover:bg-black/20 border border-white/20 py-4 rounded-2xl flex flex-col items-center gap-2 transition-all group active:scale-95"
-                            >
-                                <Clock className="w-6 h-6 group-hover:scale-110 transition-transform" />
-                                <span className="font-bebas text-lg uppercase tracking-widest">30 Mins</span>
-                            </button>
-                        </motion.div>
-                    ) : (
-                        <motion.div 
-                            key="composer"
-                            initial={{ opacity: 0, y: 10 }}
-                            animate={{ opacity: 1, y: 0 }}
-                            exit={{ opacity: 0, y: 10 }}
-                            className="space-y-4"
-                        >
-                            <div className="flex items-center justify-between mb-2">
-                                <button 
-                                    onClick={() => setIsComposing(false)}
-                                    className="flex items-center gap-2 text-white/60 hover:text-white transition-colors"
-                                >
-                                    <ChevronLeft className="w-4 h-4" />
-                                    <span className="font-bebas text-xs uppercase tracking-widest">Back</span>
-                                </button>
-                                <span className="font-bebas text-[10px] tracking-[0.2em] uppercase text-white/40">Add a short note</span>
-                            </div>
-                            <div className="flex gap-3">
-                                <div className="flex-1 relative">
-                                    <input 
-                                        autoFocus
-                                        value={responseText}
-                                        onChange={(e) => setResponseText(e.target.value.substring(0, 50))}
-                                        placeholder="Ex: I'm home in 5..."
-                                        className="w-full bg-black/20 border border-white/10 rounded-xl px-4 py-3 text-sm font-outfit placeholder:text-white/20 focus:outline-none focus:border-white/30 transition-all shadow-inner"
-                                    />
-                                    <span className="absolute right-3 bottom-0 top-0 flex items-center text-[10px] items-center text-white/20 pointer-events-none">
-                                        {responseText.length}/50
-                                    </span>
-                                </div>
-                                <button 
-                                    onClick={() => handleResponse("HERE", responseText)}
-                                    disabled={responding}
-                                    aria-label="Send response"
-                                    className="bg-white text-black p-3 rounded-xl hover:bg-neutral-100 transition-all active:scale-95 shadow-xl"
-                                >
-                                    <Send className="w-5 h-5" />
-                                </button>
-                            </div>
-                        </motion.div>
-                    )}
-                </AnimatePresence>
-            </div>
+            <AnimatePresence mode="wait" initial={false}>
+              {!isComposing ? (
+                <motion.div
+                  key="buttons"
+                  initial={{ opacity: 0 }}
+                  animate={{ opacity: 1 }}
+                  exit={{ opacity: 0 }}
+                  className="grid grid-cols-2 gap-2"
+                >
+                  <button
+                    onClick={() => setIsComposing(true)}
+                    disabled={responding}
+                    className={cn("h-12 rounded-xl flex items-center justify-center gap-2 font-bebas text-sm tracking-widest uppercase transition-all active:scale-95 disabled:opacity-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-current", action)}
+                  >
+                    <Users className="w-4 h-4" /> I&apos;m here
+                  </button>
+                  <button
+                    onClick={() => handleResponse("MINUTE")}
+                    disabled={responding}
+                    className={cn("h-12 rounded-xl flex items-center justify-center gap-2 font-bebas text-sm tracking-widest uppercase transition-all active:scale-95 disabled:opacity-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-current", action)}
+                  >
+                    <Clock className="w-4 h-4" /> 30 mins
+                  </button>
+                </motion.div>
+              ) : (
+                <motion.div
+                  key="composer"
+                  initial={{ opacity: 0, y: 6 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  exit={{ opacity: 0, y: 6 }}
+                  className="space-y-3"
+                >
+                  <div className="flex items-center justify-between">
+                    <button onClick={() => setIsComposing(false)} className="flex items-center gap-1 opacity-70 hover:opacity-100 transition-opacity">
+                      <ChevronLeft className="w-4 h-4" />
+                      <span className="font-bebas text-xs uppercase tracking-widest">Back</span>
+                    </button>
+                    <span className="font-bebas text-[10px] tracking-[0.2em] uppercase opacity-60">Add a short note</span>
+                  </div>
+                  <div className="flex gap-2">
+                    <div className="flex-1 relative">
+                      <input
+                        autoFocus
+                        value={responseText}
+                        onChange={(e) => setResponseText(e.target.value.substring(0, 50))}
+                        onKeyDown={(e) => { if (e.key === "Enter" && !e.nativeEvent.isComposing && !responding) handleResponse("HERE", responseText); }}
+                        placeholder="Ex: I'm home in 5..."
+                        aria-label="Short note"
+                        className={cn("w-full h-12 rounded-xl px-4 pr-12 text-[16px] sm:text-sm font-outfit focus:outline-none focus:ring-2 focus:ring-current placeholder:opacity-50", chip)}
+                      />
+                      <span className="absolute right-3 inset-y-0 flex items-center text-[10px] tabular-nums opacity-50 pointer-events-none">{responseText.length}/50</span>
+                    </div>
+                    <button
+                      onClick={() => handleResponse("HERE", responseText)}
+                      disabled={responding}
+                      aria-label="Send response"
+                      className={cn("w-12 h-12 shrink-0 rounded-xl flex items-center justify-center transition-all active:scale-95", light ? "bg-black text-white" : "bg-white text-black")}
+                    >
+                      <Send className="w-5 h-5" />
+                    </button>
+                  </div>
+                </motion.div>
+              )}
+            </AnimatePresence>
           )
         ) : (
-          <div className="flex items-center justify-between">
-            <div className="flex items-center gap-4">
-                <div className="p-3 rounded-2xl bg-white/20">
-                    {message.response.mode === "LISTEN" && <Ear className="w-6 h-6" />}
-                    {message.response.mode === "HERE" && <Users className="w-6 h-6" />}
-                    {message.response.mode === "MINUTE" && <Clock className="w-6 h-6" />}
-                </div>
-                <div>
-                   <h4 className="font-bebas text-2xl tracking-widest uppercase leading-none">
-                      {message.response.mode === "LISTEN" ? "Listening" : 
-                       message.response.mode === "HERE" ? "Here with you" : "Coming in 30"}
-                   </h4>
-                   {message.response.text ? (
-                       <p className="text-sm font-outfit opacity-80 mt-1 italic">&quot;{message.response.text}&quot;</p>
-                   ) : (
-                       <p className="text-[10px] uppercase tracking-widest opacity-60 font-bebas mt-1">
-                          Partner Acknowledged
-                       </p>
-                   )}
-                </div>
+          <div className="flex items-center justify-between gap-3">
+            <div className="flex items-center gap-3 min-w-0">
+              <div className={cn("w-10 h-10 shrink-0 rounded-xl flex items-center justify-center", chip)}>
+                {message.response.mode === "LISTEN" && <Ear className="w-5 h-5" />}
+                {message.response.mode === "HERE" && <Users className="w-5 h-5" />}
+                {message.response.mode === "MINUTE" && <Clock className="w-5 h-5" />}
+              </div>
+              <div className="min-w-0">
+                <h4 className="font-bebas text-xl tracking-widest uppercase leading-none">
+                  {message.response.mode === "LISTEN" ? "Listening" : message.response.mode === "HERE" ? "Here with you" : "Coming in 30"}
+                </h4>
+                <p className="text-xs font-outfit opacity-75 mt-1 truncate">
+                  {message.response.text ? `"${message.response.text}"` : "Your partner replied"}
+                </p>
+              </div>
             </div>
-            
-            <div className="flex items-center gap-4">
-                {timeLeft && timeLeft !== "DONE" && (
-                    <div className="font-mono text-3xl font-bold bg-black/20 px-4 py-2 rounded-xl">
-                        {timeLeft}
-                    </div>
-                )}
-                
-                {(!timeLeft || timeLeft === "DONE") && (
-                    <CheckCircle2 className="w-8 h-8 opacity-40 text-black" />
-                )}
-            </div>
+            {timeLeft && timeLeft !== "DONE" ? (
+              <span className={cn("font-mono text-xl font-bold px-3 py-1.5 rounded-xl tabular-nums shrink-0", chip)}>{timeLeft}</span>
+            ) : (
+              <CheckCircle2 className="w-6 h-6 opacity-50 shrink-0" />
+            )}
           </div>
         )}
       </div>
 
-      <EditMessage 
-        isOpen={isEditing} 
-        onClose={() => setIsEditing(false)} 
-        message={message} 
-      />
+      <EditMessage isOpen={isEditing} onClose={() => setIsEditing(false)} message={message} />
     </motion.div>
   );
 };

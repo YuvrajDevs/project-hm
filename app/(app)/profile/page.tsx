@@ -214,10 +214,10 @@ export default function ProfilePage() {
 
   return (
     <MotionConfig reducedMotion="user">
-      <div className="min-h-screen bg-[#0e0e0e] text-white font-outfit pb-32 relative">
+      <div className="min-h-screen bg-[var(--page)] text-white font-outfit pb-32 relative">
         <AmbientBackground variant="standard" gender={shown?.gender} />
 
-        <header className="flex justify-between items-center w-full fixed top-0 left-0 p-8 z-50 bg-gradient-to-b from-[#0e0e0e] via-[#0e0e0e]/90 to-transparent pointer-events-none">
+        <header className="flex justify-between items-center w-full fixed top-0 left-0 p-8 z-50 bg-gradient-to-b from-[var(--page)] via-[var(--page)]/90 to-transparent pointer-events-none">
           <button onClick={() => router.push("/")} aria-label="Back to home" className="w-10 h-10 flex items-center justify-center rounded-full bg-[#1c1c1c] border border-[#232323] hover:bg-[#242424] transition-all text-neutral-400 hover:text-white pointer-events-auto focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/50">
             <ArrowLeft className="w-5 h-5" />
           </button>
@@ -253,7 +253,7 @@ export default function ProfilePage() {
             key={view}
             initial={{ opacity: 0, y: 12 }}
             animate={{ opacity: 1, y: 0 }}
-            className={cn("relative overflow-hidden rounded-[2.5rem] p-8 text-center", heroTone)}
+            className={cn("relative overflow-hidden rounded-[1.5rem] p-8 text-center", heroTone)}
           >
             <div className="flex flex-col items-center gap-5">
               <Avatar user={shown} size="lg" className="shadow-2xl" />
@@ -306,7 +306,7 @@ export default function ProfilePage() {
               <button
                 type="button"
                 onClick={() => open({ kind: "date" })}
-                className="text-left rounded-[2rem] tone-rose p-5 space-y-1 hover:brightness-110 active:scale-[0.98] transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/50"
+                className="text-left rounded-[1.5rem] tone-rose p-5 space-y-1 hover:brightness-110 active:scale-[0.98] transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/50"
               >
                 <p className="font-bebas text-[10px] tracking-[0.3em] uppercase text-white/55">Together</p>
                 {together !== null ? (
@@ -321,7 +321,7 @@ export default function ProfilePage() {
                   </>
                 )}
               </button>
-              <div className="rounded-[2rem] tone-amber p-5 space-y-1">
+              <div className="rounded-[1.5rem] tone-amber p-5 space-y-1">
                 <p className="font-bebas text-[10px] tracking-[0.3em] uppercase text-white/55">Check-in streak</p>
                 <p className="font-bebas text-5xl leading-none tabular-nums flex items-center gap-2">
                   <Flame className={cn("w-7 h-7", streak > 0 ? "text-orange-500" : "text-white/30")} />
@@ -499,7 +499,7 @@ export default function ProfilePage() {
 
           {/* ─── Nothing yet, from their partner's side ─── */}
           {!isMe && progress.filled === 0 && (
-            <div className="py-12 px-6 flex flex-col items-center gap-3 bg-[#161616] border border-[#232323] border-dashed rounded-[2.5rem] text-center">
+            <div className="py-12 px-6 flex flex-col items-center gap-3 bg-[#161616] border border-[#232323] border-dashed rounded-[1.5rem] text-center">
               <Sparkles className="w-6 h-6 text-neutral-500" />
               <p className="font-bebas text-2xl tracking-widest uppercase">{`${firstName} hasn't added anything yet`}</p>
               <p className="font-outfit text-sm text-neutral-500 leading-relaxed text-pretty max-w-xs">Once they do, what helps them, how they feel loved and the little things show up here.</p>

@@ -196,7 +196,7 @@ export const SafeSpaceSession: React.FC<SafeSpaceSessionProps> = ({ onLeave, onC
         initial={{ opacity: 0 }}
         animate={{ opacity: 1 }}
         exit={{ opacity: 0 }}
-        className="fixed inset-0 z-50 bg-[#0e0e0e] flex flex-col font-outfit overflow-hidden"
+        className="fixed inset-0 z-50 bg-[var(--page)] flex flex-col font-outfit overflow-hidden"
     >
         <AmbientBackground variant="bright" />
 
@@ -270,7 +270,7 @@ export const SafeSpaceSession: React.FC<SafeSpaceSessionProps> = ({ onLeave, onC
         </div>
 
         {/* Composer */}
-        <div className="p-6 bg-[#0e0e0e] border-t border-white/5 pb-10 relative z-10">
+        <div className="p-6 bg-[var(--page)] border-t border-white/5 pb-10 relative z-10">
             <div className="max-w-2xl mx-auto flex flex-col gap-4">
                 <p className="text-xs font-outfit text-neutral-400 text-center leading-relaxed">{status}</p>
                 {sendError && (
@@ -349,7 +349,7 @@ export const SafeSpaceSession: React.FC<SafeSpaceSessionProps> = ({ onLeave, onC
                     exit={{ opacity: 0 }}
                     className="fixed inset-0 z-[60] overlay-backdrop flex items-center justify-center p-6"
                 >
-                    <div className="max-w-md w-full bg-[#0e0e0e] border border-white/10 rounded-[2.5rem] p-8 text-center space-y-8">
+                    <div className="max-w-md w-full bg-[var(--page)] border border-white/10 rounded-[1.5rem] p-8 text-center space-y-8">
                         <div className="space-y-3">
                             <h3 className="text-3xl font-bebas text-white tracking-widest uppercase leading-none">Close the Safe Space?</h3>
                             <p className="text-neutral-400 font-outfit text-sm leading-relaxed">

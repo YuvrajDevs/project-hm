@@ -11,7 +11,7 @@ const NAV = [
 
 export default function SiteLayout({ children }: Readonly<{ children: React.ReactNode }>) {
   return (
-    <div className="min-h-screen bg-[#0e0e0e] text-white flex flex-col">
+    <div className="min-h-screen bg-[var(--page)] text-white flex flex-col">
       <header className="border-b border-white/5">
         <div className="max-w-5xl mx-auto px-6 py-5 flex items-center justify-between gap-6 flex-wrap">
           <Link href="/" className="font-bebas text-lg tracking-widest uppercase text-white">

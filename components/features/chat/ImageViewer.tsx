@@ -56,7 +56,7 @@ export const ImageViewer = ({ message, onClose }: { message: ChatMessage; onClos
         src={src}
         alt="Photo from the chat"
         onClick={(e) => e.stopPropagation()}
-        className="max-w-full max-h-[85dvh] rounded-[2rem] object-contain shadow-2xl"
+        className="max-w-full max-h-[85dvh] rounded-[1.5rem] object-contain shadow-2xl"
       />
     </motion.div>,
     document.body

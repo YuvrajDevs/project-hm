@@ -38,13 +38,13 @@ export const PartnerLeftOverlay: React.FC<PartnerLeftOverlayProps> = ({ onClearD
       <motion.div
         initial={{ opacity: 0, y: 20 }}
         animate={{ opacity: 1, y: 0 }}
-        className="relative z-10 w-full max-w-md bg-[#161616] border border-[#2a2a2a] rounded-[3rem] p-10 text-center space-y-8 shadow-2xl"
+        className="relative z-10 w-full max-w-md bg-[#161616] border border-[#2a2a2a] rounded-[1.5rem] p-10 text-center space-y-8 shadow-2xl"
       >
         <div className="flex justify-center">
           <motion.div
             animate={{ scale: [1, 1.1, 1], rotate: [0, 5, -5, 0] }}
             transition={{ duration: 6, repeat: Infinity }}
-            className="w-20 h-20 rounded-[2.5rem] bg-white text-black flex items-center justify-center shadow-[0_0_50px_rgba(255,255,255,0.15)]"
+            className="w-20 h-20 rounded-[1.5rem] bg-white text-black flex items-center justify-center shadow-[0_0_50px_rgba(255,255,255,0.15)]"
           >
             <Heart className="w-10 h-10 fill-pink-500 text-pink-500" />
           </motion.div>

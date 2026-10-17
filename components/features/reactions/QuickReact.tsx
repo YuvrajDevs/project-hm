@@ -87,7 +87,7 @@ export const QuickReact = ({ onClose }: { onClose: () => void }) => {
         initial={{ opacity: 0, scale: 0.95, y: 20 }}
         animate={{ opacity: 1, scale: 1, y: 0 }}
         exit={{ opacity: 0, scale: 0.95, y: 20 }}
-        className="w-full max-w-sm md:max-w-xl bg-neutral-900 border border-white/10 rounded-[2.5rem] overflow-hidden shadow-2xl relative"
+        className="w-full max-w-sm md:max-w-xl bg-neutral-900 border border-white/10 rounded-[1.5rem] overflow-hidden shadow-2xl relative"
         onClick={(e) => e.stopPropagation()}
       >
         {!selected ? (
@@ -267,7 +267,7 @@ export const IncomingReactionIndicator = () => {
                                 initial={{ opacity: 0, y: 10 }}
                                 animate={{ opacity: 1, y: 0 }}
                                 transition={{ delay: 0.3 }}
-                                className="inline-block px-8 py-4 text-white rounded-[2rem] shadow-xl font-outfit text-base italic"
+                                className="inline-block px-8 py-4 text-white rounded-[1.5rem] shadow-xl font-outfit text-base italic"
                                 style={{ backgroundColor: reactionConfig.color === '#ffffff' ? '#171717' : reactionConfig.color }}
                             >
                                 &quot;{activeSplash.note}&quot;

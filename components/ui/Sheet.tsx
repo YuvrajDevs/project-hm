@@ -44,7 +44,7 @@ export const Sheet = ({ title, subtitle, onClose, tint, children, footer }: {
         exit={{ opacity: 0, y: 20, scale: 0.98 }}
         transition={{ type: "spring", damping: 22, stiffness: 160 }}
         onClick={(e) => e.stopPropagation()}
-        className="relative w-full max-w-md max-h-[88dvh] overlay-panel rounded-[2.5rem] overflow-hidden flex flex-col"
+        className="relative w-full max-w-md max-h-[88dvh] overlay-panel rounded-[1.5rem] overflow-hidden flex flex-col"
       >
         {tint && <div className={cn("pointer-events-none absolute inset-0 bg-gradient-to-br", tint)} />}
         <header className="relative flex items-start justify-between gap-4 p-6 pb-3 shrink-0">

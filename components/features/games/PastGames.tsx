@@ -51,7 +51,7 @@ export const PastGames = ({ onClose }: { onClose: () => void }) => {
         exit={{ opacity: 0, y: 20 }}
         transition={{ type: "spring", damping: 20, stiffness: 100 }}
         onClick={(e) => e.stopPropagation()}
-        className="w-full max-w-md h-[75vh] max-h-[680px] overlay-panel rounded-[2.5rem] p-6 flex flex-col gap-5"
+        className="w-full max-w-md h-[75vh] max-h-[680px] overlay-panel rounded-[1.5rem] p-6 flex flex-col gap-5"
       >
         <div className="flex items-center justify-between gap-3 shrink-0">
           {open ? (

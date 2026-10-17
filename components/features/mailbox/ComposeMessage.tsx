@@ -128,7 +128,7 @@ export const ComposeMessage = ({ onClose }: { onClose: () => void }) => {
       exit={{ opacity: 0 }}
       className="fixed inset-0 z-50 flex items-center justify-center p-4 overlay-backdrop"
     >
-      <div className="w-full max-w-md bg-[#151515] border border-white/10 rounded-[2rem] overflow-hidden flex flex-col max-h-[90vh] shadow-2xl">
+      <div className="w-full max-w-md bg-[#151515] border border-white/10 rounded-[1.5rem] overflow-hidden flex flex-col max-h-[90vh] shadow-2xl">
         <header className="p-4 border-b border-white/5 flex justify-between items-center">
           <h2 className="font-bebas text-xl tracking-widest text-white">Compose Heart</h2>
           <button onClick={onClose} className="p-1.5 hover:bg-white/5 rounded-full transition-colors text-neutral-500 hover:text-white">

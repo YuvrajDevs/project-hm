@@ -172,7 +172,7 @@ export const StreakGrid: React.FC<StreakGridProps> = ({ history }) => {
       </div>
 
       {/* Calendar Grid Container */}
-      <div className="bg-[#161616] p-8 md:p-16 rounded-[2.5rem] md:rounded-[4rem] border border-[#232323] relative overflow-hidden group/grid">
+      <div className="bg-[#161616] p-8 md:p-16 rounded-[1.5rem] md:rounded-[4rem] border border-[#232323] relative overflow-hidden group/grid">
         {/* Master Grid (Header + Dates) */}
         <div className="grid grid-cols-7 gap-y-10 md:gap-y-14 gap-x-4 md:gap-x-12 place-items-center relative z-10 h-full">
             {/* Row 1: Days Header */}
@@ -256,7 +256,7 @@ export const StreakGrid: React.FC<StreakGridProps> = ({ history }) => {
                     initial={{ scale: 0.9, y: 20 }}
                     animate={{ scale: 1, y: 0 }}
                     exit={{ scale: 0.9, y: 20 }}
-                    className="w-full max-w-[320px] md:max-w-xl bg-neutral-900 border border-white/10 rounded-[2.5rem] overflow-hidden shadow-2xl flex flex-col max-h-[85vh]"
+                    className="w-full max-w-[320px] md:max-w-xl bg-neutral-900 border border-white/10 rounded-[1.5rem] overflow-hidden shadow-2xl flex flex-col max-h-[85vh]"
                     onClick={e => e.stopPropagation()}
                 >
                     {/* Modal Header */}
@@ -358,7 +358,7 @@ export const StreakGrid: React.FC<StreakGridProps> = ({ history }) => {
                             <div className="space-y-8">
                                 {/* Grouped Sync Section (Calculated Cards) */}
                                 {selectedData && (
-                                    <div className="bg-[#161616] border border-[#2a2a2a] rounded-[2.5rem] overflow-hidden">
+                                    <div className="bg-[#161616] border border-[#2a2a2a] rounded-[1.5rem] overflow-hidden">
                                         {/* Sync Score Row */}
                                         <div className="flex justify-between items-center bg-[#1c1c1c] p-6 border-b border-[#232323]">
                                             <div className="space-y-1">

@@ -69,7 +69,7 @@ export const BucketList = () => {
       {error && <p className="text-rose-500 font-outfit text-xs">{error}</p>}
 
       {items.length === 0 ? (
-        <div className="py-8 px-6 flex items-center justify-center bg-[#161616] border border-[#232323] border-dashed rounded-[2rem] text-center">
+        <div className="py-8 px-6 flex items-center justify-center bg-[#161616] border border-[#232323] border-dashed rounded-[1.5rem] text-center">
           <p className="font-outfit text-sm text-neutral-500 leading-relaxed">
             {`Places, plans and little adventures you want to share with ${partnerName}. You both see the same list.`}
           </p>
@@ -209,7 +209,7 @@ const AllItems = ({ count, doneCount, onClose, children }: { count: number; done
         exit={{ opacity: 0, y: 20 }}
         transition={{ type: "spring", damping: 20, stiffness: 100 }}
         onClick={(e) => e.stopPropagation()}
-        className="w-full max-w-md h-[75vh] max-h-[680px] overlay-panel rounded-[2.5rem] p-6 flex flex-col gap-4"
+        className="w-full max-w-md h-[75vh] max-h-[680px] overlay-panel rounded-[1.5rem] p-6 flex flex-col gap-4"
       >
         <div className="flex items-center justify-between gap-3 shrink-0">
           <div>

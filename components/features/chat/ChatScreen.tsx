@@ -252,11 +252,11 @@ export const ChatScreen = ({ onClose }: { onClose: () => void }) => {
       exit={{ opacity: 0, y: 24 }}
       transition={{ duration: 0.2 }}
       style={{ top: viewport.top, height: viewport.height }}
-      className="fixed inset-x-0 z-[100] flex flex-col bg-[#0e0e0e] text-white overflow-hidden"
+      className="fixed inset-x-0 z-[100] flex flex-col bg-[var(--page)] text-white overflow-hidden"
     >
       <AmbientBackground variant="standard" gender={partner?.gender} />
 
-      <header className="relative z-10 shrink-0 px-4 pb-3 pt-[max(0.75rem,env(safe-area-inset-top))] border-b border-white/5 bg-[#0e0e0e]">
+      <header className="relative z-10 shrink-0 px-4 pb-3 pt-[max(0.75rem,env(safe-area-inset-top))] border-b border-white/5 bg-[var(--page)]">
         <div className="w-full max-w-2xl mx-auto flex items-center gap-3">
           <button
             type="button"
@@ -384,7 +384,7 @@ export const ChatScreen = ({ onClose }: { onClose: () => void }) => {
           )}
         </AnimatePresence>
 
-        <div className="shrink-0 border-t border-white/5 bg-[#0e0e0e] pb-[env(safe-area-inset-bottom)]">
+        <div className="shrink-0 border-t border-white/5 bg-[var(--page)] pb-[env(safe-area-inset-bottom)]">
           <div className="w-full max-w-2xl mx-auto">
             {error && <p role="alert" className="px-5 pt-2 text-rose-400 font-outfit text-xs text-center">{error}</p>}
             <Composer onText={sendText} onPhoto={sendPhoto} onVoice={sendVoice} onError={setError} preparing={preparing} />

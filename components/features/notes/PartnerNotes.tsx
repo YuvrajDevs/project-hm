@@ -104,7 +104,7 @@ export const PartnerNotes = () => {
       {error && <p className="text-rose-500 font-outfit text-xs">{error}</p>}
 
       {shown.length === 0 ? (
-        <div className="py-8 px-6 flex items-center justify-center bg-[#161616] border border-[#232323] border-dashed rounded-[2rem] text-center">
+        <div className="py-8 px-6 flex items-center justify-center bg-[#161616] border border-[#232323] border-dashed rounded-[1.5rem] text-center">
           <p className="font-outfit text-sm text-neutral-500 leading-relaxed">{empty}</p>
         </div>
       ) : (
@@ -183,7 +183,7 @@ const NoteCard = ({ note, kind, partnerName, onOpen }: { note: PartnerNote; kind
     exit={{ opacity: 0, scale: 0.96 }}
     onClick={onOpen}
     className={cn(
-      "h-[9.5rem] rounded-[1.75rem] p-4 flex flex-col text-left border border-white/10 bg-gradient-to-br",
+      "h-[9.5rem] rounded-[1.5rem] p-4 flex flex-col text-left border border-white/10 bg-gradient-to-br",
       "hover:border-white/20 active:scale-[0.97] transition-all",
       STYLE[kind].card
     )}
@@ -348,7 +348,7 @@ const Sheet = ({ onClose, tint, tall, children }: { onClose: () => void; tint?: 
         transition={{ type: "spring", damping: 22, stiffness: 160 }}
         onClick={(e) => e.stopPropagation()}
         className={cn(
-          "relative w-full max-w-md overlay-panel rounded-[2.5rem] p-6 flex flex-col gap-5 overflow-hidden",
+          "relative w-full max-w-md overlay-panel rounded-[1.5rem] p-6 flex flex-col gap-5 overflow-hidden",
           tall && "h-[75vh] max-h-[680px]"
         )}
       >

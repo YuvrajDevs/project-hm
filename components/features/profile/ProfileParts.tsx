@@ -11,7 +11,7 @@ export const SectionCard = ({ icon, title, onEdit, tone = "tone-slate", classNam
   className?: string;
   children: React.ReactNode;
 }) => (
-  <section className={cn("relative overflow-hidden rounded-[2.5rem] p-8 space-y-6", tone, className)}>
+  <section className={cn("relative overflow-hidden rounded-[1.5rem] p-8 space-y-6", tone, className)}>
     <div className="relative flex items-center justify-between gap-3">
       <div className="flex items-center gap-3 min-w-0">
         <span className="w-10 h-10 shrink-0 rounded-xl bg-black/25 flex items-center justify-center" aria-hidden="true">

@@ -34,7 +34,7 @@ export default function ContactPage() {
   };
 
   return (
-    <div className="min-h-screen bg-[#0e0e0e] text-neutral-300 font-inter selection:bg-pink-500/30 overflow-x-hidden">
+    <div className="min-h-screen bg-[var(--page)] text-neutral-300 font-inter selection:bg-pink-500/30 overflow-x-hidden">
       <div className="fixed inset-0 z-0 pointer-events-none opacity-40">
         <AmbientBackground variant="standard" />
       </div>
@@ -65,7 +65,7 @@ export default function ContactPage() {
               key="sent"
               initial={{ opacity: 0, scale: 0.95 }}
               animate={{ opacity: 1, scale: 1 }}
-              className="bg-[#161616] border border-[#2a2a2a] rounded-[2.5rem] p-12 text-center space-y-6"
+              className="bg-[#161616] border border-[#2a2a2a] rounded-[1.5rem] p-12 text-center space-y-6"
             >
               <div className="w-20 h-20 bg-green-500/10 rounded-full flex items-center justify-center mx-auto text-green-500">
                 <CheckCircle2 className="w-10 h-10" />

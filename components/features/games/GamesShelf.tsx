@@ -125,7 +125,7 @@ const PendingRow = ({ games, noun, onOpen }: { games: ActiveGame[]; noun: string
     <button
       onClick={() => { playTick(); vibrateTick(); onOpen(); }}
       className={cn(
-        "w-full rounded-[2rem] p-5 flex items-center justify-between gap-4 border border-white/10 bg-gradient-to-br text-left active:scale-[0.98] transition-all",
+        "w-full rounded-[1.5rem] p-5 flex items-center justify-between gap-4 border border-white/10 bg-gradient-to-br text-left active:scale-[0.98] transition-all",
         newest.gradient
       )}
     >
@@ -168,7 +168,7 @@ const GameRow = ({ game }: { game: ActiveGame }) => {
     <button
       onClick={() => { playTick(); vibrateTick(); openAny(game); }}
       className={cn(
-        "w-full rounded-[2rem] p-5 flex items-center justify-between gap-4 border border-white/10 bg-gradient-to-br text-left active:scale-[0.98] transition-all",
+        "w-full rounded-[1.5rem] p-5 flex items-center justify-between gap-4 border border-white/10 bg-gradient-to-br text-left active:scale-[0.98] transition-all",
         deck.gradient
       )}
     >
@@ -264,7 +264,7 @@ const PendingDialog = ({ kind, onClose }: { kind: "game" | "deck"; onClose: () =
         exit={{ opacity: 0, y: 20 }}
         transition={{ type: "spring", damping: 20, stiffness: 100 }}
         onClick={(e) => e.stopPropagation()}
-        className="relative w-full max-w-sm max-h-[90vh] overflow-y-auto overlay-panel rounded-[2.5rem] p-8 space-y-5"
+        className="relative w-full max-w-sm max-h-[90vh] overflow-y-auto overlay-panel rounded-[1.5rem] p-8 space-y-5"
       >
         <div className="flex items-start justify-between gap-4">
           <div className="space-y-1">
@@ -315,7 +315,7 @@ const DeckSection = ({ title, subtitle, decks, active, noun, showScore, onPick, 
               key={deck.id}
               onClick={() => { playTick(); vibrateTick(); onPick(deck); }}
               className={cn(
-                "relative shrink-0 snap-start w-[9.5rem] h-[11rem] md:w-44 md:h-[12.5rem] rounded-[1.75rem] p-4 flex flex-col justify-between text-left overflow-hidden",
+                "relative shrink-0 snap-start w-[9.5rem] h-[11rem] md:w-44 md:h-[12.5rem] rounded-[1.5rem] p-4 flex flex-col justify-between text-left overflow-hidden",
                 "border border-white/10 bg-gradient-to-br active:scale-[0.97] hover:border-white/20 transition-all",
                 deck.gradient
               )}
@@ -418,7 +418,7 @@ const GameLobby = ({ deck, onClose }: { deck: DeckInfo; onClose: () => void }) =
         exit={{ opacity: 0, y: 20 }}
         transition={{ type: "spring", damping: 20, stiffness: 100 }}
         onClick={(e) => e.stopPropagation()}
-        className="relative w-full max-w-sm max-h-[90vh] overflow-y-auto overlay-panel rounded-[2.5rem]"
+        className="relative w-full max-w-sm max-h-[90vh] overflow-y-auto overlay-panel rounded-[1.5rem]"
       >
         <div className={cn("bg-gradient-to-br p-8 pb-6 space-y-4", deck.gradient)}>
           <div className="flex items-start justify-between">

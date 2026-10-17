@@ -4,108 +4,70 @@ import React from "react";
 import { motion } from "framer-motion";
 import { useMailbox } from "@/context/MailboxContext";
 import { cn } from "@/lib/utils";
-import { getCheckInDateId } from "@/lib/utils";
+import { formatRelativeTime, getCheckInDateId } from "@/lib/utils";
 import { REACTION_ICONS } from "@/lib/constants";
 
+const iconFor = (mood?: string) =>
+  Object.values(REACTION_ICONS).find((icon) => icon.label === mood)?.url || REACTION_ICONS.APPRECIATIVE.url;
+
+// How each of you is feeling, as two small tiles stacked one under the other.
+// Both tiles are built the same way, so their labels, icons and names line up.
 export const MoodStatusHub = () => {
   const { user, partner, couple, todayId } = useMailbox();
 
   const needsUpdate = !user?.moodUpdatedAt || getCheckInDateId(new Date(user.moodUpdatedAt), couple?.dayTimezone) !== todayId;
+  const partnerName = partner?.displayName?.split(" ")[0] || "Partner";
 
-  const openSignalSelector = () => {
-    window.dispatchEvent(new CustomEvent('openSignalSelector'));
-  };
+  const openSignalSelector = () => window.dispatchEvent(new CustomEvent("openSignalSelector"));
+  const replayPartnerSignal = () => window.dispatchEvent(new CustomEvent("triggerSignalSplash"));
 
-  const replayPartnerSignal = () => {
-    window.dispatchEvent(new CustomEvent('triggerSignalSplash'));
-  };
+  const tile = "relative w-full h-full tone-%s rounded-[1.5rem] px-4 py-3.5 text-left overflow-hidden flex flex-col justify-between gap-2 transition-all hover:brightness-110 active:scale-[0.98] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/70";
+  const eyebrow = "font-bebas text-[10px] tracking-[0.18em] uppercase leading-none opacity-70 truncate";
+  const name = "font-bebas text-[clamp(1.2rem,6.2vw,1.5rem)] md:text-3xl tracking-wide uppercase leading-none whitespace-nowrap";
+  const since = "font-outfit text-[11px] leading-tight opacity-80 text-right";
 
   return (
-    <div className="w-full space-y-4">
-      <div className="grid grid-cols-2 gap-4 items-stretch">
-        {/* Your Mood Tile */}
-        <div className="relative group flex">
-            <button
-                onClick={openSignalSelector}
-                className={cn(
-                    "w-full tone-red rounded-[2rem] p-6 text-left transition-all relative overflow-hidden flex flex-col justify-center min-h-[140px]",
-                    needsUpdate 
-                        ? "ring-2 ring-yellow-300" 
-                        : "hover:brightness-110"
-                )}
-            >
-                {needsUpdate && (
-                    <div className="absolute top-0 right-0 p-3">
-                        <motion.div 
-                            animate={{ scale: [1, 1.2, 1], opacity: [0.5, 1, 0.5] }}
-                            transition={{ repeat: Infinity, duration: 2 }}
-                            className="w-1.5 h-1.5 rounded-full bg-pink-500" 
-                        />
-                    </div>
-                )}
-                
-                <span className="font-bebas text-[10px] tracking-[0.4em] text-white/60 uppercase">You are feeling</span>
-                <div className="mt-3 flex flex-col items-start gap-2 sm:flex-row sm:items-center sm:gap-4">
-                    <div className="w-12 h-12 flex items-center justify-center relative">
-                        <div className="absolute inset-0 bg-white/10 blur-xl rounded-full" />
-                        {user?.currentMood ? (
-                            <img 
-                                src={Object.values(REACTION_ICONS).find(icon => icon.label === user.currentMood)?.url || REACTION_ICONS.APPRECIATIVE.url} 
-                                alt={user.currentMood}
-                                className="w-full h-full object-contain relative z-10 drop-shadow-xl animate-float"
-                            />
-                        ) : (
-                            <img src={REACTION_ICONS.APPRECIATIVE.url} alt="Set Mood" className="w-full h-full object-contain relative z-10 opacity-20 grayscale" />
-                        )}
-                    </div>
-                    <div className="text-xl sm:text-2xl font-bebas text-white tracking-widest uppercase leading-tight break-words">
-                        {user?.currentMood || "Set Mood"}
-                    </div>
-                </div>
-                {needsUpdate && (
-                    <div className="mt-2 font-outfit text-[9px] text-pink-400 uppercase tracking-widest animate-pulse">
-                        Update required for today
-                    </div>
-                )}
-            </button>
+    <div className="grid grid-rows-2 gap-3 h-full">
+      {/* You: label, then the icon beside when it was set, then the full mood name on its own line */}
+      <button onClick={openSignalSelector} className={cn(tile.replace("%s", "red"), needsUpdate && "ring-2 ring-yellow-300")}>
+        <span className={eyebrow}>You are feeling</span>
+        <div className="flex items-center justify-between gap-2">
+          {/* eslint-disable-next-line @next/next/no-img-element */}
+          <img
+            src={user?.currentMood ? iconFor(user.currentMood) : REACTION_ICONS.APPRECIATIVE.url}
+            alt=""
+            className={cn("w-12 h-12 md:w-14 md:h-14 shrink-0 object-contain drop-shadow-lg", !user?.currentMood && "opacity-25 grayscale")}
+          />
+          {needsUpdate ? (
+            <span className={cn(since, "flex items-center gap-1.5")}>
+              <motion.span
+                animate={{ scale: [1, 1.3, 1], opacity: [0.6, 1, 0.6] }}
+                transition={{ repeat: Infinity, duration: 2 }}
+                className="w-1.5 h-1.5 rounded-full bg-yellow-300 shrink-0"
+              />
+              Update today
+            </span>
+          ) : user?.moodUpdatedAt ? (
+            <span className={since}>{formatRelativeTime(user.moodUpdatedAt)}</span>
+          ) : null}
         </div>
+        <p className={name}>{user?.currentMood || "Set mood"}</p>
+      </button>
 
-        {/* Partner's Mood Tile */}
-        <div className="relative group flex">
-            <button
-                onClick={replayPartnerSignal}
-                className="w-full tone-blue rounded-[2rem] p-6 text-left relative overflow-hidden flex flex-col justify-center min-h-[140px] hover:brightness-110 transition-all group/partner"
-            >
-                <span className="font-bebas text-[10px] tracking-[0.4em] text-white/60 uppercase">
-                    {partner?.displayName?.split(' ')[0] || "Partner"} is feeling
-                </span>
-                <div className="mt-3 flex flex-col items-start gap-2 sm:flex-row sm:items-center sm:gap-4 group-hover/partner:scale-105 transition-transform origin-left">
-                    <div className="w-12 h-12 flex items-center justify-center relative">
-                         <div className="absolute inset-0 bg-blue-500/10 blur-xl rounded-full" />
-                         {partner?.currentMood ? (
-                            <img 
-                                src={Object.values(REACTION_ICONS).find(icon => icon.label === partner.currentMood)?.url || REACTION_ICONS.APPRECIATIVE.url} 
-                                alt={partner.currentMood}
-                                className="w-full h-full object-contain relative z-10 drop-shadow-xl animate-float"
-                            />
-                        ) : (
-                            <div className="w-full h-full bg-[#1c1c1c] rounded-full border border-[#2a2a2a] flex items-center justify-center">
-                                <span className="text-neutral-700 text-xs font-bebas">?</span>
-                            </div>
-                        )}
-                    </div>
-                    <div className="text-xl sm:text-2xl font-bebas text-blue-400 tracking-widest uppercase leading-tight break-words">
-                        {partner?.currentMood || "Not Shared Yet"}
-                    </div>
-                </div>
-                {partner?.currentMood && (
-                    <div className="mt-2 text-[8px] font-bebas text-neutral-600 uppercase tracking-widest opacity-0 group-hover/partner:opacity-100 transition-opacity">
-                         Click to tune in
-                    </div>
-                )}
-            </button>
+      {/* Your partner: built the same way, so the two line up */}
+      <button onClick={replayPartnerSignal} className={tile.replace("%s", "blue")}>
+        <span className={eyebrow}>{partnerName} is feeling</span>
+        <div className="flex items-center justify-between gap-2">
+          {partner?.currentMood ? (
+            // eslint-disable-next-line @next/next/no-img-element
+            <img src={iconFor(partner.currentMood)} alt="" className="w-12 h-12 md:w-14 md:h-14 shrink-0 object-contain drop-shadow-lg" />
+          ) : (
+            <span className="w-12 h-12 md:w-14 md:h-14 shrink-0 rounded-full bg-black/20 flex items-center justify-center font-bebas text-xl opacity-70">?</span>
+          )}
+          {partner?.currentMood && partner.moodUpdatedAt ? <span className={since}>{formatRelativeTime(partner.moodUpdatedAt)}</span> : null}
         </div>
-      </div>
+        <p className={name}>{partner?.currentMood || "Not shared yet"}</p>
+      </button>
     </div>
   );
 };

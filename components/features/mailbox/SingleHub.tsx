@@ -10,7 +10,7 @@ export const SingleHub = () => {
   const router = useRouter();
 
   return (
-    <div className="min-h-screen bg-[#0e0e0e] text-white overflow-hidden relative font-outfit">
+    <div className="min-h-screen bg-[var(--page)] text-white overflow-hidden relative font-outfit">
       <AmbientBackground variant="bright" />
       
       {/* HUD / Header */}

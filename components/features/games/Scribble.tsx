@@ -273,7 +273,7 @@ const Canvas = ({ strokes, canDraw, tool, onStroke }: { strokes: string[]; canDr
         onPointerUp={up}
         onPointerLeave={up}
         onPointerCancel={up}
-        className={cn("rounded-[2rem] bg-white", canDraw ? "cursor-crosshair touch-none" : "")}
+        className={cn("rounded-[1.5rem] bg-white", canDraw ? "cursor-crosshair touch-none" : "")}
       >
         {strokes.map((s, i) => {
           const { color, width, points } = parseStroke(s);

@@ -42,7 +42,7 @@ export const GameShell = ({ game, coupleId, partnerUid, partnerName, scores, sco
       initial={{ opacity: 0 }}
       animate={{ opacity: 1 }}
       exit={{ opacity: 0 }}
-      className="fixed inset-0 z-[105] bg-[#0e0e0e] text-white"
+      className="fixed inset-0 z-[105] bg-[var(--page)] text-white"
     >
 
       <div className="relative h-[100dvh] max-w-md mx-auto px-5 pt-6 pb-6 flex flex-col gap-4">
@@ -93,7 +93,7 @@ export const GameShell = ({ game, coupleId, partnerUid, partnerName, scores, sco
             onClick={() => setConfirmEnd(false)}
             className="fixed inset-0 z-[110] flex items-center justify-center p-6 overlay-backdrop"
           >
-            <div onClick={(e) => e.stopPropagation()} className="w-full max-w-sm overlay-panel rounded-[2.5rem] p-8 text-center space-y-6">
+            <div onClick={(e) => e.stopPropagation()} className="w-full max-w-sm overlay-panel rounded-[1.5rem] p-8 text-center space-y-6">
               <div className="space-y-2">
                 <h3 className="text-3xl font-bebas tracking-widest uppercase leading-none">End This Game?</h3>
                 <p className="text-neutral-400 font-outfit text-sm leading-relaxed">

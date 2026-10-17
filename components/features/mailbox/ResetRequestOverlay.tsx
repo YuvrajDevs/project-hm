@@ -78,7 +78,7 @@ export const ResetRequestOverlay = () => {
                                 animate={{ opacity: 1 }}
                                 className="space-y-4 pt-4"
                             >
-                                <div className="flex flex-col items-center gap-4 p-8 bg-[#161616] border border-[#2a2a2a] rounded-[2rem]">
+                                <div className="flex flex-col items-center gap-4 p-8 bg-[#161616] border border-[#2a2a2a] rounded-[1.5rem]">
                                     <Loader2 className="w-8 h-8 text-neutral-500 animate-spin" />
                                     <span className="font-bebas text-lg tracking-widest text-neutral-400 uppercase">Resetting Archive...</span>
                                 </div>
@@ -92,14 +92,14 @@ export const ResetRequestOverlay = () => {
                             >
                                 <button 
                                     onClick={handleConfirm}
-                                    className="w-full bg-white text-black font-bebas text-xl py-5 rounded-[2rem] flex items-center justify-center gap-2 hover:bg-neutral-200 active:scale-[0.98] transition-all shadow-[0_0_30px_rgba(255,255,255,0.1)]"
+                                    className="w-full bg-white text-black font-bebas text-xl py-5 rounded-[1.5rem] flex items-center justify-center gap-2 hover:bg-neutral-200 active:scale-[0.98] transition-all shadow-[0_0_30px_rgba(255,255,255,0.1)]"
                                 >
                                     <Sparkles className="w-5 h-5" /> Let&apos;s Start Over
                                 </button>
                                 
                                 <button 
                                     onClick={handleReject}
-                                    className="w-full bg-[#161616] border border-[#2a2a2a] text-neutral-400 font-bebas text-lg py-4 rounded-[2rem] hover:bg-[#242424] hover:text-white transition-all"
+                                    className="w-full bg-[#161616] border border-[#2a2a2a] text-neutral-400 font-bebas text-lg py-4 rounded-[1.5rem] hover:bg-[#242424] hover:text-white transition-all"
                                 >
                                     Not Now
                                 </button>

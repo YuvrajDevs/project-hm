@@ -4,14 +4,17 @@ import React, { useState } from "react";
 import { useRouter } from "next/navigation";
 import { useMailbox } from "@/context/MailboxContext";
 import { motion, AnimatePresence } from "framer-motion";
-import { ArrowLeft, Bell, BellOff, UserX, AlertTriangle, User, LogOut, RotateCcw, Heart, ChevronRight, EyeOff, Users, ShieldCheck } from "lucide-react";
+import { ArrowLeft, Bell, BellOff, Moon, Sun, UserX, AlertTriangle, User, LogOut, RotateCcw, Heart, ChevronRight, EyeOff, Users, ShieldCheck } from "lucide-react";
 import Link from "next/link";
 import { AmbientBackground } from "@/components/ui/AmbientBackground";
 import { useAuthGuard } from "@/hooks/useAuthGuard";
+import { useTheme } from "@/hooks/useTheme";
+import { cn } from "@/lib/utils";
 import { LeavePartnerModal } from "@/components/features/profile/LeavePartnerModal";
 
 export default function SettingsPage() {
   const router = useRouter();
+  const { theme, setTheme } = useTheme();
   const { user, partner, wipeoutUserAccount, logout, couple, leavePartner, requestReset, cancelReset, notificationsEnabled, toggleNotifications } = useMailbox();
   const [showWipeoutConfirm, setShowWipeoutConfirm] = useState(false);
   const [showUnpairConfirm, setShowUnpairConfirm] = useState(false);
@@ -73,11 +76,11 @@ export default function SettingsPage() {
   };
 
   return (
-    <div className="min-h-screen bg-[#0e0e0e] text-white overflow-y-auto font-outfit relative">
+    <div className="min-h-screen bg-[var(--page)] text-white overflow-y-auto font-outfit relative">
       <AmbientBackground variant="standard" />
 
       {/* Header */}
-      <header className="sticky top-0 left-0 right-0 p-6 z-50 flex items-center justify-between bg-gradient-to-b from-black to-transparent">
+      <header className="sticky top-0 left-0 right-0 p-6 z-50 flex items-center justify-between bg-gradient-to-b from-[var(--page)] to-transparent">
         <button 
           onClick={() => router.push("/")}
           className="flex items-center gap-2 text-neutral-400 hover:text-white transition-colors uppercase tracking-[0.2em] font-bebas text-sm group"
@@ -155,6 +158,34 @@ export default function SettingsPage() {
         <section className="space-y-4">
           <h2 className="text-sm font-bebas text-neutral-500 tracking-[0.2em] uppercase">Preferences</h2>
           <div className="space-y-2">
+            <div className="bg-[#161616] border border-[#2a2a2a] rounded-2xl p-5 flex items-center justify-between gap-4">
+              <div className="flex items-center gap-4 min-w-0">
+                <div className="p-3 bg-[#1c1c1c] rounded-xl shrink-0">
+                  {theme === "light" ? <Sun className="w-5 h-5 text-white" /> : <Moon className="w-5 h-5 text-white" />}
+                </div>
+                <div className="min-w-0">
+                  <p className="font-bebas tracking-widest uppercase text-lg">Appearance</p>
+                  <p className="text-xs text-neutral-400">Dark, or light with a cream page</p>
+                </div>
+              </div>
+              <div role="radiogroup" aria-label="Appearance" className="flex p-1 rounded-full bg-[#1c1c1c] shrink-0">
+                {(["dark", "light"] as const).map((t) => (
+                  <button
+                    key={t}
+                    type="button"
+                    role="radio"
+                    aria-checked={theme === t}
+                    onClick={() => setTheme(t)}
+                    className={cn(
+                      "px-4 py-2 rounded-full font-bebas text-xs tracking-widest uppercase transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/50",
+                      theme === t ? "bg-white text-black" : "text-neutral-400 hover:text-white"
+                    )}
+                  >
+                    {t}
+                  </button>
+                ))}
+              </div>
+            </div>
             <div className="bg-[#161616] border border-[#2a2a2a] rounded-2xl p-5 flex items-center justify-between hover:bg-[#242424] transition-all">
               <div className="flex items-center gap-4">
                 <div className="p-3 bg-[#1c1c1c] rounded-xl">

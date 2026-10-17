@@ -73,7 +73,11 @@ export default function RootLayout({
       suppressHydrationWarning
       className={`${bebasNeue.variable} ${outfit.variable} ${inter.variable} antialiased dark scroll-smooth`}
     >
-      <body suppressHydrationWarning className={`${outfit.className} min-h-screen bg-[#0e0e0e] text-neutral-50 overflow-x-hidden flex flex-col`}>
+      <head>
+        {/* Apply the saved light/dark choice before the page paints, so it never flashes the wrong colour */}
+        <script dangerouslySetInnerHTML={{ __html: 'try{if(localStorage.getItem("hm_theme")==="light")document.documentElement.setAttribute("data-theme","light")}catch(e){}' }} />
+      </head>
+      <body suppressHydrationWarning className={`${outfit.className} min-h-screen bg-[var(--page)] text-neutral-50 overflow-x-hidden flex flex-col`}>
         <JsonLd
           data={{
             "@context": "https://schema.org",

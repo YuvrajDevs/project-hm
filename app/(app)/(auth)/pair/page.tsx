@@ -19,7 +19,7 @@ const INVITE_ERRORS: Record<InviteError, string> = {
 
 export default function PairPage() {
   return (
-    <Suspense fallback={<div className="h-screen w-screen bg-[#0e0e0e]" />}>
+    <Suspense fallback={<div className="h-screen w-screen bg-[var(--page)]" />}>
       <Pair />
     </Suspense>
   );
@@ -149,7 +149,7 @@ function Pair() {
   };
 
   return (
-    <div className="h-screen w-screen bg-[#0e0e0e] flex flex-col overflow-hidden relative">
+    <div className="h-screen w-screen bg-[var(--page)] flex flex-col overflow-hidden relative">
       {/* Top rainbow stripe */}
       <div className="flex-none h-0.5 bg-gradient-to-r from-pink-500 via-blue-500 to-yellow-400" />
 

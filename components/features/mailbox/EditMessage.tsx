@@ -74,7 +74,7 @@ export const EditMessage = ({
                 initial={{ opacity: 0, scale: 0.9, y: 20 }}
                 animate={{ opacity: 1, scale: 1, y: 0 }}
                 exit={{ opacity: 0, scale: 0.9, y: 20 }}
-                className="fixed inset-x-4 bottom-8 md:inset-auto md:left-1/2 md:top-1/2 md:-translate-x-1/2 md:-translate-y-1/2 md:w-full md:max-w-xl bg-neutral-900 border border-white/10 rounded-[3rem] p-8 z-[101] shadow-2xl overflow-hidden"
+                className="fixed inset-x-4 bottom-8 md:inset-auto md:left-1/2 md:top-1/2 md:-translate-x-1/2 md:-translate-y-1/2 md:w-full md:max-w-xl bg-neutral-900 border border-white/10 rounded-[1.5rem] p-8 z-[101] shadow-2xl overflow-hidden"
             >
                 <div className="absolute inset-0 opacity-10 pointer-events-none" style={{ backgroundImage: "linear-gradient(45deg, #ef476f, #ffd166, #06d6a0, #118ab2, #073b4c)" }} />
                 

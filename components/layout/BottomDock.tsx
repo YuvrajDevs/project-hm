@@ -51,7 +51,7 @@ export const BottomDock: React.FC<BottomDockProps> = ({
             animate={{ y: 0, opacity: 1 }}
             exit={{ y: 100, opacity: 0 }}
             transition={{ type: "spring", damping: 20, stiffness: 100 }}
-            className="pointer-events-auto relative flex items-center gap-1 p-2 bg-[#161616] border border-white/10 rounded-[2.5rem] shadow-[0_20px_50px_rgba(0,0,0,0.5)]"
+            className="pointer-events-auto relative flex items-center gap-1 p-2 bg-[#161616] border border-white/10 rounded-[1.5rem] shadow-[0_20px_50px_rgba(0,0,0,0.5)]"
           >
         {/* Far Left: Inbox Button */}
         <button
