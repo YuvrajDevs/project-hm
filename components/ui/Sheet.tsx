@@ -56,7 +56,7 @@ export const Sheet = ({ title, subtitle, onClose, tint, children, footer }: {
             type="button"
             onClick={onClose}
             aria-label="Close"
-            className="w-10 h-10 shrink-0 rounded-full bg-white/5 border border-white/5 flex items-center justify-center text-neutral-400 hover:text-white transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/50"
+            className="w-10 h-10 shrink-0 rounded-full bg-[#1c1c1c] border border-[#232323] flex items-center justify-center text-neutral-400 hover:text-white transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/50"
           >
             <X className="w-4 h-4" />
           </button>

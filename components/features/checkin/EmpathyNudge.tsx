@@ -24,7 +24,7 @@ export const EmpathyNudge: React.FC<EmpathyNudgeProps> = ({ onWriteNote, onDismi
 
                 <button 
                     onClick={onDismiss}
-                    className="absolute top-4 right-4 p-1.5 rounded-full bg-white/5 hover:bg-white/10 transition-colors text-neutral-500 hover:text-white"
+                    className="absolute top-4 right-4 p-1.5 rounded-full bg-[#1c1c1c] hover:bg-[#242424] transition-colors text-neutral-500 hover:text-white"
                 >
                     <X className="w-3.5 h-3.5" />
                 </button>

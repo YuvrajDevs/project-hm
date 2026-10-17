@@ -41,22 +41,21 @@ export const MailboxScreen: React.FC<MailboxScreenProps> = ({ onOpenCheckIn, onC
             {/* Streak Hero Section */}
             {metrics && (
                 <section className="relative">
-                    <div className="absolute inset-0 rounded-[2.5rem]" style={{ backgroundImage: "radial-gradient(ellipse at center, rgba(249,115,22,0.1), transparent 70%)" }} />
                     <motion.div 
                         initial={{ opacity: 0, y: 20 }}
                         animate={{ opacity: 1, y: 0 }}
-                        className="relative bg-white/5 border border-white/10 rounded-[2.5rem] p-8 overflow-hidden flex items-center justify-between"
+                        className="relative tone-amber rounded-[2.5rem] p-8 overflow-hidden flex items-center justify-between"
                     >
                         <div className="space-y-4">
                             <div className="flex items-center gap-2">
                                 <Sparkles className="w-4 h-4 text-yellow-400" />
-                                <span className="text-[10px] font-bebas tracking-[0.4em] text-neutral-500 uppercase">Check-in Streak</span>
+                                <span className="text-[10px] font-bebas tracking-[0.4em] text-amber-100/60 uppercase">Check-in Streak</span>
                             </div>
                             <div className="space-y-1">
                                 <h2 className="text-7xl font-bebas text-white leading-none tracking-tight">
-                                    {metrics.streak} <span className="text-2xl text-neutral-600">{metrics.streak === 1 ? "Day" : "Days"}</span>
+                                    {metrics.streak} <span className="text-2xl text-amber-100/40">{metrics.streak === 1 ? "Day" : "Days"}</span>
                                 </h2>
-                                <p className="text-neutral-500 font-outfit text-xs uppercase tracking-widest leading-relaxed">
+                                <p className="text-amber-100/60 font-outfit text-xs uppercase tracking-widest leading-relaxed">
                                     {metrics.streak > 0 
                                         ? "Days in a row you both checked in." 
                                         : "Check in together today to start a streak."}
@@ -99,7 +98,7 @@ export const MailboxScreen: React.FC<MailboxScreenProps> = ({ onOpenCheckIn, onC
             </section>
 
             {/* White Flag: a one-tap way to pause an argument */}
-            <section className="bg-white/5 border border-white/5 rounded-[2rem] p-6 flex flex-col md:flex-row md:items-center justify-between gap-4">
+            <section className="tone-slate rounded-[2rem] p-6 flex flex-col md:flex-row md:items-center justify-between gap-4">
                 <div className="space-y-1">
                     <h2 className="text-2xl font-bebas text-white tracking-widest uppercase leading-none">White Flag</h2>
                     <p className="text-neutral-500 font-outfit text-xs leading-relaxed">

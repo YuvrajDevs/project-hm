@@ -240,7 +240,7 @@ export const ChatScreen = ({ onClose }: { onClose: () => void }) => {
   const partnerTitle = partner?.partnerNickname || partner?.displayName || "Your person";
   const saved = view === "saved";
   const roundButton =
-    "w-10 h-10 shrink-0 rounded-full bg-white/5 border border-white/5 flex items-center justify-center text-neutral-400 hover:text-white hover:bg-white/10 active:scale-90 transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/50";
+    "w-10 h-10 shrink-0 rounded-full bg-[#1c1c1c] border border-[#232323] flex items-center justify-center text-neutral-400 hover:text-white hover:bg-[#242424] active:scale-90 transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/50";
 
   return (
     <motion.div
@@ -252,11 +252,11 @@ export const ChatScreen = ({ onClose }: { onClose: () => void }) => {
       exit={{ opacity: 0, y: 24 }}
       transition={{ duration: 0.2 }}
       style={{ top: viewport.top, height: viewport.height }}
-      className="fixed inset-x-0 z-[100] flex flex-col bg-[#0a0a0a] text-white overflow-hidden"
+      className="fixed inset-x-0 z-[100] flex flex-col bg-[#0e0e0e] text-white overflow-hidden"
     >
       <AmbientBackground variant="standard" gender={partner?.gender} />
 
-      <header className="relative z-10 shrink-0 px-4 pb-3 pt-[max(0.75rem,env(safe-area-inset-top))] border-b border-white/5 bg-black/30 backdrop-blur-xl">
+      <header className="relative z-10 shrink-0 px-4 pb-3 pt-[max(0.75rem,env(safe-area-inset-top))] border-b border-white/5 bg-[#0e0e0e]">
         <div className="w-full max-w-2xl mx-auto flex items-center gap-3">
           <button
             type="button"
@@ -283,7 +283,7 @@ export const ChatScreen = ({ onClose }: { onClose: () => void }) => {
               <button
                 type="button"
                 onClick={() => setView("saved")}
-                className="h-10 px-4 shrink-0 rounded-full bg-white/5 border border-white/10 flex items-center gap-2 font-bebas text-xs tracking-widest uppercase text-neutral-300 hover:text-white hover:bg-white/10 active:scale-95 transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/50"
+                className="h-10 px-4 shrink-0 rounded-full bg-[#1c1c1c] border border-[#2a2a2a] flex items-center gap-2 font-bebas text-xs tracking-widest uppercase text-neutral-300 hover:text-white hover:bg-[#242424] active:scale-95 transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/50"
               >
                 <Bookmark className="w-3.5 h-3.5" /> Saved
               </button>
@@ -313,13 +313,13 @@ export const ChatScreen = ({ onClose }: { onClose: () => void }) => {
               <div className="space-y-3 pt-4" aria-hidden="true">
                 {[["w-40", false], ["w-56", true], ["w-32", false]].map(([w, mine], i) => (
                   <div key={i} className={`flex ${mine ? "justify-end" : ""}`}>
-                    <div className={`h-10 ${w} rounded-[1.4rem] bg-white/5 animate-pulse`} />
+                    <div className={`h-10 ${w} rounded-[1.4rem] bg-[#1c1c1c] animate-pulse`} />
                   </div>
                 ))}
               </div>
             ) : messages.length === 0 ? (
               <div className="flex-1 flex flex-col items-center justify-center text-center gap-4 px-8">
-                <div className="p-4 rounded-2xl bg-white/5 text-neutral-400"><MessageCircleHeart className="w-6 h-6" /></div>
+                <div className="p-4 rounded-2xl bg-[#161616] text-neutral-400"><MessageCircleHeart className="w-6 h-6" /></div>
                 <div className="space-y-1.5">
                   <p className="font-bebas text-2xl tracking-widest uppercase">{`Say hi to ${partnerName}`}</p>
                   <p className="font-outfit text-sm text-neutral-500 leading-relaxed text-pretty max-w-xs">
@@ -333,7 +333,7 @@ export const ChatScreen = ({ onClose }: { onClose: () => void }) => {
                   <button
                     type="button"
                     onClick={loadEarlier}
-                    className="block mx-auto my-3 px-4 py-2 rounded-full bg-white/5 border border-white/10 font-bebas text-xs tracking-widest uppercase text-neutral-400 hover:text-white hover:bg-white/10 active:scale-95 transition-all"
+                    className="block mx-auto my-3 px-4 py-2 rounded-full bg-[#1c1c1c] border border-[#2a2a2a] font-bebas text-xs tracking-widest uppercase text-neutral-400 hover:text-white hover:bg-[#242424] active:scale-95 transition-all"
                   >
                     Earlier messages
                   </button>
@@ -342,9 +342,9 @@ export const ChatScreen = ({ onClose }: { onClose: () => void }) => {
                   <React.Fragment key={m.id}>
                     {newDay && (
                       <div className="flex items-center gap-3 pt-5 pb-1" role="separator" aria-label={dayLabel(m.createdAt)}>
-                        <span className="flex-1 h-px bg-white/5" />
+                        <span className="flex-1 h-px bg-[#1c1c1c]" />
                         <span className="font-bebas text-[10px] tracking-[0.3em] uppercase text-neutral-500">{dayLabel(m.createdAt)}</span>
-                        <span className="flex-1 h-px bg-white/5" />
+                        <span className="flex-1 h-px bg-[#1c1c1c]" />
                       </div>
                     )}
                     <ChatBubble
@@ -384,7 +384,7 @@ export const ChatScreen = ({ onClose }: { onClose: () => void }) => {
           )}
         </AnimatePresence>
 
-        <div className="shrink-0 border-t border-white/5 bg-black/30 backdrop-blur-xl pb-[env(safe-area-inset-bottom)]">
+        <div className="shrink-0 border-t border-white/5 bg-[#0e0e0e] pb-[env(safe-area-inset-bottom)]">
           <div className="w-full max-w-2xl mx-auto">
             {error && <p role="alert" className="px-5 pt-2 text-rose-400 font-outfit text-xs text-center">{error}</p>}
             <Composer onText={sendText} onPhoto={sendPhoto} onVoice={sendVoice} onError={setError} preparing={preparing} />

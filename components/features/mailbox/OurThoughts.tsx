@@ -87,11 +87,11 @@ export const OurThoughts = ({ onComposeClick }: { onComposeClick?: () => void })
 
       <div className="space-y-4">
         {list === null ? (
-          <div className="h-32 rounded-[2rem] bg-white/5 animate-pulse" aria-label="Loading" />
+          <div className="h-32 rounded-[2rem] bg-[#161616] animate-pulse" aria-label="Loading" />
         ) : shown && shown.length > 0 ? (
           <AnimatePresence initial={false} mode="popLayout">{shown.map(renderItem)}</AnimatePresence>
         ) : (
-          <div className="h-40 flex flex-col items-center justify-center bg-white/5 border border-white/5 rounded-[2rem] text-neutral-500 gap-2 px-6 text-center">
+          <div className="h-40 flex flex-col items-center justify-center bg-[#161616] border border-[#232323] rounded-[2rem] text-neutral-500 gap-2 px-6 text-center">
             {filter === "week" ? <Inbox className="w-8 h-8 opacity-30" /> : <Bookmark className="w-8 h-8 opacity-30" />}
             <p className="font-outfit text-sm leading-relaxed text-pretty">
               {filter === "week" ? "No thoughts this week. Write one when you're ready." : "Nothing saved yet. Tap Save on a thought to keep it here."}

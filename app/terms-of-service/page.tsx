@@ -10,7 +10,7 @@ export const metadata: Metadata = {
 
 export default function TermsOfService() {
   return (
-    <div className="min-h-screen bg-[#0a0a0a] text-neutral-300 font-inter selection:bg-pink-500/30">
+    <div className="min-h-screen bg-[#0e0e0e] text-neutral-300 font-inter selection:bg-pink-500/30">
       <div className="max-w-3xl mx-auto px-6 py-12 md:py-20">
 
         {/* Header */}

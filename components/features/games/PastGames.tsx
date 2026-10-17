@@ -58,7 +58,7 @@ export const PastGames = ({ onClose }: { onClose: () => void }) => {
             <button
               aria-label="Back to past games"
               onClick={() => setOpen(null)}
-              className="w-10 h-10 rounded-full bg-white/5 border border-white/5 flex items-center justify-center text-neutral-400 hover:text-white transition-all"
+              className="w-10 h-10 rounded-full bg-[#1c1c1c] border border-[#232323] flex items-center justify-center text-neutral-400 hover:text-white transition-all"
             >
               <ArrowLeft className="w-4 h-4" />
             </button>
@@ -69,7 +69,7 @@ export const PastGames = ({ onClose }: { onClose: () => void }) => {
           <button
             aria-label="Close"
             onClick={onClose}
-            className="w-10 h-10 rounded-full bg-white/5 border border-white/5 flex items-center justify-center text-neutral-400 hover:text-white transition-all"
+            className="w-10 h-10 rounded-full bg-[#1c1c1c] border border-[#232323] flex items-center justify-center text-neutral-400 hover:text-white transition-all"
           >
             <X className="w-4 h-4" />
           </button>
@@ -93,7 +93,7 @@ export const PastGames = ({ onClose }: { onClose: () => void }) => {
                   <button
                     key={e.id}
                     onClick={() => setOpen(e)}
-                    className="w-full flex items-center gap-3 rounded-2xl bg-white/5 border border-white/10 p-4 text-left hover:bg-white/10 active:scale-[0.98] transition-all"
+                    className="w-full flex items-center gap-3 rounded-2xl bg-[#161616] border border-[#2a2a2a] p-4 text-left hover:bg-[#242424] active:scale-[0.98] transition-all"
                   >
                     <div className={cn("w-10 h-10 rounded-xl bg-gradient-to-br flex items-center justify-center shrink-0", deck.cards[0])}>
                       <Icon className="w-5 h-5 text-white" />

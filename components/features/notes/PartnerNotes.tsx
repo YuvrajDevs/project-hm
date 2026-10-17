@@ -25,9 +25,9 @@ type Kind = "private" | "shared" | "theirs";
 
 // One look per kind of note, in the same tinted style as the game cards
 const STYLE: Record<Kind, { card: string; tag: string }> = {
-  private: { card: "from-indigo-500/25 to-indigo-600/10", tag: "bg-white/10 text-white/80" },
-  shared: { card: "from-pink-500/30 to-pink-600/10", tag: "bg-pink-400/20 text-pink-100" },
-  theirs: { card: "from-sky-500/30 to-sky-600/10", tag: "bg-sky-400/20 text-sky-100" },
+  private: { card: "from-indigo-600 to-indigo-700", tag: "bg-white/10 text-white/80" },
+  shared: { card: "from-red-700 to-red-800", tag: "bg-pink-400/20 text-pink-100" },
+  theirs: { card: "from-sky-600 to-sky-700", tag: "bg-sky-400/20 text-sky-100" },
 };
 
 const shortDate = (iso: string) =>
@@ -104,7 +104,7 @@ export const PartnerNotes = () => {
       {error && <p className="text-rose-500 font-outfit text-xs">{error}</p>}
 
       {shown.length === 0 ? (
-        <div className="py-8 px-6 flex items-center justify-center bg-white/5 border border-white/5 border-dashed rounded-[2rem] text-center">
+        <div className="py-8 px-6 flex items-center justify-center bg-[#161616] border border-[#232323] border-dashed rounded-[2rem] text-center">
           <p className="font-outfit text-sm text-neutral-500 leading-relaxed">{empty}</p>
         </div>
       ) : (

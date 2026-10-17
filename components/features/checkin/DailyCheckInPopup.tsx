@@ -115,7 +115,7 @@ export const DailyCheckInPopup: React.FC<DailyCheckInPopupProps> = ({ onClose })
             <div className="w-2 h-2 rounded-full bg-pink-500 animate-pulse" />
             <span className="font-bebas text-[10px] tracking-[0.4em] text-neutral-500 uppercase">Daily Heart-Sync</span>
           </div>
-          <button onClick={onClose} aria-label="Close" className="p-2 rounded-full bg-white/5 hover:bg-white/10 transition-colors">
+          <button onClick={onClose} aria-label="Close" className="p-2 rounded-full bg-[#1c1c1c] hover:bg-[#242424] transition-colors">
             <X className="w-4 h-4 text-neutral-400" />
           </button>
         </div>
@@ -125,7 +125,7 @@ export const DailyCheckInPopup: React.FC<DailyCheckInPopupProps> = ({ onClose })
             {step === "intro" && (
               <motion.div key="intro" initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -10 }} className="space-y-8 text-center py-4">
                 <div className="flex justify-center">
-                    <div className="w-16 h-16 rounded-2xl bg-white/5 border border-white/10 flex items-center justify-center">
+                    <div className="w-16 h-16 rounded-2xl bg-[#161616] border border-[#2a2a2a] flex items-center justify-center">
                         <Zap className="w-8 h-8 text-yellow-400 shadow-[0_0_15px_rgba(250,204,21,0.3)]" />
                     </div>
                 </div>
@@ -256,7 +256,7 @@ export const DailyCheckInPopup: React.FC<DailyCheckInPopupProps> = ({ onClose })
                      </div>
                      <button 
                        onClick={onClose}
-                       className="w-full bg-white/5 border border-white/10 text-neutral-400 font-bebas tracking-widest uppercase py-4 rounded-2xl hover:text-white transition-colors"
+                       className="w-full bg-[#161616] border border-[#2a2a2a] text-neutral-400 font-bebas tracking-widest uppercase py-4 rounded-2xl hover:text-white transition-colors"
                      >
                        Close for now
                      </button>
@@ -270,7 +270,7 @@ export const DailyCheckInPopup: React.FC<DailyCheckInPopupProps> = ({ onClose })
                      
                      <div className="space-y-4">
                          {/* Score Banner */}
-                         <div className="flex items-center justify-between bg-white/5 border border-white/10 p-6 rounded-3xl relative overflow-hidden">
+                         <div className="flex items-center justify-between bg-[#161616] border border-[#2a2a2a] p-6 rounded-3xl relative overflow-hidden">
                             <div className="absolute inset-0 bg-gradient-to-r from-pink-500/5 to-transparent pointer-events-none" />
                             <div className="flex items-center gap-4 relative z-10">
                                 <motion.div 
@@ -294,11 +294,11 @@ export const DailyCheckInPopup: React.FC<DailyCheckInPopupProps> = ({ onClose })
         
                          {/* Headspace Comparison */}
                          <div className="grid grid-cols-2 gap-4">
-                            <div className="p-4 bg-white/5 border border-white/10 rounded-3xl flex flex-col items-center justify-center gap-1">
+                            <div className="p-4 bg-[#161616] border border-[#2a2a2a] rounded-3xl flex flex-col items-center justify-center gap-1">
                                 <span className="font-bebas text-[10px] tracking-widest text-neutral-600 uppercase">You</span>
                                 <span className="font-bebas text-xl text-white tracking-wide uppercase truncate max-w-full">{user?.currentMood || "Synced"}</span>
                             </div>
-                            <div className="p-4 bg-white/5 border border-white/10 rounded-3xl flex flex-col items-center justify-center gap-1">
+                            <div className="p-4 bg-[#161616] border border-[#2a2a2a] rounded-3xl flex flex-col items-center justify-center gap-1">
                                 <span className="font-bebas text-[10px] tracking-widest text-neutral-500 uppercase">{partner?.displayName?.split(' ')[0]}</span>
                                 <span className="font-bebas text-xl text-white tracking-wide uppercase truncate max-w-full">{partner?.currentMood || "Connected"}</span>
                             </div>

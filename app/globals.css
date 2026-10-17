@@ -8,11 +8,11 @@
   --color-pink-soft: #e06c9f;
   --color-blue-soft: #7aa2f7;
   --color-yellow-soft: #e0af68;
-  --color-dark-base: #0f0f0f;
+  --color-dark-base: #0e0e0e;
 }
 
 :root {
-  --background: #0f0f0f;
+  --background: #0e0e0e;
   --foreground: #f5f5f5;
   
   --accent-pink: #e06c9f;
@@ -67,41 +67,50 @@ h1, h2, h3, h4, h5, h6 {
   border: 1px solid var(--card-dark-border);
 }
 
-/* Dialog backdrop: the page stays visible but blurred behind any popup (never a black wall) */
+/* Dialog backdrop: the page dims behind any popup. Flat, no frosted blur. */
 .overlay-backdrop {
   /* Always the full screen: a parent's spacing utilities (space-y-*) must not add margins to it */
   margin: 0;
-  background: rgba(10, 10, 10, 0.35);
-  -webkit-backdrop-filter: blur(24px) saturate(120%);
-  backdrop-filter: blur(24px) saturate(120%);
+  background: rgba(14, 14, 14, 0.82);
 }
 
-/* Dialog surface: solid enough to read on top of the blurred page */
+/* Dialog surface: a solid card, a step lighter than the page */
 .overlay-panel {
-  background: rgba(20, 20, 20, 0.92);
-  border: 1px solid rgba(255, 255, 255, 0.1);
+  background: #151515;
+  border: 1px solid #262626;
 }
+
+/* Coloured cards: bold, flat colour with only the faintest gradient. Blue and red are the two brand swatches;
+   yellow is the third; the rest are supporting colours for variety. Names are kept stable (amber is the yellow,
+   rose is the red) so existing cards keep working. */
+.tone-slate   { background: linear-gradient(145deg, #1b1b1d, #141415); border: 1px solid #262628; }
+.tone-blue    { background: linear-gradient(145deg, #4034c4, #3329a6); border: 1px solid #5a4fd8; }
+.tone-indigo  { background: linear-gradient(145deg, #3b2fb6, #2d2391); border: 1px solid #5246d0; }
+.tone-rose    { background: linear-gradient(145deg, #b3241f, #961c18); border: 1px solid #cc3a34; }
+.tone-red     { background: linear-gradient(145deg, #b3241f, #961c18); border: 1px solid #cc3a34; }
+.tone-amber   { background: linear-gradient(145deg, #f8cb1f, #eab40d); border: 1px solid #ffdc55; }
+.tone-pink    { background: linear-gradient(145deg, #d6336c, #b92558); border: 1px solid #ea5a8d; }
+.tone-violet  { background: linear-gradient(145deg, #6d3fd6, #5a2fb8); border: 1px solid #8860ea; }
+.tone-emerald { background: linear-gradient(145deg, #178a46, #107238); border: 1px solid #2aa862; }
+.tone-teal    { background: linear-gradient(145deg, #0f8f94, #0a7378); border: 1px solid #25adb2; }
+
+/* On a bold card, white text stays white and the quieter text is lifted so it is still easy to read */
+:is(.tone-blue, .tone-indigo, .tone-rose, .tone-red, .tone-pink, .tone-violet, .tone-emerald, .tone-teal) { color: #fff; }
+:is(.tone-blue, .tone-indigo, .tone-rose, .tone-red, .tone-pink, .tone-violet, .tone-emerald, .tone-teal)
+  :is([class*="text-white/"], [class*="text-neutral-"], [class*="text-blue-"], [class*="text-indigo-"], [class*="text-pink-"], [class*="text-rose-"], [class*="text-emerald-"], [class*="text-amber-"]) {
+  color: rgba(255, 255, 255, 0.86);
+}
+
+/* Yellow is bright, so everything on it is dark instead */
+.tone-amber { color: #17140a; }
+.tone-amber [class*="text-"] { color: #17140a; }
+.tone-amber :is([class*="text-white/"], [class*="text-neutral-"], [class*="text-amber-"]) { color: rgba(23, 20, 10, 0.72); }
+.tone-amber [class*="text-yellow-"] { color: #6b4a00; }
+.tone-amber [class*="bg-white/"], .tone-amber [class*="bg-black/"] { background-color: rgba(23, 20, 10, 0.1); }
 
 /* Subtle Shadows */
 .shadow-soft {
   box-shadow: 0 4px 20px -2px rgba(0, 0, 0, 0.5);
-}
-
-/* Ambient background washes */
-.ambient-wash {
-  will-change: transform;
-  transition: opacity 1s;
-}
-.ambient-wash-a { animation: wash-a 35s ease-in-out infinite; }
-.ambient-wash-b { animation: wash-b 40s ease-in-out infinite; }
-
-@keyframes wash-a {
-  0%, 100% { transform: translate3d(-20%, -20%, 0) scale(1); }
-  50% { transform: translate3d(-10%, -10%, 0) scale(1.1); }
-}
-@keyframes wash-b {
-  0%, 100% { transform: translate3d(20%, 20%, 0) scale(1.2); }
-  50% { transform: translate3d(10%, 10%, 0) scale(1); }
 }
 
 /* Long lists: the browser skips layout and paint for cards that are off screen */

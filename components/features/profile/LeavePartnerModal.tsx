@@ -57,7 +57,7 @@ export const LeavePartnerModal: React.FC<LeavePartnerModalProps> = ({
             initial={{ opacity: 0, scale: 0.9, y: 20 }}
             animate={{ opacity: 1, scale: 1, y: 0 }}
             exit={{ opacity: 0, scale: 0.9, y: 20 }}
-            className="relative w-full max-w-sm bg-[#111] border border-white/5 rounded-[2.5rem] p-8 overflow-hidden shadow-2xl"
+            className="relative w-full max-w-sm bg-[#151515] border border-white/5 rounded-[2.5rem] p-8 overflow-hidden shadow-2xl"
           >
             {/* Visual Ambiance */}
             <div className="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-transparent via-red-500/50 to-transparent" />
@@ -104,7 +104,7 @@ export const LeavePartnerModal: React.FC<LeavePartnerModalProps> = ({
                     </button>
                     <button
                       onClick={onClose}
-                      className="w-full py-4 bg-white/5 text-white border border-white/5 rounded-2xl font-bebas tracking-widest uppercase hover:bg-white/10 transition-all font-medium"
+                      className="w-full py-4 bg-[#161616] text-white border border-[#232323] rounded-2xl font-bebas tracking-widest uppercase hover:bg-[#242424] transition-all font-medium"
                     >
                       Give it another try
                     </button>
@@ -123,7 +123,7 @@ export const LeavePartnerModal: React.FC<LeavePartnerModalProps> = ({
                     )}
                     <button
                       onClick={() => setStep(1)}
-                      className="w-full py-4 bg-white/5 text-white border border-white/5 rounded-2xl font-bebas tracking-widest uppercase hover:bg-white/10 transition-all"
+                      className="w-full py-4 bg-[#161616] text-white border border-[#232323] rounded-2xl font-bebas tracking-widest uppercase hover:bg-[#242424] transition-all"
                     >
                       Go back
                     </button>

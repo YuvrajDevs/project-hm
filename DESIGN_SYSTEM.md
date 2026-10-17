@@ -17,7 +17,7 @@ Tokens live in `app/globals.css`.
 
 | Use | Value | Notes |
 |---|---|---|
-| Page background | `#0a0a0a` (`bg-[#0a0a0a]`) | The only page black. Do not add new near-blacks. |
+| Page background | `#0e0e0e` (`bg-[#0e0e0e]`) | One flat colour on every screen: no gradients, washes, glow or noise behind the content. Do not add new near-blacks. |
 | Text | `text-white`, `text-neutral-300` (body), `text-neutral-500` (secondary) | Nothing dimmer than `neutral-600` for text a person needs to read. |
 | Pink accent | `pink-500` / `--accent-pink` | You, love, primary highlights, active dock item. |
 | Blue accent | `blue-400` / `--accent-blue` | Your partner. |
@@ -25,7 +25,7 @@ Tokens live in `app/globals.css`.
 | Destructive | `red-500` (delete), `orange-400` (disconnect) | Only in the danger zone and confirm dialogs. |
 | Feeling colours | `PREMIUM_ICONS[status].color` in `lib/constants.ts` | Message cards take their background from the feeling. |
 
-Ambient colour comes from `<AmbientBackground />`, not from page-level gradients.
+The page itself never carries colour. Colour lives in cards (see Surfaces). `<AmbientBackground />` renders the flat `#0e0e0e` and nothing else.
 
 ## Type
 
@@ -47,14 +47,18 @@ Page padding is `px-6`. Cards use `p-6` (rows) or `p-8` (large). Sections are se
 
 ## Surfaces
 
-- **Card:** `bg-white/5 border border-white/5 rounded-[2.5rem] p-8` (use `border-white/10` for rows that are tappable).
-- **Row (settings style):** `bg-white/5 border border-white/10 rounded-2xl p-5`, icon in a `p-3 bg-white/5 rounded-xl` tile, title in Bebas `text-lg`, one line of `text-xs text-neutral-400` underneath.
+- **Everything is a solid card.** No frosted glass, no see-through white fills, no `backdrop-blur`. A card is either a neutral solid or a coloured tone, and carries at most the faintest gradient.
+- **Neutral card:** `bg-[#161616] border border-[#232323] rounded-[2.5rem] p-8` (the `.tone-slate` class gives the same with a hint of gradient). Chips, pills and tiles inside or beside a card use `bg-[#1c1c1c]`, one step lighter, so they stay visible. Hover is `#242424`.
+- **Coloured card:** bold, flat colour with only the faintest gradient and a hairline border one shade lighter, from the `.tone-*` classes in `app/globals.css`. The three brand colours are **blue** (`#3b2fb6`), **red** (`#a2201d`) and **yellow**; green, pink, violet and teal are supporting colours. (`tone-rose` is the red and `tone-amber` is the yellow.) Use colour to say what a card is: yellow for the streak, red for you, blue for your partner, blue for the Safe Space, green for the bucket list, red for hard times.
+- **Text on colour:** white on every tone except yellow, where everything is dark (`#17140a`) instead. The tone classes lift quieter text (`text-white/55`, `text-neutral-*`) so it stays readable, so write cards with the usual text classes and do not hard-code a colour per card.
+- **Game and note cards** use `from-{hue}-600 to-{hue}-700` (see `HUES` in `lib/games/decks.ts`), the same bold colour.
+- **Row (settings style):** `bg-[#161616] border border-[#2a2a2a] rounded-2xl p-5`, icon in a `p-3 bg-[#1c1c1c] rounded-xl` tile, title in Bebas `text-lg`, one line of `text-xs text-neutral-400` underneath.
 - **Tappable card:** add `hover:bg-white/10 active:scale-[0.98] transition-all`, and always show where it goes (a short hint with an arrow). Never style something as clickable unless it does something.
 
 - **Game card:** square `w-40 h-40 rounded-[2rem] p-5 border border-white/10 bg-gradient-to-br` with the game's own gradient from `DECKS` in `lib/games/decks.ts` (about 40% → 20% → 10% opacity, never solid). Icon in a `w-10 h-10 rounded-xl bg-white/10` tile at the top, Bebas `text-xl` title and one `text-xs text-white/60` line at the bottom. Cards sit in a horizontal snap row under a section heading. The same gradient tints that game's dialog header and full-screen view.
 
-- **Profile hero:** one `rounded-[2.5rem] border border-white/10 bg-gradient-to-br p-8` card with a wash of the person's colour (pink for you, blue for your partner, about 25% → 10% → clear). Avatar tile, name in Bebas `text-5xl`, one line of `text-sm text-neutral-300`, then chips. Chips are `px-3.5 py-2 rounded-full bg-black/25 border border-white/10 text-xs`.
-- **Profile section card:** `bg-white/5 border border-white/5 rounded-[2.5rem] p-8`, a `w-10 h-10 rounded-xl bg-white/5` icon tile, Bebas `text-2xl` title. Blocks inside carry a Bebas `text-[10px] tracking-[0.3em]` eyebrow, separated by `border-t border-white/5 pt-5`. The most useful card ("When things get hard") gets a warm wash (`from-rose-500/15 via-orange-500/5`).
+- **Profile hero:** one `rounded-[2.5rem] p-8` card in the person's tone (`tone-pink` for you, `tone-blue` for your partner) (pink for you, blue for your partner, about 25% → 10% → clear). Avatar tile, name in Bebas `text-5xl`, one line of `text-sm text-neutral-300`, then chips. Chips are `px-3.5 py-2 rounded-full bg-black/25 border border-white/10 text-xs`.
+- **Profile section card:** `rounded-[2.5rem] p-8` in its own tone (rose for hard times, pink for love, violet for about, teal for likes, amber for little things), a `w-10 h-10 rounded-xl bg-black/25` icon tile, Bebas `text-2xl` title. Blocks inside carry a Bebas `text-[10px] tracking-[0.3em]` eyebrow, separated by `border-t border-white/5 pt-5`. The most useful card ("When things get hard") gets a warm wash (`from-rose-500/15 via-orange-500/5`).
 - **Empty profile blocks:** the owner sees a dashed "Add" prompt. Their partner never sees an empty box: sections with nothing in them are left out, and one line says how little there is, with a nudge.
 - **Pop-up editors:** profile sections are edited in a pop-up (`components/ui/Sheet.tsx`), never expanded in place, so the page doesn't jump.
 
@@ -62,7 +66,7 @@ Page padding is `px-6`. Cards use `p-6` (rows) or `p-8` (large). Sections are se
 
 - **Full screen:** the chat opens from the dock as its own full-screen view. The dock and the page header are hidden, a round back button sits top left (it goes home) and a Saved pill top right. Content is capped at `max-w-2xl` and centred on wide screens. A pink dot on the dock's Inbox icon means an unread message.
 - **Saved (in the chat):** the Saved pill swaps the conversation for the messages you saved. The header becomes "Saved" with a back button to the chat, and the conversation stays where you left it. Saving is private.
-- **Header and composer:** both sit on `bg-black/30 backdrop-blur-xl` with a hairline border, and respect the phone's safe areas. The view is sized to the visible screen so the keyboard never covers the composer.
+- **Header and composer:** both sit on the solid page colour with a hairline border, and respect the phone's safe areas. The view is sized to the visible screen so the keyboard never covers the composer.
 - **Bubbles:** yours are `bg-white text-black`, theirs `bg-white/[0.07] border border-white/10 text-white`. `rounded-[1.4rem]` with the corner next to the sender's edge squared off; consecutive messages from one person within five minutes join into one run, and only the last carries the time. Photos have no bubble, just a hairline border. Times and durations use `tabular-nums`.
 - **Message actions:** tap a message (or the `...` button on desktop) to show Save, Copy and, on your own messages, Unsend (asks for a second tap). Saving is private to the person who saved.
 - **Composer:** photo button, auto-growing field (16px on phones so iOS doesn't zoom), and a mic that becomes a send button once there is text. Recording replaces the field with a discard button, a timer and a send button.
@@ -95,10 +99,10 @@ Buttons say what happens ("Send Request", "Disconnect From Raj"), not "OK" or "S
 
 ## Dialogs and overlays
 
-- Backdrop is always `.overlay-backdrop` (blurred page, never a black wall). Wrapper: `fixed inset-0 z-[100] flex items-center justify-center p-6 overlay-backdrop`.
-- Panel: `w-full max-w-sm` or `max-w-md`, solid dark surface (`bg-[#111]` or `.overlay-panel`), `rounded-[2.5rem] p-8`, `max-h-[90vh]` with an inner scroll area.
+- Backdrop is always `.overlay-backdrop`: the page dimmed flat (`rgba(14,14,14,.82)`), no blur. Wrapper: `fixed inset-0 z-[100] flex items-center justify-center p-6 overlay-backdrop`.
+- Panel: `w-full max-w-sm` or `max-w-md`, solid dark surface (`bg-[#151515]` or `.overlay-panel`), `rounded-[2.5rem] p-8`, `max-h-[90vh]` with an inner scroll area.
 - Every dialog has a visible close button and closes on backdrop tap, unless it is asking for a decision that cannot be skipped.
-- Full-screen takeovers (Safe Space session, white flag, signal splash) are the only exceptions to the blurred backdrop.
+- Full-screen takeovers (Safe Space session, white flag, signal splash) are the only exceptions to the dimmed backdrop.
 - Layers: page content `z-10`, header and dock `z-50`, dialogs `z-[100]`, blocking overlays (partner left, reset request) `z-[200]`, signal splash `z-[300]`.
 
 ## States every screen needs

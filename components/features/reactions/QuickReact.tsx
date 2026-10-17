@@ -102,7 +102,7 @@ export const QuickReact = ({ onClose }: { onClose: () => void }) => {
                         <button
                             key={r.type}
                             onClick={() => setSelected(r)}
-                            className="flex flex-col items-center justify-center p-4 bg-white/5 border border-white/5 rounded-3xl hover:bg-white/10 transition-all group active:scale-95 space-y-2"
+                            className="flex flex-col items-center justify-center p-4 bg-[#161616] border border-[#232323] rounded-3xl hover:bg-[#242424] transition-all group active:scale-95 space-y-2"
                         >
                             <img 
                                 src={r.url} 
@@ -118,7 +118,7 @@ export const QuickReact = ({ onClose }: { onClose: () => void }) => {
                 
                 <button 
                     onClick={onClose}
-                    className="w-full py-4 bg-white/5 text-neutral-500 font-bebas text-xs tracking-widest uppercase rounded-2xl hover:bg-white/10 transition-all"
+                    className="w-full py-4 bg-[#161616] text-neutral-500 font-bebas text-xs tracking-widest uppercase rounded-2xl hover:bg-[#242424] transition-all"
                 >
                     Dismiss
                 </button>
@@ -141,7 +141,7 @@ export const QuickReact = ({ onClose }: { onClose: () => void }) => {
                         value={note}
                         onChange={(e) => setNote(e.target.value.substring(0, 50))}
                         placeholder="Optional short note..."
-                        className="w-full h-24 bg-white/5 border border-white/10 rounded-2xl p-4 text-sm font-outfit placeholder:text-neutral-700 text-white focus:outline-none focus:border-white/20 transition-all resize-none"
+                        className="w-full h-24 bg-[#161616] border border-[#2a2a2a] rounded-2xl p-4 text-sm font-outfit placeholder:text-neutral-700 text-white focus:outline-none focus:border-white/20 transition-all resize-none"
                     />
                     <div className="flex justify-end pr-2">
                         <span className="text-[10px] text-neutral-600 font-outfit">{note.length}/50</span>

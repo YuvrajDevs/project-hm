@@ -68,7 +68,7 @@ export const GamesShelf = () => {
       ))}
       <button
         onClick={() => setShowPast(true)}
-        className="w-full flex items-center justify-between rounded-2xl bg-white/5 border border-white/10 p-5 hover:bg-white/10 active:scale-[0.98] transition-all"
+        className="w-full flex items-center justify-between rounded-2xl bg-[#161616] border border-[#2a2a2a] p-5 hover:bg-[#242424] active:scale-[0.98] transition-all"
       >
         <span className="flex items-center gap-3">
           <History className="w-5 h-5 text-neutral-400" />
@@ -100,7 +100,7 @@ const ScoreTally = () => {
   const theirs = partner?.uid ? scores[partner.uid] ?? 0 : 0;
   const partnerName = partner?.displayName?.split(" ")[0] || "Partner";
   return (
-    <div className="shrink-0 rounded-2xl bg-white/5 border border-white/10 px-3.5 py-2 text-center" aria-label={`Score: you ${mine}, ${partnerName} ${theirs}`}>
+    <div className="shrink-0 rounded-2xl bg-[#161616] border border-[#2a2a2a] px-3.5 py-2 text-center" aria-label={`Score: you ${mine}, ${partnerName} ${theirs}`}>
       {/* Yours first in pink, theirs in blue: "1:2" */}
       <p className="font-bebas text-2xl leading-none tracking-wide whitespace-nowrap">
         <span className="text-pink-300">{mine}</span>
@@ -200,7 +200,7 @@ const PendingList = ({ games, busy, onClose, onOpen }: { games: ActiveGame[]; bu
         const GIcon = DECK_ICONS[g.deck];
         const oldest = games.length > 1 && i === games.length - 1;
         return (
-          <div key={g.id} className="flex items-center gap-3 rounded-2xl bg-white/5 border border-white/10 p-3">
+          <div key={g.id} className="flex items-center gap-3 rounded-2xl bg-[#161616] border border-[#2a2a2a] p-3">
             <button onClick={() => { onOpen(); openAny(g); }} className="flex-1 min-w-0 flex items-center gap-3 text-left">
               <div className={cn("w-9 h-9 rounded-xl bg-gradient-to-br flex items-center justify-center shrink-0", gDeck.cards[0])}>
                 <GIcon className="w-4 h-4 text-white" />
@@ -276,7 +276,7 @@ const PendingDialog = ({ kind, onClose }: { kind: "game" | "deck"; onClose: () =
           <button
             aria-label="Close"
             onClick={onClose}
-            className="w-10 h-10 shrink-0 rounded-full bg-white/5 border border-white/5 flex items-center justify-center text-neutral-400 hover:text-white transition-all"
+            className="w-10 h-10 shrink-0 rounded-full bg-[#1c1c1c] border border-[#232323] flex items-center justify-center text-neutral-400 hover:text-white transition-all"
           >
             <X className="w-4 h-4" />
           </button>

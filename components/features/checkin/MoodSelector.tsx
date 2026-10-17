@@ -36,7 +36,7 @@ export const MoodSelector: React.FC<MoodSelectorProps> = ({ selectedMood, onSele
               "py-3 px-2 rounded-xl font-bebas text-[11px] tracking-widest uppercase transition-all duration-300 border",
               isActive 
                 ? "bg-white text-black border-white shadow-[0_0_20px_rgba(255,255,255,0.2)]" 
-                : "bg-white/5 text-neutral-500 border-white/5 hover:border-white/20 hover:bg-white/10"
+                : "bg-[#1c1c1c] text-neutral-500 border-[#232323] hover:border-white/20 hover:bg-[#242424]"
             )}
           >
             {mood}

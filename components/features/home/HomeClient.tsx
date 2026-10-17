@@ -282,7 +282,7 @@ export function HomeClient() {
   // content, and a signed-in visitor sees only this (no flash of the landing copy).
   if (!mounted || fbUser === "loading") {
     return (
-      <div aria-hidden="true" className={`${COVER} bg-[#0a0a0a] flex items-center justify-center`}>
+      <div aria-hidden="true" className={`${COVER} bg-[#0e0e0e] flex items-center justify-center`}>
         <motion.div
           animate={{ opacity: [0.3, 0.6, 0.3], scale: [0.95, 1, 0.95] }}
           transition={{ repeat: Infinity, duration: 2, ease: "easeInOut" }}
@@ -302,7 +302,7 @@ export function HomeClient() {
   // 3. Logged in but profile/data is still syncing
   if (!hasLoadedInitially && (loading || !user || (!hasOnboarded && !user.leftByPartner))) {
     return (
-      <div className={`${COVER} bg-[#0a0a0a] flex items-center justify-center`}>
+      <div className={`${COVER} bg-[#0e0e0e] flex items-center justify-center`}>
         <div className="flex flex-col items-center gap-6">
           <div className="flex items-center justify-center mb-2">
             <Image src="/logo.png" alt="HM Logo" width={256} height={256} className="w-16 h-auto drop-shadow-lg" />
@@ -324,7 +324,7 @@ export function HomeClient() {
                 </p>
                 <button
                   onClick={() => window.location.reload()}
-                  className="px-6 py-2 rounded-xl bg-white/5 border border-white/10 text-neutral-400 font-bebas text-xs tracking-widest hover:bg-white/10 hover:text-white transition-all shadow-xl"
+                  className="px-6 py-2 rounded-xl bg-[#1c1c1c] border border-[#2a2a2a] text-neutral-400 font-bebas text-xs tracking-widest hover:bg-[#242424] hover:text-white transition-all shadow-xl"
                 >
                   Refresh Page
                 </button>
@@ -339,7 +339,7 @@ export function HomeClient() {
   // If not paired, show the Single Hub
   if (!isPaired) {
     return (
-        <div className={`${COVER} bg-[#0a0a0a]`}>
+        <div className={`${COVER} bg-[#0e0e0e]`}>
             <SingleHub />
             <AnimatePresence>
                 {(user?.leftByPartner && !overlayDismissed) ? (
@@ -358,7 +358,7 @@ export function HomeClient() {
 
   // A plain cover div, not <main> — the server-rendered <LandingPage /> underneath already owns that landmark.
   return (
-    <div className={`${COVER} bg-[#0a0a0a] text-white`}>
+    <div className={`${COVER} bg-[#0e0e0e] text-white`}>
       {/* ─── Persistent Background Ambiance ─── */}
       <div className="fixed inset-0 pointer-events-none overflow-hidden z-0">
         <AmbientBackground variant="bright" />
@@ -373,7 +373,7 @@ export function HomeClient() {
             initial={{ y: -100, opacity: 0 }}
             animate={{ y: 0, opacity: 1 }}
             exit={{ y: -100, opacity: 0 }}
-            className="flex justify-between items-center w-full fixed top-0 left-0 p-8 z-50 bg-gradient-to-b from-black/80 to-transparent backdrop-blur-sm pointer-events-none"
+            className="flex justify-between items-center w-full fixed top-0 left-0 p-8 z-50 bg-gradient-to-b from-[#0e0e0e] via-[#0e0e0e]/90 to-transparent pointer-events-none"
           >
             <div className="flex items-center gap-3 pointer-events-auto">
               <Image src="/logo.png" alt="HM Logo" width={256} height={256} className="w-6 h-auto" />
@@ -385,14 +385,14 @@ export function HomeClient() {
                <button
                 aria-label="Notifications"
                 onClick={() => { setShowNotiCenter(true); }}
-                className="w-10 h-10 rounded-full bg-white/5 border border-white/5 flex items-center justify-center hover:bg-white/10 transition-all text-neutral-400 hover:text-white shadow-2xl relative"
+                className="w-10 h-10 rounded-full bg-[#1c1c1c] border border-[#232323] flex items-center justify-center hover:bg-[#242424] transition-all text-neutral-400 hover:text-white shadow-2xl relative"
               >
                 <Bell className="w-5 h-5" />
                 {unreadNotificationsCount > 0 && (
                     <motion.div
                         initial={{ scale: 0 }}
                         animate={{ scale: 1 }}
-                        className="absolute top-0 right-0 w-3 h-3 bg-pink-500 rounded-full border-2 border-[#0a0a0a]"
+                        className="absolute top-0 right-0 w-3 h-3 bg-pink-500 rounded-full border-2 border-[#0e0e0e]"
                     />
                 )}
               </button>
@@ -400,7 +400,7 @@ export function HomeClient() {
               <button
                 aria-label="Settings"
                 onClick={() => router.push("/settings")}
-                className="w-10 h-10 rounded-full bg-white/5 border border-white/5 flex items-center justify-center hover:bg-white/10 transition-all text-neutral-400 hover:text-white shadow-2xl"
+                className="w-10 h-10 rounded-full bg-[#1c1c1c] border border-[#232323] flex items-center justify-center hover:bg-[#242424] transition-all text-neutral-400 hover:text-white shadow-2xl"
               >
                 <Settings className="w-5 h-5" />
               </button>
@@ -495,7 +495,7 @@ export function HomeClient() {
                 exit={{ opacity: 0 }}
                 className="fixed inset-0 z-[100] flex items-center justify-center p-6 overlay-backdrop"
             >
-                <div className="w-full max-w-sm bg-[#111] border border-white/10 rounded-[2.5rem] p-8 text-center space-y-6">
+                <div className="w-full max-w-sm bg-[#151515] border border-white/10 rounded-[2.5rem] p-8 text-center space-y-6">
                     <div className="w-14 h-14 rounded-2xl bg-pink-500/10 flex items-center justify-center mx-auto text-pink-400">
                         <MessageSquareHeart className="w-7 h-7" />
                     </div>

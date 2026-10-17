@@ -49,7 +49,7 @@ export const SafeSpaceEntry = () => {
             <div className="flex items-center gap-3 md:gap-4 min-w-0">
                 <div className="p-3 bg-indigo-500/20 rounded-2xl text-indigo-400 relative shrink-0">
                     <ShieldCheck className="w-6 h-6" />
-                    {safeSpaceHasNew && <span className="absolute -top-1 -right-1 w-3 h-3 bg-pink-500 rounded-full border-2 border-[#0a0a0a]" />}
+                    {safeSpaceHasNew && <span className="absolute -top-1 -right-1 w-3 h-3 bg-pink-500 rounded-full border-2 border-[#0e0e0e]" />}
                 </div>
                 <div className="min-w-0">
                     <h3 className="text-lg md:text-xl font-bebas text-white tracking-widest uppercase">Safe Space Is Open</h3>
@@ -67,14 +67,14 @@ export const SafeSpaceEntry = () => {
   }
 
   return (
-    <div className="w-full bg-white/5 border border-white/5 rounded-[2rem] p-6 md:p-8 flex flex-row items-center justify-between gap-4 overflow-hidden relative group">
+    <div className="w-full tone-indigo rounded-[2rem] p-6 md:p-8 flex flex-row items-center justify-between gap-4 overflow-hidden relative group">
       <div className="absolute top-0 right-0 p-8 opacity-5 pointer-events-none group-hover:scale-110 transition-transform duration-700">
         <Coffee className="w-32 h-32" />
       </div>
 
       <div className="flex flex-col gap-1 relative z-10 flex-1">
         <h3 className="text-2xl md:text-3xl font-bebas text-white tracking-wider uppercase leading-none">The Safe Space</h3>
-        <p className="text-neutral-500 font-outfit text-xs leading-relaxed">A quiet room for the two of you. Write when you&apos;re ready; it stays open until one of you closes it.</p>
+        <p className="text-white/60 font-outfit text-xs leading-relaxed">A quiet room for the two of you. Write when you&apos;re ready; it stays open until one of you closes it.</p>
         {error && <p className="text-rose-500 text-xs font-outfit">{error}</p>}
       </div>
 
