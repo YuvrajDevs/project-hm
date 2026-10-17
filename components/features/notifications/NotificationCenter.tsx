@@ -6,9 +6,13 @@ import { useMailbox } from "@/context/MailboxContext";
 import { X, Bell, MessageCircle, Heart, Sparkles, Trash2, CheckCircle2 } from "lucide-react";
 import { formatRelativeTime } from "@/lib/utils";
 import { useScrollLock } from "@/hooks/useScrollLock";
+import { openAnyGame } from "@/components/features/games/deckIcons";
+import { slotFor } from "@/lib/games/decks";
 
 export const NotificationCenter = ({ isOpen, onClose }: { isOpen: boolean, onClose: () => void }) => {
-    const { notifications, markNotiRead, clearAllNotis, unreadNotificationsCount } = useMailbox();
+    const { notifications, markNotiRead, clearAllNotis, unreadNotificationsCount, liveGames, questionGames } = useMailbox();
+    const gameFor = (noti: { type: string; gameId?: string }) =>
+        noti.type === "GAME" && noti.gameId ? [...liveGames, ...questionGames].find(g => g.id === noti.gameId) : undefined;
 
     useScrollLock(isOpen);
     React.useEffect(() => {
@@ -57,10 +61,15 @@ export const NotificationCenter = ({ isOpen, onClose }: { isOpen: boolean, onClo
                                     <p className="font-bebas text-neutral-500 tracking-widest uppercase text-sm">Quiet for now...</p>
                                 </div>
                             ) : (
-                                notifications.map((noti) => (
+                                notifications.map((noti) => {
+                                    const game = gameFor(noti);
+                                    return (
                                     <motion.div
                                         key={noti.id}
-                                        onClick={() => !noti.read && markNotiRead(noti.id)}
+                                        onClick={() => {
+                                            if (!noti.read) markNotiRead(noti.id);
+                                            if (game) { onClose(); openAnyGame(game); }
+                                        }}
                                         className={`p-4 rounded-2xl border transition-all cursor-pointer relative ${
                                             noti.read 
                                                 ? "bg-white/[0.02] border-white/5" 
@@ -91,13 +100,19 @@ export const NotificationCenter = ({ isOpen, onClose }: { isOpen: boolean, onClo
                                                 <p className={`text-xs font-outfit mt-1 line-clamp-2 ${noti.read ? "text-neutral-600" : "text-neutral-400"}`}>
                                                     {noti.body}
                                                 </p>
+                                                {game && (
+                                                    <p className="font-bebas text-[11px] tracking-widest uppercase text-pink-300 mt-2">
+                                                        {slotFor(game.deck) === "questions" ? "Answer now" : "Join now"}
+                                                    </p>
+                                                )}
                                             </div>
                                             {!noti.read && (
                                                 <div className="w-2 h-2 bg-pink-500 rounded-full shrink-0 self-center" />
                                             )}
                                         </div>
                                     </motion.div>
-                                ))
+                                    );
+                                })
                             )}
                         </div>
 

@@ -186,6 +186,7 @@ export interface AppNotification {
   body: string;
   read: boolean;
   createdAt: string;
+  gameId?: string; // GAME: the game it is about, so tapping the notification can open it
 }
 
 // 📅 Event Types

@@ -482,9 +482,8 @@ export const startGame = async (coupleId: string, uid: string, partnerUid: strin
       uid: partnerUid,
       type: "GAME",
       title: written ? "Questions for You" : "Come Play",
-      body: written
-        ? `${starterName || "Your partner"} started ${DECK_BY_ID[deck].title}. Answer whenever you're ready.`
-        : `${starterName || "Your partner"} started ${DECK_BY_ID[deck].title}. Your move.`,
+      body: `${starterName || "Your partner"} started ${DECK_BY_ID[deck].title}. Tap to ${written ? "answer" : "join"}.`,
+      gameId: ref.id,
     }))
     .catch(console.error);
   return ref.id;
@@ -498,7 +497,8 @@ export const submitQuestionAnswer = async (coupleId: string, gameId: string, rou
       uid: partnerUid,
       type: "GAME",
       title: "Answers Are In",
-      body: `${name || "Your partner"} answered every question. Finish yours to read them together.`,
+      body: `${name || "Your partner"} answered every question. Tap to finish yours and read them together.`,
+      gameId,
     });
   }
 };
@@ -633,7 +633,8 @@ export const replayGame = async (coupleId: string, oldId: string, uid: string, p
       uid: partnerUid,
       type: "GAME",
       title: written ? "Questions for You" : "Come Play",
-      body: `${starterName || "Your partner"} started another round of ${DECK_BY_ID[deck].title}.`,
+      body: `${starterName || "Your partner"} started another round of ${DECK_BY_ID[deck].title}. Tap to ${written ? "answer" : "join"}.`,
+      gameId: newRef.id,
     }).catch(console.error);
   }
   return result;

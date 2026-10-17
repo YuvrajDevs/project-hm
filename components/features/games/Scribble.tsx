@@ -1,11 +1,12 @@
 "use client";
 
 import React, { useEffect, useRef, useState } from "react";
-import { ArrowRight, Eraser } from "lucide-react";
+import { ArrowRight, Eraser, Trash2 } from "lucide-react";
 import {
   addScribbleStroke, advanceGame, clearScribble, endGame, replayGame, skipScribble, submitScribbleGuess,
 } from "@/lib/firestore-helpers";
 import { drawer, getCard, guessMatches, roundKey, totalScores } from "@/lib/games/engine";
+import { ERASER, PALETTE, encodeStroke, parseStroke } from "@/lib/games/strokes";
 import type { ActiveGame } from "@/lib/types";
 import { useSensoryFeedback } from "@/hooks/useSensoryFeedback";
 import { cn } from "@/lib/utils";
@@ -29,6 +30,7 @@ export const Scribble = ({ game, uid, partnerUid, partnerName, coupleId, onLeave
 }) => {
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState("");
+  const [tool, setTool] = useState(PALETTE[0].id); // a colour from the palette, or the eraser
   const { playChime, playPop } = useSensoryFeedback();
 
   const round = game.round;
@@ -101,8 +103,42 @@ export const Scribble = ({ game, uid, partnerUid, partnerName, coupleId, onLeave
             key={round}
             strokes={strokes}
             canDraw={iDraw && !result}
+            tool={tool}
             onStroke={(s) => addScribbleStroke(coupleId, game.id, round, s).catch(() => setError("A line didn't save. Try drawing it again."))}
           />
+
+          {/* The artist's pens: an eraser first, then a few colours */}
+          {iDraw && !result && (
+            <div className="h-10 shrink-0 flex items-center justify-center gap-2" role="group" aria-label="Pen">
+              <button
+                type="button"
+                onClick={() => setTool(ERASER)}
+                aria-pressed={tool === ERASER}
+                aria-label="Eraser"
+                className={cn(
+                  "w-9 h-9 rounded-lg border-2 flex items-center justify-center bg-white/10 text-white active:scale-90 transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/60",
+                  tool === ERASER ? "border-white" : "border-transparent hover:bg-white/20"
+                )}
+              >
+                <Eraser className="w-4 h-4" />
+              </button>
+              <span className="w-px h-5 bg-white/20 mx-1" aria-hidden="true" />
+              {PALETTE.map((c) => (
+                <button
+                  key={c.id}
+                  type="button"
+                  onClick={() => setTool(c.id)}
+                  aria-pressed={tool === c.id}
+                  aria-label={c.name}
+                  style={{ backgroundColor: `#${c.id}` }}
+                  className={cn(
+                    "w-7 h-7 rounded-md border-2 active:scale-90 transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/60",
+                    tool === c.id ? "border-white scale-110" : "border-white/25"
+                  )}
+                />
+              ))}
+            </div>
+          )}
 
           {/* Wrong guesses so far, so the artist can steer */}
           <div className="h-8 shrink-0 flex items-center gap-1.5 overflow-x-auto [scrollbar-width:none]">
@@ -126,7 +162,7 @@ export const Scribble = ({ game, uid, partnerUid, partnerName, coupleId, onLeave
             ) : iDraw ? (
               <div className="grid grid-cols-2 gap-3 h-full">
                 <BigButton quiet onClick={() => run(() => clearScribble(coupleId, game.id, round))} disabled={busy}>
-                  <Eraser className="w-4 h-4" /> Clear
+                  <Trash2 className="w-4 h-4" /> Clear
                 </BigButton>
                 <BigButton quiet onClick={() => run(() => skipScribble(coupleId, game.id, round))} disabled={busy}>
                   Skip Word
@@ -175,7 +211,7 @@ const GuessBox = ({ busy, onGuess }: { busy: boolean; onGuess: (guess: string) =
 };
 
 // The drawing surface. Saved strokes come from Firestore; the line being drawn right now stays local until the finger lifts.
-const Canvas = ({ strokes, canDraw, onStroke }: { strokes: string[]; canDraw: boolean; onStroke: (stroke: string) => void }) => {
+const Canvas = ({ strokes, canDraw, tool, onStroke }: { strokes: string[]; canDraw: boolean; tool: string; onStroke: (stroke: string) => void }) => {
   const ref = useRef<SVGSVGElement>(null);
   const [current, setCurrent] = useState<string[]>([]);
   const drawing = useRef(false);
@@ -190,7 +226,7 @@ const Canvas = ({ strokes, canDraw, onStroke }: { strokes: string[]; canDraw: bo
   };
 
   const flush = () => {
-    if (points.current.length > 0) onStroke(points.current.map(([x, y]) => `${x},${y}`).join(" "));
+    if (points.current.length > 0) onStroke(encodeStroke(tool, points.current.map(([x, y]) => `${x},${y}`).join(" ")));
   };
 
   const down = (e: React.PointerEvent) => {
@@ -239,12 +275,14 @@ const Canvas = ({ strokes, canDraw, onStroke }: { strokes: string[]; canDraw: bo
         onPointerCancel={up}
         className={cn("rounded-[2rem] bg-white", canDraw ? "cursor-crosshair touch-none" : "")}
       >
-        {strokes.map((s, i) => (
-          <path key={i} d={toPath(s)} fill="none" stroke="#111" strokeWidth={4} vectorEffect="non-scaling-stroke" strokeLinecap="round" strokeLinejoin="round" />
-        ))}
-        {current.length > 0 && (
-          <path d={toPath(current.join(" "))} fill="none" stroke="#111" strokeWidth={4} vectorEffect="non-scaling-stroke" strokeLinecap="round" strokeLinejoin="round" />
-        )}
+        {strokes.map((s, i) => {
+          const { color, width, points } = parseStroke(s);
+          return <path key={i} d={toPath(points)} fill="none" stroke={color} strokeWidth={width} vectorEffect="non-scaling-stroke" strokeLinecap="round" strokeLinejoin="round" />;
+        })}
+        {current.length > 0 && (() => {
+          const { color, width } = parseStroke(encodeStroke(tool, ""));
+          return <path d={toPath(current.join(" "))} fill="none" stroke={color} strokeWidth={width} vectorEffect="non-scaling-stroke" strokeLinecap="round" strokeLinejoin="round" />;
+        })()}
       </svg>
     </div>
   );

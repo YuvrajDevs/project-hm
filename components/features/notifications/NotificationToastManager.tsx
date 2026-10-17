@@ -6,11 +6,12 @@ import { useMailbox } from "@/context/MailboxContext";
 import { AppNotification } from "@/lib/types";
 import { Bell, Heart, MessageCircle, Sparkles, X } from "lucide-react";
 import { useSensoryFeedback } from "@/hooks/useSensoryFeedback";
+import { openAnyGame } from "@/components/features/games/deckIcons";
 
 const RECENT_MS = 2 * 60 * 1000;
 
 export const NotificationToastManager = () => {
-    const { notifications, notificationsEnabled, partner } = useMailbox();
+    const { notifications, notificationsEnabled, liveGames, questionGames, markNotiRead } = useMailbox();
     const [activeToast, setActiveToast] = useState<AppNotification | null>(null);
     const { playChime } = useSensoryFeedback();
 
@@ -43,6 +44,17 @@ export const NotificationToastManager = () => {
         return () => clearTimeout(timer);
     }, [activeToastId]);
 
+    // A game invitation opens the game when tapped, as long as the game is still going
+    const game = activeToast?.type === "GAME" && activeToast.gameId
+        ? [...liveGames, ...questionGames].find(g => g.id === activeToast.gameId)
+        : undefined;
+    const openGameFromToast = () => {
+        if (!game || !activeToast) return;
+        markNotiRead(activeToast.id).catch(console.error);
+        setActiveToast(null);
+        openAnyGame(game);
+    };
+
     return (
         <AnimatePresence>
             {activeToast && (
@@ -52,7 +64,14 @@ export const NotificationToastManager = () => {
                     exit={{ opacity: 0, scale: 0.8, transition: { duration: 0.2 } }}
                     className="fixed top-24 left-1/2 -translate-x-1/2 z-[200] w-[90%] max-w-sm"
                 >
-                    <div className="bg-neutral-900/80 backdrop-blur-xl border border-white/10 rounded-3xl p-4 shadow-2xl flex items-center gap-4 relative overflow-hidden group">
+                    <div
+                        onClick={game ? openGameFromToast : undefined}
+                        onKeyDown={game ? (e) => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); openGameFromToast(); } } : undefined}
+                        role={game ? "button" : undefined}
+                        tabIndex={game ? 0 : undefined}
+                        aria-label={game ? `${activeToast.title}. ${activeToast.body}` : undefined}
+                        className={`bg-neutral-900/80 backdrop-blur-xl border border-white/10 rounded-3xl p-4 shadow-2xl flex items-center gap-4 relative overflow-hidden group ${game ? "cursor-pointer hover:bg-neutral-900/90 active:scale-[0.98] transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/50" : ""}`}
+                    >
                         {/* Progress bar */}
                         <motion.div 
                             initial={{ width: "100%" }}
@@ -81,7 +100,8 @@ export const NotificationToastManager = () => {
                         </div>
 
                         <button 
-                            onClick={() => setActiveToast(null)}
+                            onClick={(e) => { e.stopPropagation(); setActiveToast(null); }}
+                            aria-label="Dismiss"
                             className="p-1 hover:bg-white/5 rounded-full transition-colors text-neutral-600 hover:text-white"
                         >
                             <X className="w-4 h-4" />

@@ -154,6 +154,39 @@ const PendingRow = ({ games, noun, onOpen }: { games: ActiveGame[]; noun: string
   );
 };
 
+// A single game in progress, shown on its own: tap to jump back in
+const GameRow = ({ game }: { game: ActiveGame }) => {
+  const { user, partner } = useMailbox();
+  const { playTick, vibrateTick } = useSensoryFeedback();
+  const partnerName = partner?.displayName?.split(" ")[0] || "your partner";
+  const deck = DECK_BY_ID[game.deck];
+  const Icon = DECK_ICONS[game.deck];
+  const { status, action } = describe(game, user?.uid || "", partner?.uid || "", partnerName);
+
+  return (
+    <button
+      onClick={() => { playTick(); vibrateTick(); openAny(game); }}
+      className={cn(
+        "w-full rounded-[2rem] p-5 flex items-center justify-between gap-4 border border-white/10 bg-gradient-to-br text-left active:scale-[0.98] transition-all",
+        deck.gradient
+      )}
+    >
+      <div className="flex items-center gap-4 min-w-0">
+        <div className={cn("w-10 h-10 shrink-0 rounded-xl bg-gradient-to-br flex items-center justify-center", deck.cards[0])}>
+          <Icon className="w-4 h-4 text-white" />
+        </div>
+        <div className="min-w-0">
+          <h3 className={cn("text-lg font-bebas text-white tracking-widest uppercase leading-none truncate", titleFont(deck.id))}>{deck.title}</h3>
+          <p className="text-white/70 font-outfit text-xs mt-1 truncate">{status}</p>
+        </div>
+      </div>
+      <span className="shrink-0 flex items-center gap-1 font-bebas text-sm tracking-widest uppercase text-white">
+        {action} <ArrowRight className="w-4 h-4" />
+      </span>
+    </button>
+  );
+};
+
 // The open games as rows: tap one to go back to it, or close it for both
 const PendingList = ({ games, busy, onClose, onOpen }: { games: ActiveGame[]; busy: boolean; onClose: (g: ActiveGame) => void; onOpen: () => void }) => {
   const { user, partner } = useMailbox();
@@ -269,8 +302,9 @@ const DeckSection = ({ title, subtitle, decks, active, noun, showScore, onPick, 
         {showScore && <ScoreTally />}
       </div>
 
-      {/* Everything in progress sits behind one row, so nobody has to hunt for it */}
-      {active.length > 0 && <PendingRow games={active} noun={noun} onOpen={onOpenPending} />}
+      {/* One game going: show it as it is. Two or more: they sit behind a single row, so nobody has to hunt for them. */}
+      {active.length === 1 && <GameRow game={active[0]} />}
+      {active.length >= 2 && <PendingRow games={active} noun={noun} onOpen={onOpenPending} />}
 
       <div className="flex gap-4 overflow-x-auto snap-x snap-mandatory scroll-px-6 -mx-6 px-6 pb-2 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
         {decks.map((deck) => {
