@@ -22,7 +22,9 @@ import {
   SnapshotOptions,
   limit,
   limitToLast,
-  increment
+  increment,
+  arrayRemove,
+  serverTimestamp
 } from "firebase/firestore";
 import { db, auth } from "./firebase";
 import { 
@@ -38,7 +40,9 @@ import {
   CoupleGame,
   GameAnswer,
   ActiveGame,
-  BucketItem
+  BucketItem,
+  ChatMessage,
+  ChatKind
 } from "./types";
 import { DECK_BY_ID, slotFor, type DeckId } from "./games/decks";
 import type { User as FirebaseUser } from "firebase/auth";
@@ -189,6 +193,22 @@ export const deleteMailboxMessage = async (coupleId: string, messageId: string) 
   batch.delete(doc(db, "couples", coupleId, "capsules", messageId));
   await batch.commit();
   return true;
+};
+
+// Saving a thought keeps it past the week it is shown for. It is private to the person who saved it.
+export const setThoughtSaved = (coupleId: string, messageId: string, uid: string, saved: boolean) =>
+  updateDoc(doc(db, "couples", coupleId, "mailbox", messageId), { savedBy: saved ? arrayUnion(uid) : arrayRemove(uid) });
+
+// Everything this person has saved, newest first. Sorted here so no extra database index is needed.
+export const subscribeToSavedThoughts = (coupleId: string, uid: string, callback: (messages: MailboxMessage[]) => void) => {
+  const q = query(getCoupleCollection(coupleId, "mailbox"), where("savedBy", "array-contains", uid));
+  return onSnapshot(q, (snapshot) => {
+    callback(
+      snapshot.docs.map((d) => d.data() as MailboxMessage)
+        .filter((m) => !m.hiddenFor?.includes(uid))
+        .sort((a, b) => (b.createdAt || "").localeCompare(a.createdAt || ""))
+    );
+  });
 };
 
 export const hideMessageForUser = async (coupleId: string, messageId: string, uid: string) => {
@@ -690,7 +710,7 @@ export const respondToMessage = async (coupleId: string, messageId: string, resp
   });
 };
 
-const COUPLE_SUBCOLLECTIONS = ["mailbox", "checkins", "reactions", "safe_space_sessions", "events", "games", "game_history", "bucket_list"];
+const COUPLE_SUBCOLLECTIONS = ["mailbox", "checkins", "reactions", "safe_space_sessions", "events", "games", "game_history", "bucket_list", "chat"];
 
 /**
  * Delete documents in chunks that fit inside a single batch
@@ -776,6 +796,10 @@ export const acceptCoupleReset = async (coupleId: string) => {
     streakCount: 0,
     streakLastDay: null,
     gameScores: {},
+    chatLastAt: null,
+    chatLastBy: null,
+    chatLastKind: null,
+    chatSeen: {},
   });
 };
 
@@ -1123,3 +1147,97 @@ export const sendContactMessage = async (message: { name?: string; email: string
     createdAt: Timestamp.now()
   });
 };
+
+/**
+ * Chat Helpers
+ *
+ * Photos and voice notes are squeezed on the device and stored inside the message itself, so chat
+ * needs no file storage. The security rules cap how large one message can be.
+ */
+const toChat = (d: QueryDocumentSnapshot): ChatMessage => {
+  const data = d.data({ serverTimestamps: "estimate" });
+  return {
+    ...data,
+    id: d.id,
+    createdAt: data.createdAt instanceof Timestamp ? data.createdAt.toDate().toISOString() : new Date().toISOString(),
+    pending: d.metadata.hasPendingWrites,
+  } as ChatMessage;
+};
+
+// The newest `count` messages, oldest first
+export const subscribeToChat = (coupleId: string, count: number, callback: (messages: ChatMessage[], mayHaveMore: boolean) => void) => {
+  const q = query(collection(db, "couples", coupleId, "chat"), orderBy("createdAt", "asc"), limitToLast(count));
+  return onSnapshot(q, { includeMetadataChanges: true }, (snap) => {
+    callback(snap.docs.map(toChat), snap.size >= count);
+  });
+};
+
+// Everything this person has saved, newest first. Sorted here so no extra database index is needed.
+export const subscribeToSavedChat = (coupleId: string, uid: string, callback: (messages: ChatMessage[]) => void) => {
+  const q = query(collection(db, "couples", coupleId, "chat"), where("savedBy", "array-contains", uid));
+  return onSnapshot(q, (snap) => {
+    callback(snap.docs.map(toChat).sort((a, b) => b.createdAt.localeCompare(a.createdAt)));
+  });
+};
+
+export interface ChatDraft {
+  kind: ChatKind;
+  text?: string;
+  mime?: string;
+  data?: string;
+  w?: number;
+  h?: number;
+  dur?: number;
+}
+
+const chatPreview = (draft: ChatDraft) =>
+  draft.kind === "image" ? "Sent a photo" : draft.kind === "voice" ? "Sent a voice note" : (draft.text || "").slice(0, 100);
+
+/**
+ * Add a message and update the chat summary on the couple in one go. The partner gets a
+ * notification only when this starts a new burst, not for every line.
+ */
+export const sendChatMessage = async (
+  coupleId: string,
+  uid: string,
+  draft: ChatDraft,
+  opts: { partnerUid?: string; name?: string; notify?: boolean } = {}
+) => {
+  const fields: Record<string, unknown> = { kind: draft.kind };
+  for (const key of ["text", "mime", "data", "w", "h", "dur"] as const) {
+    if (draft[key] !== undefined) fields[key] = draft[key];
+  }
+  const now = new Date().toISOString();
+  const batch = writeBatch(db);
+  batch.set(doc(collection(db, "couples", coupleId, "chat")), { ...fields, senderUid: uid, createdAt: serverTimestamp() });
+  batch.update(doc(db, "couples", coupleId), {
+    chatLastAt: now,
+    chatLastBy: uid,
+    chatLastKind: draft.kind,
+    [`chatSeen.${uid}`]: now,
+  });
+  await batch.commit();
+
+  if (opts.notify && opts.partnerUid) {
+    notifyPartner(opts.partnerUid, {
+      uid: opts.partnerUid,
+      type: "CHAT",
+      title: opts.name || "New message",
+      body: chatPreview(draft),
+    });
+  }
+};
+
+// Remember how far this person has read. It never moves backwards.
+export const markChatSeen = (coupleId: string, uid: string, lastAt?: string) => {
+  const now = new Date().toISOString();
+  return updateDoc(doc(db, "couples", coupleId), {
+    [`chatSeen.${uid}`]: lastAt && lastAt > now ? lastAt : now,
+  });
+};
+
+export const setChatMessageSaved = (coupleId: string, messageId: string, uid: string, saved: boolean) =>
+  updateDoc(doc(db, "couples", coupleId, "chat", messageId), { savedBy: saved ? arrayUnion(uid) : arrayRemove(uid) });
+
+export const deleteChatMessage = (coupleId: string, messageId: string) =>
+  deleteDoc(doc(db, "couples", coupleId, "chat", messageId));

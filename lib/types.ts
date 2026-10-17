@@ -44,6 +44,11 @@ export interface Couple {
   dayTimezone?: string; // shared timezone that decides which day a check-in belongs to
   streakCount?: number; // running count of consecutive days both partners checked in
   streakLastDay?: string; // the last day (YYYY-MM-DD) counted in streakCount
+  // Chat summary, so the unread dot needs no chat subscription
+  chatLastAt?: string;
+  chatLastBy?: string;
+  chatLastKind?: ChatKind;
+  chatSeen?: Record<string, string>; // when each person last had the chat open (ISO)
   // Reset Flow
   resetBy?: string;
   resetStatus?: "pending" | "declined" | null;
@@ -53,6 +58,7 @@ export interface Couple {
 }
 
 export interface EmotionalProfile {
+  bio?: string;             // one line about me, shown under my name
   howToShowUp?: string[];    // 🧠
   loveLanguages?: string[]; // ❤️
   offSignals?: string[];    // ⚡
@@ -100,6 +106,7 @@ export interface MailboxMessage {
   sealed?: boolean; // time capsule whose words are still locked away (see capsules collection)
   readAt?: string; // Track when receiver first viewed
   hiddenFor?: string[]; // UIDs of users who 'deleted' for themselves
+  savedBy?: string[]; // UIDs of people who saved it, so it stays on their Our Thoughts after a week
 }
 
 // 🌡️ Daily Check-In Types
@@ -174,7 +181,7 @@ export interface SafeSpaceSession {
 export interface AppNotification {
   id: string;
   uid: string; // recipient
-  type: "MAILBOX" | "CHECK_IN" | "REACTION" | "SAFE_SPACE" | "GAME" | "BUCKET";
+  type: "MAILBOX" | "CHECK_IN" | "REACTION" | "SAFE_SPACE" | "GAME" | "BUCKET" | "CHAT";
   title: string;
   body: string;
   read: boolean;
@@ -199,6 +206,24 @@ export interface PartnerNote {
   text: string;    // The note itself (max 140 chars)
   shared?: boolean; // true: the partner can read it too; otherwise only the writer
   createdAt: string;
+}
+
+// 💬 Chat: the everyday conversation between the two of them (couples/{id}/chat)
+export type ChatKind = "text" | "image" | "voice";
+
+export interface ChatMessage {
+  id: string;
+  senderUid: string;
+  kind: ChatKind;
+  text?: string;       // text messages only
+  mime?: string;       // photos and voice notes: the media type of `data`
+  data?: string;       // photos and voice notes: the file itself, base64
+  w?: number;          // photos: size in pixels, so the bubble holds its shape while loading
+  h?: number;
+  dur?: number;        // voice notes: seconds
+  createdAt: string;
+  savedBy?: string[];  // people who saved it for themselves
+  pending?: boolean;   // still on its way to the server
 }
 
 // 🪣 Bucket list: things the two of them want to do together

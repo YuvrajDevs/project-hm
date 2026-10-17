@@ -53,6 +53,21 @@ Page padding is `px-6`. Cards use `p-6` (rows) or `p-8` (large). Sections are se
 
 - **Game card:** square `w-40 h-40 rounded-[2rem] p-5 border border-white/10 bg-gradient-to-br` with the game's own gradient from `DECKS` in `lib/games/decks.ts` (about 40% → 20% → 10% opacity, never solid). Icon in a `w-10 h-10 rounded-xl bg-white/10` tile at the top, Bebas `text-xl` title and one `text-xs text-white/60` line at the bottom. Cards sit in a horizontal snap row under a section heading. The same gradient tints that game's dialog header and full-screen view.
 
+- **Profile hero:** one `rounded-[2.5rem] border border-white/10 bg-gradient-to-br p-8` card with a wash of the person's colour (pink for you, blue for your partner, about 25% → 10% → clear). Avatar tile, name in Bebas `text-5xl`, one line of `text-sm text-neutral-300`, then chips. Chips are `px-3.5 py-2 rounded-full bg-black/25 border border-white/10 text-xs`.
+- **Profile section card:** `bg-white/5 border border-white/5 rounded-[2.5rem] p-8`, a `w-10 h-10 rounded-xl bg-white/5` icon tile, Bebas `text-2xl` title. Blocks inside carry a Bebas `text-[10px] tracking-[0.3em]` eyebrow, separated by `border-t border-white/5 pt-5`. The most useful card ("When things get hard") gets a warm wash (`from-rose-500/15 via-orange-500/5`).
+- **Empty profile blocks:** the owner sees a dashed "Add" prompt. Their partner never sees an empty box: sections with nothing in them are left out, and one line says how little there is, with a nudge.
+- **Pop-up editors:** profile sections are edited in a pop-up (`components/ui/Sheet.tsx`), never expanded in place, so the page doesn't jump.
+
+## Chat
+
+- **Full screen:** the chat opens from the dock as its own full-screen view. The dock and the page header are hidden, a round back button sits top left (it goes home) and a Saved pill top right. Content is capped at `max-w-2xl` and centred on wide screens. A pink dot on the dock's Inbox icon means an unread message.
+- **Saved (in the chat):** the Saved pill swaps the conversation for the messages you saved. The header becomes "Saved" with a back button to the chat, and the conversation stays where you left it. Saving is private.
+- **Header and composer:** both sit on `bg-black/30 backdrop-blur-xl` with a hairline border, and respect the phone's safe areas. The view is sized to the visible screen so the keyboard never covers the composer.
+- **Bubbles:** yours are `bg-white text-black`, theirs `bg-white/[0.07] border border-white/10 text-white`. `rounded-[1.4rem]` with the corner next to the sender's edge squared off; consecutive messages from one person within five minutes join into one run, and only the last carries the time. Photos have no bubble, just a hairline border. Times and durations use `tabular-nums`.
+- **Message actions:** tap a message (or the `...` button on desktop) to show Save, Copy and, on your own messages, Unsend (asks for a second tap). Saving is private to the person who saved.
+- **Composer:** photo button, auto-growing field (16px on phones so iOS doesn't zoom), and a mic that becomes a send button once there is text. Recording replaces the field with a discard button, a timer and a send button.
+- **Day dividers:** Bebas `text-[10px] tracking-[0.3em]` between two hairlines. "Today", "Yesterday", then the date.
+
 ## Buttons
 
 - **Primary:** `bg-white text-black font-bebas tracking-widest uppercase rounded-2xl py-4 hover:bg-neutral-200 active:scale-95 disabled:opacity-30`. One per screen or dialog.
@@ -103,3 +118,9 @@ Buttons say what happens ("Send Request", "Disconnect From Raj"), not "OK" or "S
 - Calendar days use `getCheckInDateId()` (the day rolls over at 6 AM local time). Never derive a day from `toISOString()`.
 - Show relative times with `formatRelativeTime()` and full dates in the reader's locale.
 - Use first names. No gendered pronouns; use "they/them" or the name.
+
+## Thoughts on the home page
+
+- **Our Thoughts** lists the thoughts you two sent in the last 7 days. A time capsule counts from the moment it opens, and one that hasn't opened yet always shows. Older thoughts leave the list but are not deleted.
+- **Pills:** "This week" and "Saved", in the same filter-pill style as Partner Notes (`px-4 py-2 rounded-full border text-xs`, selected is white). The line under them says thoughts leave after a week and how to keep one.
+- **Save pill:** in the corner of each thought card, `px-2.5 py-1 rounded-full font-bebas text-[11px] tracking-widest uppercase` with a bookmark. Unsaved it is a quiet dark pill, saved it is white. Saving is private to whoever saved it, and keeps the thought on their Saved view for good.

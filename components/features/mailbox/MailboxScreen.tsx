@@ -2,15 +2,14 @@
 
 import React, { useState } from "react";
 import { useMailbox } from "@/context/MailboxContext";
-import { MessageCard } from "./MessageCard";
-import { LockedCapsule } from "./LockedCapsule";
+import { OurThoughts } from "./OurThoughts";
 import { DailyCheckIn } from "../checkin/DailyCheckIn";
 import { MoodStatusHub } from "../checkin/MoodStatusHub";
 import { SafeSpaceEntry } from "../safespace/SafeSpaceEntry";
 import { WhiteFlagButton } from "./WhiteFlagButton";
 import { PartnerNotes } from "../notes/PartnerNotes";
 import { motion, AnimatePresence } from "framer-motion";
-import { Plus, Inbox, History, Heart, Sparkles, MessageSquarePlus } from "lucide-react";
+import { Heart, Sparkles } from "lucide-react";
 
 import { AmbientBackground } from "../../ui/AmbientBackground";
 import { cn } from "@/lib/utils";
@@ -25,7 +24,7 @@ interface MailboxScreenProps {
 export const MailboxScreen: React.FC<MailboxScreenProps> = ({ onOpenCheckIn, onComposeClick }) => {
 
 
-  const { messages, loading, user, metrics, now } = useMailbox();
+  const { loading, metrics } = useMailbox();
 
   if (loading) return null;
 
@@ -88,45 +87,8 @@ export const MailboxScreen: React.FC<MailboxScreenProps> = ({ onOpenCheckIn, onC
                 <MoodStatusHub />
             </section>
 
-            <section className="space-y-6">
-                <div className="flex items-center justify-between">
-                    <div className="space-y-1">
-                        <h2 className="text-3xl font-bebas text-white tracking-widest uppercase leading-none">Latest Thoughts</h2>
-                        <p className="text-[10px] text-neutral-500 font-bebas tracking-[0.2em] uppercase">The most recent context</p>
-                    </div>
-                    <button 
-                        onClick={onComposeClick}
-                        className="p-3 bg-white text-black rounded-xl hover:scale-105 active:scale-95 transition-all shadow-lg flex items-center gap-2"
-                    >
-                        <Plus className="w-5 h-5" />
-                        <span className="font-bebas text-sm tracking-widest uppercase">New Thought</span>
-                    </button>
-                </div>
-
-                {/* 1. Messages section */}
-                <div className="space-y-4">
-                    {messages.length > 0 ? (
-                        messages.slice(0, 3).map((msg) => {
-                            if (msg.unlockAt) {
-                                // Still sealed counts as locked: the words have not arrived yet
-                                const isLocked = !!msg.sealed || new Date(msg.unlockAt).getTime() > now;
-                                if (isLocked) {
-                                    if (msg.isSecretBeforeUnlock && msg.senderUid !== user?.uid) {
-                                        return null; // Don't even show it
-                                    }
-                                    return <LockedCapsule key={msg.id} message={msg} />;
-                                }
-                            }
-                            return <MessageCard key={msg.id} message={msg} />;
-                        })
-                    ) : (
-                        <div className="h-40 flex flex-col items-center justify-center bg-white/5 border border-white/5 rounded-[2rem] text-neutral-600 gap-2">
-                             <Inbox className="w-8 h-8 opacity-20" />
-                             <p className="font-bebas text-xs tracking-widest uppercase">No messages yet</p>
-                        </div>
-                    )}
-                </div>
-            </section>
+            {/* Thoughts you two sent each other: the last week, plus what you saved */}
+            <OurThoughts onComposeClick={onComposeClick} />
 
             {/* Games */}
             <GamesShelf />

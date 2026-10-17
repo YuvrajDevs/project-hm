@@ -88,7 +88,7 @@ export const ArchiveDashboard: React.FC<ArchiveDashboardProps> = ({ onOpenInbox,
       value: `${metrics.unreadCount} ${metrics.unreadCount === 1 ? "Note" : "Notes"}`,
       subtext: metrics.unreadCount > 0 ? `From ${partnerName}, not answered yet` : "All caught up",
       color: metrics.unreadCount > 0 ? "text-pink-400" : "text-neutral-600",
-      hint: "Open inbox",
+      hint: "Open the mailbox",
       onClick: onOpenInbox
     },
     {
@@ -98,7 +98,7 @@ export const ArchiveDashboard: React.FC<ArchiveDashboardProps> = ({ onOpenInbox,
       value: activity ? formatRelativeTime(activity.time) : "Nothing yet",
       subtext: activity ? `${activityWho} ${activityWhat}` : "Send the first note",
       color: activity ? "text-blue-400" : "text-neutral-600",
-      hint: "Open inbox",
+      hint: "Open the mailbox",
       onClick: onOpenInbox
     },
     {

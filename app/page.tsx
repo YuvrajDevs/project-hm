@@ -17,12 +17,13 @@ import { Bell } from "lucide-react";
 import { PENDING_INVITE_KEY } from "@/lib/constants";
 import dynamic from "next/dynamic";
 import { useScrollLock } from "@/hooks/useScrollLock";
+import { hasUnreadChat } from "@/lib/chat";
 
 // Screens and dialogs that are not on the first screen load on demand, so opening the app
 // downloads and runs only what the home screen needs.
 const loadCompose = () => import("@/components/features/mailbox/ComposeMessage");
 const loadCheckIn = () => import("@/components/features/checkin/DailyCheckInPopup");
-const loadHistory = () => import("@/components/features/mailbox/MessageHistory");
+const loadChat = () => import("@/components/features/chat/ChatScreen");
 const loadArchive = () => import("@/components/features/archive/ArchiveDashboard");
 const loadSafeSpace = () => import("@/components/features/safespace/SafeSpaceSession");
 const loadGame = () => import("@/components/features/games/GameScreen");
@@ -30,7 +31,7 @@ const loadQuestions = () => import("@/components/features/games/QuestionDeckScre
 
 const ComposeMessage = dynamic(() => loadCompose().then(m => m.ComposeMessage));
 const DailyCheckInPopup = dynamic(() => loadCheckIn().then(m => m.DailyCheckInPopup));
-const MessageHistory = dynamic(() => loadHistory().then(m => m.MessageHistory));
+const ChatScreen = dynamic(() => loadChat().then(m => m.ChatScreen));
 const ArchiveDashboard = dynamic(() => loadArchive().then(m => m.ArchiveDashboard));
 const SafeSpaceSession = dynamic(() => loadSafeSpace().then(m => m.SafeSpaceSession));
 const GameScreen = dynamic(() => loadGame().then(m => m.GameScreen));
@@ -65,7 +66,9 @@ export default function Home() {
     unreadNotificationsCount
   } = useMailbox();
 
-  const [activeView, setActiveView] = React.useState<"mailbox" | "archive" | "inbox">("mailbox");
+  const [activeView, setActiveView] = React.useState<"mailbox" | "archive">("mailbox");
+  // The chat is a full-screen view of its own, opened from the dock
+  const [chatOpen, setChatOpen] = React.useState(false);
   const [showCompose, setShowCompose] = React.useState(false);
   const [showReactions, setShowReactions] = React.useState(false);
   const [showCheckInPopup, setShowCheckInPopup] = React.useState(false);
@@ -217,7 +220,7 @@ export default function Home() {
   useEffect(() => {
     if (!isPaired) return;
     const warm = () => {
-      loadCompose(); loadCheckIn(); loadHistory(); loadArchive(); loadSafeSpace(); loadGame(); loadQuestions();
+      loadCompose(); loadCheckIn(); loadChat(); loadArchive(); loadSafeSpace(); loadGame(); loadQuestions();
       // The other pages too, so tapping Settings or Profile opens them without a wait
       router.prefetch("/settings");
       router.prefetch("/profile");
@@ -242,7 +245,7 @@ export default function Home() {
     return () => clearTimeout(timer);
   }, [loading, hasLoadedInitially]);
 
-  const effectivelyPopupOpen = isAnyPopupOpen || showCompose || showCheckInPopup || showEmpathyNudge || inSafeSpace || inGame || inQuestions || isOverlayActive || showAfterSafeSpace;
+  const effectivelyPopupOpen = isAnyPopupOpen || chatOpen || showCompose || showCheckInPopup || showEmpathyNudge || inSafeSpace || inGame || inQuestions || isOverlayActive || showAfterSafeSpace;
 
   useEffect(() => {
     if (!loading && user && hasOnboarded) {
@@ -261,6 +264,7 @@ export default function Home() {
       setShowCompose(false);
       setOpenGameId(null);
       setOpenQuestionsId(null);
+      setChatOpen(false);
       setActiveView("mailbox");
     }
   }, [fbUser]);
@@ -410,19 +414,6 @@ export default function Home() {
                     />
                 </motion.div>
             )}
-            {activeView === "inbox" && (
-                <motion.div
-                    key="inbox"
-                    initial={{ opacity: 0, scale: 0.95 }}
-                    animate={{ opacity: 1, scale: 1 }}
-                    exit={{ opacity: 0, scale: 1.05 }}
-                    transition={{ duration: 0.2 }}
-                >
-                    <MessageHistory 
-                        onComposeClick={() => setShowCompose(true)}
-                    />
-                </motion.div>
-            )}
             {activeView === "archive" && (
                 <motion.div
                     key="archive"
@@ -432,7 +423,7 @@ export default function Home() {
                     transition={{ duration: 0.2 }}
                 >
                     <ArchiveDashboard 
-                        onOpenInbox={() => setActiveView("inbox")}
+                        onOpenInbox={() => setActiveView("mailbox")}
                         onOpenCheckIn={() => setShowCheckInPopup(true)}
                         onOpenSignals={() => setShowReactions(true)}
                     />
@@ -463,6 +454,10 @@ export default function Home() {
             <WhiteFlagOverlay key="white-flag-overlay" />
         )}
         <IncomingReactionIndicator key="reaction-indicator" />
+
+        {chatOpen ? (
+            <ChatScreen key="chat-screen" onClose={() => { setChatOpen(false); setActiveView("mailbox"); }} />
+        ) : null}
 
         {inSafeSpace ? (
             <SafeSpaceSession
@@ -546,6 +541,8 @@ export default function Home() {
         <BottomDock 
           activeView={activeView}
           onViewChange={setActiveView}
+          onChatClick={() => setChatOpen(true)}
+          showInboxDot={hasUnreadChat(couple, user?.uid)}
           onComposeClick={() => setShowCompose(true)}
           onEmojiClick={() => setShowReactions(true)}
         />

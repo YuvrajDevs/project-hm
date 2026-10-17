@@ -8,25 +8,29 @@ import { cn } from "@/lib/utils";
 import { useSensoryFeedback } from "@/hooks/useSensoryFeedback";
 
 interface BottomDockProps {
-  activeView: "mailbox" | "archive" | "inbox";
-  onViewChange: (view: "mailbox" | "archive" | "inbox") => void;
+  activeView: "mailbox" | "archive";
+  onViewChange: (view: "mailbox" | "archive") => void;
+  onChatClick: () => void;
   onComposeClick: () => void;
   onEmojiClick: () => void;
   showEmojiDot?: boolean;
+  showInboxDot?: boolean;
 }
 
 export const BottomDock: React.FC<BottomDockProps> = ({ 
   activeView, 
   onViewChange, 
+  onChatClick,
   onComposeClick, 
   onEmojiClick,
-  showEmojiDot = false
+  showEmojiDot = false,
+  showInboxDot = false
 }) => {
   const router = useRouter();
   const [internalHidden, setInternalHidden] = React.useState(false);
   const { playTick, vibrateTick } = useSensoryFeedback();
 
-  const handleNav = (view: "mailbox" | "archive" | "inbox") => {
+  const handleNav = (view: "mailbox" | "archive") => {
     playTick();
     vibrateTick();
     onViewChange(view);
@@ -52,13 +56,13 @@ export const BottomDock: React.FC<BottomDockProps> = ({
         {/* Far Left: Inbox Button */}
         <button
           aria-label="Inbox"
-          onClick={() => handleNav("inbox")}
-          className={cn(
-            "relative w-14 h-14 rounded-full flex items-center justify-center transition-all group active:scale-90",
-            activeView === "inbox" ? "text-white bg-white/10" : "text-neutral-400 hover:text-white hover:bg-white/5"
-          )}
+          onClick={() => { playTick(); vibrateTick(); onChatClick(); }}
+          className="relative w-14 h-14 rounded-full flex items-center justify-center transition-all group active:scale-90 text-neutral-400 hover:text-white hover:bg-white/5"
         >
           <Inbox className="w-6 h-6 group-hover:scale-110 transition-transform" />
+          {showInboxDot && (
+            <span className="absolute top-3.5 right-3.5 w-2.5 h-2.5 bg-pink-500 rounded-full border-2 border-black" aria-label="New messages" />
+          )}
           <span className="absolute -top-12 left-1/2 -translate-x-1/2 px-3 py-1 bg-white text-black text-[10px] font-bebas tracking-widest uppercase rounded-lg opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none">
             Inbox
           </span>

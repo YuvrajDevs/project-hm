@@ -22,6 +22,9 @@ import {
   writeBatch,
   runTransaction,
   Timestamp,
+  serverTimestamp,
+  arrayUnion,
+  arrayRemove,
 } from "firebase/firestore";
 
 let env;
@@ -457,4 +460,91 @@ test("partners can add to the couple's game score; outsiders cannot", async () =
   await seedCouple();
   await assertSucceeds(updateDoc(doc(db(ALICE), "couples", COUPLE), { [`gameScores.${ALICE}`]: 3, [`gameScores.${BOB}`]: 2 }));
   await assertFails(updateDoc(doc(db(MALLORY), "couples", COUPLE), { [`gameScores.${MALLORY}`]: 99 }));
+});
+
+// ─── Chat ──────────────────────────────────────────────────────────────────
+const chatRef = (uid, id) => doc(db(uid), "couples", COUPLE, "chat", id);
+const textMsg = (uid, text = "hello") => ({ senderUid: uid, kind: "text", text, createdAt: serverTimestamp() });
+
+test("partners can chat; outsiders cannot read or write", async () => {
+  await seedCouple();
+  await assertSucceeds(setDoc(chatRef(ALICE, "c1"), textMsg(ALICE)));
+  await assertSucceeds(setDoc(chatRef(BOB, "c2"), textMsg(BOB, "hi back")));
+  await assertSucceeds(getDocs(query(collection(db(BOB), "couples", COUPLE, "chat"), orderBy("createdAt"), limit(10))));
+  await assertFails(getDocs(collection(db(MALLORY), "couples", COUPLE, "chat")));
+  await assertFails(getDoc(chatRef(MALLORY, "c1")));
+  await assertFails(setDoc(chatRef(MALLORY, "c3"), textMsg(MALLORY)));
+  await assertFails(getDoc(chatRef(null, "c1")));
+});
+
+test("a message must be from the sender, stamped by the server, and well formed", async () => {
+  await seedCouple();
+  await assertFails(setDoc(chatRef(ALICE, "x1"), textMsg(BOB)));                                    // pretending to be Bob
+  await assertFails(setDoc(chatRef(ALICE, "x2"), { ...textMsg(ALICE), createdAt: Timestamp.now() })); // client-chosen time
+  await assertFails(setDoc(chatRef(ALICE, "x3"), textMsg(ALICE, "")));                               // empty
+  await assertFails(setDoc(chatRef(ALICE, "x4"), textMsg(ALICE, "a".repeat(2001))));                 // too long
+  await assertFails(setDoc(chatRef(ALICE, "x5"), { ...textMsg(ALICE), savedBy: [ALICE] }));          // extra fields
+  await assertFails(setDoc(chatRef(ALICE, "x6"), { ...textMsg(ALICE), kind: "video" }));
+  await assertSucceeds(setDoc(chatRef(ALICE, "ok"), textMsg(ALICE, "a".repeat(2000))));
+});
+
+test("photos and voice notes are size- and type-capped", async () => {
+  await seedCouple();
+  const photo = (data, mime = "image/jpeg") => ({ senderUid: ALICE, kind: "image", mime, data, w: 800, h: 600, createdAt: serverTimestamp() });
+  const voice = (data, dur = 12, mime = "audio/webm") => ({ senderUid: ALICE, kind: "voice", mime, data, dur, createdAt: serverTimestamp() });
+  await assertSucceeds(setDoc(chatRef(ALICE, "p1"), photo("A".repeat(600000))));
+  await assertFails(setDoc(chatRef(ALICE, "p2"), photo("A".repeat(700001))));
+  await assertFails(setDoc(chatRef(ALICE, "p3"), photo("A".repeat(1000), "text/html")));
+  await assertFails(setDoc(chatRef(ALICE, "p4"), { ...photo("A".repeat(1000)), text: "caption" }));
+  await assertSucceeds(setDoc(chatRef(ALICE, "v1"), voice("A".repeat(200000), 60)));
+  await assertSucceeds(setDoc(chatRef(ALICE, "v2"), voice("A".repeat(200000), 30, "audio/mp4")));
+  await assertFails(setDoc(chatRef(ALICE, "v3"), voice("A".repeat(200000), 500)));
+  await assertFails(setDoc(chatRef(ALICE, "v4"), voice("A".repeat(200000), 10, "application/zip")));
+  await assertFails(setDoc(chatRef(ALICE, "v5"), { senderUid: ALICE, kind: "voice", mime: "audio/webm", createdAt: serverTimestamp() })); // no audio
+});
+
+test("either partner can save a message for themselves, and only themselves", async () => {
+  await seedCouple();
+  await assertSucceeds(setDoc(chatRef(ALICE, "c1"), textMsg(ALICE)));
+  await assertSucceeds(updateDoc(chatRef(BOB, "c1"), { savedBy: arrayUnion(BOB) }));
+  await assertSucceeds(updateDoc(chatRef(ALICE, "c1"), { savedBy: arrayUnion(ALICE) }));
+  await assertFails(updateDoc(chatRef(BOB, "c1"), { savedBy: arrayRemove(ALICE) }));           // not Alice's save to undo
+  await assertFails(updateDoc(chatRef(BOB, "c1"), { savedBy: [BOB, "mallory"] }));
+  await assertFails(updateDoc(chatRef(BOB, "c1"), { text: "edited" }));                         // words are never edited
+  await assertFails(updateDoc(chatRef(MALLORY, "c1"), { savedBy: arrayUnion(MALLORY) }));
+  await assertSucceeds(updateDoc(chatRef(BOB, "c1"), { savedBy: arrayRemove(BOB) }));
+  await assertSucceeds(getDocs(query(collection(db(BOB), "couples", COUPLE, "chat"), where("savedBy", "array-contains", ALICE))));
+});
+
+test("only the sender can unsend a message", async () => {
+  await seedCouple();
+  await assertSucceeds(setDoc(chatRef(ALICE, "c1"), textMsg(ALICE)));
+  await assertFails(deleteDoc(chatRef(BOB, "c1")));
+  await assertFails(deleteDoc(chatRef(MALLORY, "c1")));
+  await assertSucceeds(deleteDoc(chatRef(ALICE, "c1")));
+});
+
+test("a message and the chat summary on the couple are written together", async () => {
+  await seedCouple();
+  const alice = db(ALICE);
+  const batch = writeBatch(alice);
+  batch.set(doc(collection(alice, "couples", COUPLE, "chat")), textMsg(ALICE));
+  batch.update(doc(alice, "couples", COUPLE), { chatLastAt: "2026-10-17T10:00:00Z", chatLastBy: ALICE, chatLastKind: "text", [`chatSeen.${ALICE}`]: "2026-10-17T10:00:00Z" });
+  await assertSucceeds(batch.commit());
+  await assertSucceeds(updateDoc(doc(db(BOB), "couples", COUPLE), { [`chatSeen.${BOB}`]: "2026-10-17T10:01:00Z" }));
+  await assertFails(updateDoc(doc(db(MALLORY), "couples", COUPLE), { [`chatSeen.${MALLORY}`]: "2026-10-17T10:01:00Z" }));
+});
+
+// ─── Saving thoughts ───────────────────────────────────────────────────────
+test("either partner can save a thought for themselves, and only themselves", async () => {
+  await seedCouple();
+  const m1 = (uid) => doc(db(uid), "couples", COUPLE, "mailbox", "m1");
+  await assertSucceeds(updateDoc(m1(BOB), { savedBy: arrayUnion(BOB) }));       // the receiver
+  await assertSucceeds(updateDoc(m1(ALICE), { savedBy: arrayUnion(ALICE) }));   // the sender
+  await assertFails(updateDoc(m1(BOB), { savedBy: arrayRemove(ALICE) }));       // not Alice's save to undo
+  await assertFails(updateDoc(m1(BOB), { savedBy: [BOB, MALLORY] }));
+  await assertFails(updateDoc(m1(BOB), { savedBy: arrayUnion(BOB), note: "changed" })); // words are never touched
+  await assertFails(updateDoc(m1(MALLORY), { savedBy: arrayUnion(MALLORY) }));
+  await assertSucceeds(updateDoc(m1(BOB), { savedBy: arrayRemove(BOB) }));
+  await assertSucceeds(getDocs(query(collection(db(BOB), "couples", COUPLE, "mailbox"), where("savedBy", "array-contains", ALICE))));
 });
