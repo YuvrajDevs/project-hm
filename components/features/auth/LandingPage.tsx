@@ -9,6 +9,8 @@ import Image from "next/image";
 import Link from "next/link";
 import { Heart, Sparkles, MessageCircle, Zap, Shield, ArrowDown } from "lucide-react";
 import { AmbientBackground } from "@/components/ui/AmbientBackground";
+import { childrenOf } from "@/lib/seo/pages";
+import { RelatedLinks } from "@/components/seo/RelatedLinks";
 
 const FEATURE_CARDS = [
   {
@@ -249,6 +251,13 @@ export const LandingPage = () => {
         </div>
       </section>
 
+      {/* Games — every game page, so a visitor (and a crawler) can reach each one within a couple of clicks */}
+      <section className="py-16 px-8 border-t border-white/5">
+        <div className="max-w-4xl mx-auto">
+          <RelatedLinks paths={childrenOf("games").map((c) => c.path)} heading="Games" />
+        </div>
+      </section>
+
       {/* Footer */}
       <footer className="py-20 px-6 border-t border-white/5 bg-black/50 backdrop-blur-xl">
         <div className="max-w-4xl mx-auto flex flex-col items-center gap-12">
@@ -258,6 +267,9 @@ export const LandingPage = () => {
           </div>
 
           <nav className="flex flex-wrap justify-center gap-x-10 gap-y-4 text-[10px] font-bebas tracking-[0.3em] text-neutral-500 uppercase">
+            <Link href="/games" className="hover:text-white transition-colors">Games</Link>
+            <Link href="/questions" className="hover:text-white transition-colors">Questions</Link>
+            <Link href="/conflict-resolution" className="hover:text-white transition-colors">Conflict Resolution</Link>
             <Link href="/terms-of-service" className="hover:text-white transition-colors">Terms</Link>
             <Link href="/privacy-policy" className="hover:text-white transition-colors">Privacy</Link>
             <Link href="/cookie-policy" className="hover:text-white transition-colors">Cookies</Link>
