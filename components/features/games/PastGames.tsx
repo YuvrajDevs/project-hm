@@ -10,6 +10,7 @@ import { getCard, roundKey, totalScores, truthDarePlayer } from "@/lib/games/eng
 import type { CoupleGame } from "@/lib/types";
 import { cn } from "@/lib/utils";
 import { DECK_ICONS, titleFont } from "./deckIcons";
+import { DeckTitle } from "./DeckTitle";
 
 type Entry = CoupleGame & { archivedAt: string; id: string };
 
@@ -63,7 +64,7 @@ export const PastGames = ({ onClose }: { onClose: () => void }) => {
             </button>
           ) : <span className="w-10" />}
           <h3 className="text-2xl font-bebas tracking-widest uppercase leading-none truncate">
-            {open ? DECK_BY_ID[open.deck].title : "Past Games"}
+            {open ? <DeckTitle title={DECK_BY_ID[open.deck].title} /> : "Past Games"}
           </h3>
           <button
             aria-label="Close"
@@ -98,7 +99,7 @@ export const PastGames = ({ onClose }: { onClose: () => void }) => {
                       <Icon className="w-5 h-5 text-white" />
                     </div>
                     <div className="flex-1 min-w-0">
-                      <p className={cn("font-bebas text-lg tracking-wider uppercase leading-none truncate", titleFont(deck.id))}>{deck.title}</p>
+                      <p className={cn("font-bebas text-lg tracking-wider uppercase leading-none truncate", titleFont(deck.id))}><DeckTitle title={deck.title} /></p>
                       <p className="font-outfit text-xs text-neutral-400 mt-1 truncate">
                         {summaryLine(e, uid, partnerUid, partnerName)}
                       </p>
