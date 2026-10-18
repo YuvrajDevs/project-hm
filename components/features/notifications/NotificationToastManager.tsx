@@ -9,6 +9,7 @@ import { useSensoryFeedback } from "@/hooks/useSensoryFeedback";
 import { openAnyGame } from "@/components/features/games/deckIcons";
 import { DECK_BY_ID } from "@/lib/games/decks";
 import { presence } from "@/lib/presence";
+import { partnerLabel } from "@/lib/utils";
 
 const RECENT_MS = 2 * 60 * 1000;
 
@@ -18,7 +19,7 @@ export const NotificationToastManager = () => {
     const { playChime } = useSensoryFeedback();
     const uid = user?.uid ?? "";
     const partnerUid = partner?.uid ?? "";
-    const partnerName = partner?.displayName?.split(" ")[0] || "Your partner";
+    const partnerName = partnerLabel(user, partner, "Your partner");
 
     const show = useCallback((toast: AppNotification) => {
         playChime();

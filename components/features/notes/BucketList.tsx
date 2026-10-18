@@ -8,7 +8,7 @@ import { useMailbox } from "@/context/MailboxContext";
 import { addBucketItem, deleteBucketItem, setBucketItemDone, subscribeToBucketList } from "@/lib/firestore-helpers";
 import type { BucketItem } from "@/lib/types";
 import { useSensoryFeedback } from "@/hooks/useSensoryFeedback";
-import { cn } from "@/lib/utils";
+import { cn, partnerLabel } from "@/lib/utils";
 
 const PREVIEW = 5;
 
@@ -28,7 +28,7 @@ export const BucketList = () => {
   }, [coupleId]);
 
   if (!user || !coupleId) return null;
-  const partnerName = partner?.displayName?.split(" ")[0] || "your partner";
+  const partnerName = partnerLabel(user, partner, "your partner");
   const doneCount = items.filter(i => i.done).length;
   // Still to do first, then the ones you've done
   const ordered = [...items.filter(i => !i.done), ...items.filter(i => i.done)];

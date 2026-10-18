@@ -4,9 +4,10 @@ import React from "react";
 import { motion } from "framer-motion";
 import { Sparkles, MessageSquareHeart } from "lucide-react";
 import { useMailbox } from "@/context/MailboxContext";
+import { partnerLabel } from "@/lib/utils";
 
 export const WhiteFlagOverlay = () => {
-    const { partner, lowerFlag, startSafeSpace, setOverlayActive } = useMailbox();
+    const { user, partner, lowerFlag, startSafeSpace, setOverlayActive } = useMailbox();
     const [busy, setBusy] = React.useState(false);
     const busyRef = React.useRef(false);
 
@@ -59,7 +60,7 @@ export const WhiteFlagOverlay = () => {
                             You are more important <br/> than this argument
                         </h2>
                         <p className="text-neutral-500 font-outfit text-base leading-relaxed max-w-sm mx-auto">
-                            {partner?.displayName?.split(" ")[0] || "Your partner"}{" "}has raised the white flag. 
+                            {partnerLabel(user, partner, "Your partner")}{" "}has raised the white flag. 
                             It&apos;s not an apology—it&apos;s a reminder that your connection belongs above the winning or losing.
                         </p>
                     </div>

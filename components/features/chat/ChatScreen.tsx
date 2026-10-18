@@ -11,11 +11,12 @@ import {
   deleteChatMessage, markChatSeen, migrateChatToE2ee, sendChatMessage, setChatMessageSaved, subscribeToChat, type ChatDraft,
 } from "@/lib/firestore-helpers";
 import { ChatMediaError, prepareImage, type VoiceClip } from "@/lib/chatMedia";
-import { ensureChatKeys } from "@/lib/e2ee";
+import { ensureChatKeys, type KeyStatus } from "@/lib/e2ee";
+import { DeviceKeyGate } from "./DeviceKeyGate";
 import type { ChatMessage } from "@/lib/types";
 import { useSensoryFeedback } from "@/hooks/useSensoryFeedback";
 import { useScrollLock } from "@/hooks/useScrollLock";
-import { cn } from "@/lib/utils";
+import { cn, partnerLabel } from "@/lib/utils";
 import { ChatBubble } from "./ChatBubble";
 import { Composer } from "./Composer";
 import { ImageViewer } from "./ImageViewer";
@@ -62,9 +63,11 @@ export const ChatScreen = ({ onClose }: { onClose: () => void }) => {
   const coupleId = user?.coupleId;
   const uid = user?.uid;
   const partnerUid = partner?.uid;
-  const partnerName = partner?.displayName?.split(" ")[0] || "your partner";
+  const partnerName = partnerLabel(user, partner, "your partner");
 
-  useEffect(() => { if (uid) ensureChatKeys(uid).catch(console.error); }, [uid]);
+  const [keyStatus, setKeyStatus] = useState<KeyStatus | "checking">("checking");
+  const [keyEpoch, setKeyEpoch] = useState(0);
+  useEffect(() => { if (uid) ensureChatKeys(uid).then(setKeyStatus).catch((e) => { console.error(e); setKeyStatus("ready"); }); }, [uid, keyEpoch]);
 
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [loaded, setLoaded] = useState(false);
@@ -93,13 +96,13 @@ export const ChatScreen = ({ onClose }: { onClose: () => void }) => {
   const firstLoad = useRef(true);
 
   useEffect(() => {
-    if (!coupleId || !partnerUid) return;
+    if (!coupleId || !partnerUid || keyStatus !== "ready") return;
     return subscribeToChat(coupleId, partnerUid, count, (next, more) => {
       setMessages(next);
       setMayHaveMore(more);
       setLoaded(true);
     });
-  }, [coupleId, partnerUid, count]);
+  }, [coupleId, partnerUid, count, keyStatus]);
 
   // Stay at the bottom as messages arrive, unless the reader scrolled up to look at something
   useLayoutEffect(() => {
@@ -250,7 +253,7 @@ export const ChatScreen = ({ onClose }: { onClose: () => void }) => {
     deleteChatMessage(coupleId, m.id).catch(() => setError("Couldn't unsend that. Try again."));
   };
 
-  const partnerTitle = partner?.partnerNickname || partner?.displayName || "Your person";
+  const partnerTitle = user?.partnerNickname?.trim() || partner?.displayName || "Your person";
   const saved = view === "saved";
   const roundButton =
     "w-10 h-10 shrink-0 rounded-full bg-[#1c1c1c] border border-[#232323] flex items-center justify-center text-neutral-400 hover:text-white hover:bg-[#242424] active:scale-90 transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/50";
@@ -315,6 +318,9 @@ export const ChatScreen = ({ onClose }: { onClose: () => void }) => {
 
       {/* The conversation stays mounted while Saved is open, so nothing reloads when you come back */}
       <div className={cn("relative z-10 flex-1 min-h-0 flex flex-col", saved && "hidden")}>
+        {uid && keyStatus === "needs-unlock" && (
+          <DeviceKeyGate uid={uid} onDone={() => { setKeyStatus("checking"); setKeyEpoch((n) => n + 1); }} />
+        )}
         <div
           ref={scroller}
           onScroll={onScroll}

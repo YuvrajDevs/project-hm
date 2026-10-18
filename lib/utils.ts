@@ -37,3 +37,10 @@ export function formatFullDateTime(date: string | Date | number): string {
         hour12: true 
     });
 }
+
+// What to call the partner: the nickname you gave them, else their first name.
+export const partnerLabel = (
+  user?: { partnerNickname?: string } | null,
+  partner?: { displayName?: string } | null,
+  fallback = "your partner",
+): string => user?.partnerNickname?.trim() || partner?.displayName?.trim().split(" ")[0] || fallback;

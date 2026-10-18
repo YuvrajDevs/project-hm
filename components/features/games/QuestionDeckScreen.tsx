@@ -9,7 +9,7 @@ import { DECK_BY_ID } from "@/lib/games/decks";
 import { answeredCount, getCard, nextUnanswered, roundKey } from "@/lib/games/engine";
 import { presence } from "@/lib/presence";
 import { useSensoryFeedback } from "@/hooks/useSensoryFeedback";
-import { cn } from "@/lib/utils";
+import { cn, partnerLabel } from "@/lib/utils";
 import { DECK_ICONS, openQuestions, titleFont } from "./deckIcons";
 import type { ActiveGame } from "@/lib/types";
 import { useScrollLock } from "@/hooks/useScrollLock";
@@ -36,7 +36,7 @@ export const QuestionDeckScreen = ({ gameId, onLeave }: { gameId: string; onLeav
   const partnerUid = partner?.uid || "";
   const coupleId = user?.coupleId || "";
   const myName = user?.displayName?.split(" ")[0];
-  const partnerName = partner?.displayName?.split(" ")[0] || "Your partner";
+  const partnerName = partnerLabel(user, partner, "Your partner");
 
   useScrollLock();
 

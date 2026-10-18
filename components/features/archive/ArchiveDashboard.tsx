@@ -13,7 +13,7 @@ import {
 } from "lucide-react";
 import { StreakGrid } from "./StreakGrid";
 import { useMailbox } from "@/context/MailboxContext";
-import { cn, formatRelativeTime } from "@/lib/utils";
+import { cn, formatRelativeTime, partnerLabel } from "@/lib/utils";
 
 interface ArchiveDashboardProps {
   onOpenInbox: () => void;
@@ -28,7 +28,7 @@ export const ArchiveDashboard: React.FC<ArchiveDashboardProps> = ({ onOpenInbox,
 
   if (!metrics) return null;
 
-  const partnerName = partner?.displayName?.split(" ")[0] || "your partner";
+  const partnerName = partnerLabel(user, partner, "your partner");
   const myCheckIn = checkins.find(c => c.userUid === user?.uid);
   const partnerCheckIn = checkins.find(c => c.userUid !== user?.uid);
   const bothCheckedIn = !!myCheckIn && !!partnerCheckIn;

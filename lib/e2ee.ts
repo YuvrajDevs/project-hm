@@ -10,7 +10,7 @@
 // key, not against an attacker who already has script access to this origin.
 import { doc, getDoc, setDoc, updateDoc, deleteDoc } from "firebase/firestore";
 import { db } from "./firebase.ts";
-import { getKey, putKey, deleteKey } from "./e2eeStore.ts";
+import { getKey, putKey, deleteKey, setKeyScope, getLegacyKey } from "./e2eeStore.ts";
 import {
   generateKeyPairJwk,
   importNonExtractablePrivateKey,
@@ -42,24 +42,47 @@ const generateAndStoreKeyPair = async (): Promise<JsonWebKey> => {
   return publicJwk;
 };
 
-export const hasLocalPrivateKey = async (): Promise<boolean> => !!(await getKey("privateKey"));
+export const hasLocalPrivateKey = async (uid: string): Promise<boolean> => { setKeyScope(uid); return !!(await getKey("privateKey")); };
 
-// Generate a keypair on first chat use, and publish the public half if it isn't already there.
-export const ensureChatKeys = async (uid: string): Promise<void> => {
+const samePoint = (a?: JsonWebKey, b?: JsonWebKey) => !!a && !!b && a.x === b.x && a.y === b.y;
+
+export type KeyStatus = "ready" | "needs-unlock";
+
+// Make sure this device holds the key that is published for this user. First use generates and
+// publishes one; a key left by an older version is adopted only if it matches what is published.
+// If a different key is published (this is a second device or browser), nothing is overwritten:
+// the caller must unlock this device with the backup passphrase, or deliberately start fresh.
+export const ensureChatKeys = async (uid: string): Promise<KeyStatus> => {
+  setKeyScope(uid);
+  const userRef = doc(db, "users", uid);
+  const published = (await getDoc(userRef)).data()?.chatPublicKey as JsonWebKey | undefined;
+
   let publicJwk = (await getKey("publicKeyJwk")) as JsonWebKey | undefined;
   if (!(await getKey("privateKey")) || !publicJwk) {
-    publicJwk = await generateAndStoreKeyPair();
+    const legacyPub = (await getLegacyKey("publicKeyJwk")) as JsonWebKey | undefined;
+    const legacyJwk = (await getLegacyKey("privateKeyJwk")) as JsonWebKey | undefined;
+    if (legacyJwk && samePoint(legacyPub, published)) {
+      await putKey("privateKey", await importNonExtractablePrivateKey(legacyJwk));
+      await putKey("privateKeyJwk", legacyJwk);
+      await putKey("publicKeyJwk", legacyPub);
+      publicJwk = legacyPub;
+    } else if (published) {
+      return "needs-unlock";
+    } else {
+      publicJwk = await generateAndStoreKeyPair();
+    }
   }
-  const userRef = doc(db, "users", uid);
-  const snap = await getDoc(userRef);
-  if (!snap.data()?.chatPublicKey) {
+  if (!published) {
     await updateDoc(userRef, { chatPublicKey: publicJwk });
+    return "ready";
   }
+  return samePoint(publicJwk, published) ? "ready" : "needs-unlock";
 };
 
 // One function for every case that invalidates the current key material: re-pair, partner leaves,
 // lost-passphrase reset. Old messages under the old key become permanently undecryptable by design.
 export const rotateKeys = async (uid: string): Promise<JsonWebKey> => {
+  setKeyScope(uid);
   await deleteKey("privateKey");
   await deleteKey("privateKeyJwk");
   await deleteKey("publicKeyJwk");
@@ -99,6 +122,7 @@ export const backupKeyExists = async (uid: string): Promise<boolean> => {
 
 // Wraps this device's private key with `passphrase` and saves it to Firestore (owner-only).
 export const backupLocalKey = async (uid: string, passphrase: string): Promise<void> => {
+  setKeyScope(uid);
   const jwk = (await getKey("privateKeyJwk")) as JsonWebKey | undefined;
   if (!jwk) throw new Error("No local chat key to back up.");
   const blob = await wrapPrivateKeyJwk(jwk, passphrase);
@@ -107,6 +131,7 @@ export const backupLocalKey = async (uid: string, passphrase: string): Promise<v
 
 // Restores this device's private key from the Firestore backup. Throws on a wrong passphrase.
 export const restoreFromBackup = async (uid: string, passphrase: string): Promise<void> => {
+  setKeyScope(uid);
   const snap = await getDoc(doc(db, "users", uid, "keys", "chat"));
   if (!snap.exists()) throw new Error("No backup found.");
   const jwk = await unwrapPrivateKeyJwk(snap.data() as WrappedKeyBlob, passphrase);
