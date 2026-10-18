@@ -70,6 +70,7 @@ interface MailboxContextType {
   reactions: QuickReact[];
   events: CoupleEvent[];
   notifications: AppNotification[];
+  bellNotifications: AppNotification[]; // what the bell shows: chat and game activity only ever appear as toasts
   unreadNotificationsCount: number;
   notificationsEnabled: boolean;
   activeSafeSpace: SafeSpaceSession | null;
@@ -165,9 +166,11 @@ export const MailboxProvider: React.FC<{ children: React.ReactNode }> = ({ child
   const isPaired = !!user?.coupleId;
   const notificationsEnabled = user?.settings?.notificationsEnabled ?? true;
 
+  // Chat and game activity (messages, someone joining, your turn) is shown as a toast and kept out of the bell
+  const bellNotifications = useMemo(() => notifications.filter(n => n.type !== "CHAT" && n.type !== "GAME"), [notifications]);
   const unreadNotificationsCount = useMemo(() => {
-    return notifications.filter(n => !n.read).length;
-  }, [notifications]);
+    return bellNotifications.filter(n => !n.read).length;
+  }, [bellNotifications]);
 
   // Surprise Reveal Logic & Final Events List
   const events = useMemo(() => {
@@ -786,6 +789,7 @@ export const MailboxProvider: React.FC<{ children: React.ReactNode }> = ({ child
     reactions,
     events,
     notifications,
+    bellNotifications,
     unreadNotificationsCount,
     notificationsEnabled,
     activeSafeSpace,
@@ -831,7 +835,7 @@ export const MailboxProvider: React.FC<{ children: React.ReactNode }> = ({ child
     isOverlayActive,
     setOverlayActive
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }), [fbUser, user, couple, partner, messages, reactions, checkins, events, notifications, unreadNotificationsCount, notificationsEnabled, activeSafeSpace, liveGames, questionGames, metrics, loading, hasOnboarded, isPaired, hasLoadedCheckins, isOverlayActive, now, hasOlderMessages, todayId, safeSpaceHasNew]);
+  }), [fbUser, user, couple, partner, messages, reactions, checkins, events, notifications, bellNotifications, unreadNotificationsCount, notificationsEnabled, activeSafeSpace, liveGames, questionGames, metrics, loading, hasOnboarded, isPaired, hasLoadedCheckins, isOverlayActive, now, hasOlderMessages, todayId, safeSpaceHasNew]);
 
   return (
     <MailboxContext.Provider value={value}>

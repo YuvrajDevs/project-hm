@@ -7,6 +7,7 @@ import { useMailbox } from "@/context/MailboxContext";
 import { endGame, joinGame, replayGame, submitQuestionAnswer } from "@/lib/firestore-helpers";
 import { DECK_BY_ID } from "@/lib/games/decks";
 import { answeredCount, getCard, nextUnanswered, roundKey } from "@/lib/games/engine";
+import { presence } from "@/lib/presence";
 import { useSensoryFeedback } from "@/hooks/useSensoryFeedback";
 import { cn } from "@/lib/utils";
 import { DECK_ICONS, openQuestions, titleFont } from "./deckIcons";
@@ -18,6 +19,8 @@ import { DeckTitle } from "./DeckTitle";
 // Nothing of the other person's shows until both are done; then every question is a card with both answers, one at a time.
 export const QuestionDeckScreen = ({ gameId, onLeave }: { gameId: string; onLeave: () => void }) => {
   const { user, partner, questionGames } = useMailbox();
+  // Standing in the room: no toast for what happens in it
+  useEffect(() => { presence.gameId = gameId; return () => { if (presence.gameId === gameId) presence.gameId = null; }; }, [gameId]);
   // Once the game is gone (ended by either of you), keep showing its last state while the screen fades out;
   // with nothing to draw, the closing animation never finishes and the screen never really goes away
   const live = questionGames.find(g => g.id === gameId) ?? null;

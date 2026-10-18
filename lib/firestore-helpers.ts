@@ -1179,18 +1179,14 @@ export interface ChatDraft {
   sticker?: string;
 }
 
-const chatPreview = (draft: ChatDraft) =>
-  draft.kind === "image" ? "Sent a photo" : draft.kind === "sticker" ? "Sent a sticker" : draft.kind === "voice" ? "Sent a voice note" : "Sent you a message";
-
 /**
- * Add a message and update the chat summary on the couple in one go. The partner gets a
- * notification only when this starts a new burst, not for every line.
+ * Add a message and update the chat summary on the couple in one go. The partner's app sees the summary
+ * change and shows a toast (see NotificationToastManager); nothing is stored as a notification.
  */
 export const sendChatMessage = async (
   coupleId: string,
   uid: string,
-  draft: ChatDraft,
-  opts: { partnerUid?: string; name?: string; notify?: boolean } = {}
+  draft: ChatDraft
 ) => {
   const fields: Record<string, unknown> = { kind: draft.kind };
   for (const key of ["text", "mime", "data", "w", "h", "dur", "sticker"] as const) {
@@ -1206,15 +1202,6 @@ export const sendChatMessage = async (
     [`chatSeen.${uid}`]: now,
   });
   await batch.commit();
-
-  if (opts.notify && opts.partnerUid) {
-    notifyPartner(opts.partnerUid, {
-      uid: opts.partnerUid,
-      type: "CHAT",
-      title: opts.name || "New message",
-      body: chatPreview(draft),
-    });
-  }
 };
 
 // Remember how far this person has read. It never moves backwards.

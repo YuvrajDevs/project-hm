@@ -203,6 +203,8 @@ export function HomeClient() {
     const handleOpenSafeSpace = () => setSafeSpaceOpen(true);
     const handleOpenGame = (e: Event) => setOpenGameId((e as CustomEvent<{ id: string }>).detail.id);
     const handleOpenQuestions = (e: Event) => setOpenQuestionsId((e as CustomEvent<{ id: string }>).detail.id);
+    const handleOpenChat = () => setChatOpen(true);
+    window.addEventListener('openChat', handleOpenChat);
     window.addEventListener('openGame', handleOpenGame);
     window.addEventListener('openQuestions', handleOpenQuestions);
 
@@ -211,6 +213,7 @@ export function HomeClient() {
     window.addEventListener('openSafeSpace', handleOpenSafeSpace);
 
     return () => {
+        window.removeEventListener('openChat', handleOpenChat);
         window.removeEventListener('popupStateChange', handlePopup);
         window.removeEventListener('openSignalSelector', handleOpenSelector);
         window.removeEventListener('openSafeSpace', handleOpenSafeSpace);
