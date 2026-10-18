@@ -49,6 +49,7 @@ export interface Couple {
   chatLastBy?: string;
   chatLastKind?: ChatKind;
   chatSeen?: Record<string, string>; // when each person last had the chat open (ISO)
+  chatMigratedV2?: boolean; // true once pre-encryption chat history has been cleared (see migrateChatToE2ee)
   // Reset Flow
   resetBy?: string;
   resetStatus?: "pending" | "declined" | null;
@@ -216,9 +217,9 @@ export interface ChatMessage {
   id: string;
   senderUid: string;
   kind: ChatKind;
-  text?: string;       // text messages only
-  mime?: string;       // photos and voice notes: the media type of `data`
-  data?: string;       // photos and voice notes: the file itself, base64
+  text?: string;       // text messages only - decrypted client-side, never stored
+  mime?: string;       // photos and voice notes: the media type of `data` - decrypted client-side
+  data?: string;       // photos and voice notes: the file itself, base64 - decrypted client-side
   w?: number;          // photos: size in pixels, so the bubble holds its shape while loading
   h?: number;
   dur?: number;        // voice notes: seconds
@@ -226,6 +227,10 @@ export interface ChatMessage {
   createdAt: string;
   savedBy?: string[];  // people who saved it for themselves
   pending?: boolean;   // still on its way to the server
+  v?: 1;               // encryption envelope version, as stored (raw doc field)
+  iv?: string;         // AES-GCM IV, base64, as stored (raw doc field)
+  ct?: string;         // AES-GCM ciphertext, base64, as stored (raw doc field)
+  decryptFailed?: boolean; // iv/ct existed but couldn't be decrypted - show a placeholder, don't crash
 }
 
 // 🪣 Bucket list: things the two of them want to do together

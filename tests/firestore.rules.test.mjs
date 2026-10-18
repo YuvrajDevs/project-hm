@@ -475,67 +475,44 @@ test("partners can add to the couple's game score; outsiders cannot", async () =
   await assertFails(updateDoc(doc(db(MALLORY), "couples", COUPLE), { [`gameScores.${MALLORY}`]: 99 }));
 });
 
-// ─── Chat ──────────────────────────────────────────────────────────────────
+// ─── Chat (end-to-end encrypted: content is opaque ciphertext) ─────────────
 const chatRef = (uid, id) => doc(db(uid), "couples", COUPLE, "chat", id);
-const textMsg = (uid, text = "hello") => ({ senderUid: uid, kind: "text", text, createdAt: serverTimestamp() });
+const cipherMsg = (uid, extra = {}) => ({ senderUid: uid, kind: "text", v: 1, iv: "A".repeat(16), ct: "A".repeat(100), createdAt: serverTimestamp(), ...extra });
 
 test("partners can chat; outsiders cannot read or write", async () => {
   await seedCouple();
-  await assertSucceeds(setDoc(chatRef(ALICE, "c1"), textMsg(ALICE)));
-  await assertSucceeds(setDoc(chatRef(BOB, "c2"), textMsg(BOB, "hi back")));
+  await assertSucceeds(setDoc(chatRef(ALICE, "c1"), cipherMsg(ALICE)));
+  await assertSucceeds(setDoc(chatRef(BOB, "c2"), cipherMsg(BOB)));
   await assertSucceeds(getDocs(query(collection(db(BOB), "couples", COUPLE, "chat"), orderBy("createdAt"), limit(10))));
   await assertFails(getDocs(collection(db(MALLORY), "couples", COUPLE, "chat")));
   await assertFails(getDoc(chatRef(MALLORY, "c1")));
-  await assertFails(setDoc(chatRef(MALLORY, "c3"), textMsg(MALLORY)));
+  await assertFails(setDoc(chatRef(MALLORY, "c3"), cipherMsg(MALLORY)));
   await assertFails(getDoc(chatRef(null, "c1")));
 });
 
 test("a message must be from the sender, stamped by the server, and well formed", async () => {
   await seedCouple();
-  await assertFails(setDoc(chatRef(ALICE, "x1"), textMsg(BOB)));                                    // pretending to be Bob
-  await assertFails(setDoc(chatRef(ALICE, "x2"), { ...textMsg(ALICE), createdAt: Timestamp.now() })); // client-chosen time
-  await assertFails(setDoc(chatRef(ALICE, "x3"), textMsg(ALICE, "")));                               // empty
-  await assertFails(setDoc(chatRef(ALICE, "x4"), textMsg(ALICE, "a".repeat(2001))));                 // too long
-  await assertFails(setDoc(chatRef(ALICE, "x5"), { ...textMsg(ALICE), savedBy: [ALICE] }));          // extra fields
-  await assertFails(setDoc(chatRef(ALICE, "x6"), { ...textMsg(ALICE), kind: "video" }));
-  await assertSucceeds(setDoc(chatRef(ALICE, "ok"), textMsg(ALICE, "a".repeat(2000))));
-});
-
-test("stickers carry only a known id", async () => {
-  await seedCouple();
-  const sticker = (id, extra = {}) => ({ senderUid: ALICE, kind: "sticker", sticker: id, createdAt: serverTimestamp(), ...extra });
-  await assertSucceeds(setDoc(chatRef(ALICE, "s1"), sticker("s00")));
-  await assertSucceeds(setDoc(chatRef(BOB, "s2"), { ...sticker("s26"), senderUid: BOB }));
-  await assertFails(setDoc(chatRef(ALICE, "s3"), sticker("../../x")));                    // not an id
-  await assertFails(setDoc(chatRef(ALICE, "s4"), sticker("s0")));                        // wrong shape
-  await assertFails(setDoc(chatRef(ALICE, "s5"), sticker("s01", { data: "A".repeat(100) }))); // no payload on a sticker
-  await assertFails(setDoc(chatRef(ALICE, "s6"), sticker("s01", { text: "hi" })));
-  await assertFails(setDoc(chatRef(MALLORY, "s7"), { ...sticker("s01"), senderUid: MALLORY }));
-});
-
-test("photos and voice notes are size- and type-capped", async () => {
-  await seedCouple();
-  const photo = (data, mime = "image/jpeg") => ({ senderUid: ALICE, kind: "image", mime, data, w: 800, h: 600, createdAt: serverTimestamp() });
-  const voice = (data, dur = 12, mime = "audio/webm") => ({ senderUid: ALICE, kind: "voice", mime, data, dur, createdAt: serverTimestamp() });
-  await assertSucceeds(setDoc(chatRef(ALICE, "p1"), photo("A".repeat(600000))));
-  await assertFails(setDoc(chatRef(ALICE, "p2"), photo("A".repeat(700001))));
-  await assertFails(setDoc(chatRef(ALICE, "p3"), photo("A".repeat(1000), "text/html")));
-  await assertFails(setDoc(chatRef(ALICE, "p4"), { ...photo("A".repeat(1000)), text: "caption" }));
-  await assertSucceeds(setDoc(chatRef(ALICE, "v1"), voice("A".repeat(200000), 60)));
-  await assertSucceeds(setDoc(chatRef(ALICE, "v2"), voice("A".repeat(200000), 30, "audio/mp4")));
-  await assertFails(setDoc(chatRef(ALICE, "v3"), voice("A".repeat(200000), 500)));
-  await assertFails(setDoc(chatRef(ALICE, "v4"), voice("A".repeat(200000), 10, "application/zip")));
-  await assertFails(setDoc(chatRef(ALICE, "v5"), { senderUid: ALICE, kind: "voice", mime: "audio/webm", createdAt: serverTimestamp() })); // no audio
+  await assertFails(setDoc(chatRef(ALICE, "x1"), cipherMsg(BOB)));                                       // pretending to be Bob
+  await assertFails(setDoc(chatRef(ALICE, "x2"), cipherMsg(ALICE, { createdAt: Timestamp.now() })));     // client-chosen time
+  await assertFails(setDoc(chatRef(ALICE, "x3"), cipherMsg(ALICE, { savedBy: [ALICE] })));                // extra field
+  await assertFails(setDoc(chatRef(ALICE, "x4"), cipherMsg(ALICE, { kind: "video" })));                   // unknown kind
+  await assertFails(setDoc(chatRef(ALICE, "x5"), cipherMsg(ALICE, { v: 2 })));                            // wrong version
+  await assertFails(setDoc(chatRef(ALICE, "x6"), cipherMsg(ALICE, { iv: "A".repeat(15) })));              // wrong iv length
+  await assertFails(setDoc(chatRef(ALICE, "x7"), cipherMsg(ALICE, { ct: "" })));                          // empty ciphertext
+  await assertFails(setDoc(chatRef(ALICE, "x8"), cipherMsg(ALICE, { ct: "A".repeat(900001) })));          // oversized ciphertext
+  await assertFails(setDoc(chatRef(ALICE, "x9"), cipherMsg(ALICE, { text: "plaintext leaked" })));        // plaintext field rejected
+  await assertSucceeds(setDoc(chatRef(ALICE, "ok1"), cipherMsg(ALICE, { kind: "image" })));
+  await assertSucceeds(setDoc(chatRef(ALICE, "ok2"), cipherMsg(ALICE, { ct: "A".repeat(900000) })));
 });
 
 test("either partner can save a message for themselves, and only themselves", async () => {
   await seedCouple();
-  await assertSucceeds(setDoc(chatRef(ALICE, "c1"), textMsg(ALICE)));
+  await assertSucceeds(setDoc(chatRef(ALICE, "c1"), cipherMsg(ALICE)));
   await assertSucceeds(updateDoc(chatRef(BOB, "c1"), { savedBy: arrayUnion(BOB) }));
   await assertSucceeds(updateDoc(chatRef(ALICE, "c1"), { savedBy: arrayUnion(ALICE) }));
   await assertFails(updateDoc(chatRef(BOB, "c1"), { savedBy: arrayRemove(ALICE) }));           // not Alice's save to undo
   await assertFails(updateDoc(chatRef(BOB, "c1"), { savedBy: [BOB, "mallory"] }));
-  await assertFails(updateDoc(chatRef(BOB, "c1"), { text: "edited" }));                         // words are never edited
+  await assertFails(updateDoc(chatRef(BOB, "c1"), { ct: "edited".repeat(20) }));                // ciphertext is never edited
   await assertFails(updateDoc(chatRef(MALLORY, "c1"), { savedBy: arrayUnion(MALLORY) }));
   await assertSucceeds(updateDoc(chatRef(BOB, "c1"), { savedBy: arrayRemove(BOB) }));
   await assertSucceeds(getDocs(query(collection(db(BOB), "couples", COUPLE, "chat"), where("savedBy", "array-contains", ALICE))));
@@ -543,7 +520,7 @@ test("either partner can save a message for themselves, and only themselves", as
 
 test("only the sender can unsend a message", async () => {
   await seedCouple();
-  await assertSucceeds(setDoc(chatRef(ALICE, "c1"), textMsg(ALICE)));
+  await assertSucceeds(setDoc(chatRef(ALICE, "c1"), cipherMsg(ALICE)));
   await assertFails(deleteDoc(chatRef(BOB, "c1")));
   await assertFails(deleteDoc(chatRef(MALLORY, "c1")));
   await assertSucceeds(deleteDoc(chatRef(ALICE, "c1")));
@@ -553,11 +530,23 @@ test("a message and the chat summary on the couple are written together", async 
   await seedCouple();
   const alice = db(ALICE);
   const batch = writeBatch(alice);
-  batch.set(doc(collection(alice, "couples", COUPLE, "chat")), textMsg(ALICE));
+  batch.set(doc(collection(alice, "couples", COUPLE, "chat")), cipherMsg(ALICE));
   batch.update(doc(alice, "couples", COUPLE), { chatLastAt: "2026-10-17T10:00:00Z", chatLastBy: ALICE, chatLastKind: "text", [`chatSeen.${ALICE}`]: "2026-10-17T10:00:00Z" });
   await assertSucceeds(batch.commit());
   await assertSucceeds(updateDoc(doc(db(BOB), "couples", COUPLE), { [`chatSeen.${BOB}`]: "2026-10-17T10:01:00Z" }));
   await assertFails(updateDoc(doc(db(MALLORY), "couples", COUPLE), { [`chatSeen.${MALLORY}`]: "2026-10-17T10:01:00Z" }));
+});
+
+// ─── Chat key backup (owner only, never the partner) ───────────────────────
+test("only the owner can read or write their chat key backup", async () => {
+  await seedCouple();
+  const blob = { salt: "A".repeat(20), iv: "A".repeat(16), wrapped: "A".repeat(50), iterations: 600000 };
+  await assertSucceeds(setDoc(doc(db(ALICE), "users", ALICE, "keys", "chat"), blob));
+  await assertSucceeds(getDoc(doc(db(ALICE), "users", ALICE, "keys", "chat")));
+  await assertFails(getDoc(doc(db(BOB), "users", ALICE, "keys", "chat")));          // partner cannot read
+  await assertFails(setDoc(doc(db(BOB), "users", ALICE, "keys", "chat"), blob));     // partner cannot write
+  await assertFails(getDoc(doc(db(MALLORY), "users", ALICE, "keys", "chat")));
+  await assertFails(setDoc(doc(db(MALLORY), "users", ALICE, "keys", "chat"), blob));
 });
 
 // ─── Saving thoughts ───────────────────────────────────────────────────────
