@@ -5,6 +5,7 @@ import { motion } from "framer-motion";
 import { useMailbox } from "@/context/MailboxContext";
 import { ShieldCheck, ArrowRight, MessageCircle } from "lucide-react";
 import { useSensoryFeedback } from "@/hooks/useSensoryFeedback";
+import { partnerLabel } from "@/lib/utils";
 
 const openRoom = () => window.dispatchEvent(new CustomEvent('openSafeSpace'));
 
@@ -14,7 +15,7 @@ export const SafeSpaceEntry = () => {
   const [error, setError] = useState("");
   const { playHeartbeat } = useSensoryFeedback();
 
-  const partnerName = partner?.displayName?.split(" ")[0] || "your partner";
+  const partnerName = partnerLabel(user, partner, "your partner");
 
   const handleStart = async () => {
     if (!user?.coupleId || starting) return;

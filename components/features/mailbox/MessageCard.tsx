@@ -5,7 +5,7 @@ import { MailboxMessage, ResponseMode } from "@/lib/types";
 import { motion, AnimatePresence } from "framer-motion";
 import { useMailbox } from "@/context/MailboxContext";
 import { Clock, CheckCircle2, Ear, Users, Send, ChevronLeft, Trash2, Edit3, Eye, MoreVertical, Bookmark } from "lucide-react";
-import { cn } from "@/lib/utils";
+import { cn, partnerLabel } from "@/lib/utils";
 import { useSensoryFeedback } from "@/hooks/useSensoryFeedback";
 import { EditMessage } from "./EditMessage";
 import { setThoughtSaved } from "@/lib/firestore-helpers";
@@ -125,7 +125,7 @@ export const MessageCard = ({ message }: { message: MailboxMessage }) => {
   const rule = light ? "border-black/10" : "border-white/20";
   const action = light ? "bg-black/10 hover:bg-black/15" : "bg-black/20 hover:bg-black/30";
   const when = `${new Date(message.createdAt).toLocaleDateString([], { month: "short", day: "numeric" })} · ${new Date(message.createdAt).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}`;
-  const partnerFirst = partner?.displayName?.split(" ")[0] || "Your partner";
+  const partnerFirst = partnerLabel(user, partner, "Your partner");
 
   return (
     <motion.div

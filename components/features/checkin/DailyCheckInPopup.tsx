@@ -7,6 +7,7 @@ import { ArrowRight, X, Zap, Send, Heart, Smile, Link2 } from "lucide-react";
 import { MoodSelector, MoodIcon, MOOD_TYPES } from "./MoodSelector";
 import { ReactionType } from "@/lib/types";
 import { useSensoryFeedback } from "@/hooks/useSensoryFeedback";
+import { partnerLabel } from "@/lib/utils";
 
 interface DailyCheckInPopupProps {
   onClose: () => void;
@@ -76,6 +77,9 @@ export const DailyCheckInPopup: React.FC<DailyCheckInPopupProps> = ({ onClose })
     return Math.max(0, 100 - (moodDiff * 7) - (connDiff * 7));
   };
 
+  // Red when low, through yellow, to green when high (value is 0-100)
+  const levelTone = (v: number) => (v < 35 ? "tone-red" : v < 55 ? "tone-amber" : v < 75 ? "tone-teal" : "tone-emerald");
+
   const getSuggestion = (score: number) => {
     if (score > 85) return "You're perfectly in sync today! Maybe a spontaneous date?";
     if (score > 60) return "Global vibes are good. A little quality time would go a long way.";
@@ -85,7 +89,7 @@ export const DailyCheckInPopup: React.FC<DailyCheckInPopupProps> = ({ onClose })
 
   const score = calculateSyncScore();
   const stepIndex = step === "mood" ? 0 : step === "connection" ? 1 : step === "moodStatus" ? 2 : -1;
-  const partnerName = partner?.displayName?.split(" ")[0] || "Your partner";
+  const partnerName = partnerLabel(user, partner, "Your partner");
 
   // One slider screen for mood and connection: a big number on a coloured card, the slider under it
   const slider = (value: number, set: (n: number) => void, tone: string, low: string, high: string) => (
@@ -155,7 +159,7 @@ export const DailyCheckInPopup: React.FC<DailyCheckInPopupProps> = ({ onClose })
                   <p className="font-outfit text-xs text-neutral-500">Your honest feeling right now.</p>
                 </div>
               </div>
-              {slider(mood, setMood, "tone-rose", "Mellow", "Radiant")}
+              {slider(mood, setMood, levelTone(mood * 10), "Mellow", "Radiant")}
               <button onClick={() => { playTick(); setStep("connection"); }} className={primary}>Next <ArrowRight className="w-4 h-4" /></button>
             </motion.div>
           )}
@@ -169,7 +173,7 @@ export const DailyCheckInPopup: React.FC<DailyCheckInPopupProps> = ({ onClose })
                   <p className="font-outfit text-xs text-neutral-500">The two of you, right now.</p>
                 </div>
               </div>
-              {slider(connection, setConnection, "tone-blue", "Distant", "One heartbeat")}
+              {slider(connection, setConnection, levelTone(connection * 10), "Distant", "One heartbeat")}
               <button onClick={() => { playTick(); setStep("moodStatus"); }} className={primary}>Last step <ArrowRight className="w-4 h-4" /></button>
             </motion.div>
           )}
@@ -205,21 +209,21 @@ export const DailyCheckInPopup: React.FC<DailyCheckInPopupProps> = ({ onClose })
                 </>
               ) : (
                 <>
-                  <div className={`${score > 70 ? "tone-emerald" : "tone-amber"} rounded-[1.5rem] p-8 flex items-end justify-between gap-4`}>
+                  <div className={`${levelTone(score)} rounded-[1.5rem] p-8 flex items-end justify-between gap-4`}>
                     <div className="space-y-1">
                       <span className="font-bebas text-[10px] tracking-[0.4em] uppercase opacity-70">Synchronicity</span>
                       <div className="font-bebas text-7xl leading-none tabular-nums">{score}%</div>
                     </div>
-                    <span className="font-bebas text-xl tracking-widest uppercase pb-1">{score > 70 ? "Deep sync" : "Adapting"}</span>
+                    <span className="font-bebas text-xl tracking-widest uppercase pb-1">{score >= 75 ? "Deep sync" : score >= 55 ? "In tune" : score >= 35 ? "Adapting" : "Far apart"}</span>
                   </div>
                   <div className="grid grid-cols-2 gap-3">
-                    <div className="tone-pink rounded-[1.5rem] p-5 space-y-1">
-                      <span className="font-bebas text-[10px] tracking-[0.3em] uppercase opacity-70">You</span>
-                      <p className="font-bebas text-2xl tracking-wide uppercase truncate flex items-center gap-2"><MoodIcon mood={user?.currentMood} className="w-7 h-7 shrink-0 object-contain" />{user?.currentMood || "Synced"}</p>
+                    <div className="tone-pink rounded-[1.5rem] p-5 flex flex-col justify-between gap-3 min-h-[7rem]">
+                      <span className="font-bebas text-[10px] tracking-[0.3em] uppercase leading-none opacity-70 block truncate">You</span>
+                      <p className="font-bebas text-2xl leading-none tracking-wide uppercase truncate flex items-center gap-2"><MoodIcon mood={user?.currentMood} className="w-7 h-7 shrink-0 object-contain" />{user?.currentMood || "Synced"}</p>
                     </div>
-                    <div className="tone-blue rounded-[1.5rem] p-5 space-y-1">
-                      <span className="font-bebas text-[10px] tracking-[0.3em] uppercase opacity-70 truncate block">{partnerName}</span>
-                      <p className="font-bebas text-2xl tracking-wide uppercase truncate flex items-center gap-2"><MoodIcon mood={partner?.currentMood} className="w-7 h-7 shrink-0 object-contain" />{partner?.currentMood || "Connected"}</p>
+                    <div className="tone-blue rounded-[1.5rem] p-5 flex flex-col justify-between gap-3 min-h-[7rem]">
+                      <span className="font-bebas text-[10px] tracking-[0.3em] uppercase leading-none opacity-70 truncate block">{partnerName}</span>
+                      <p className="font-bebas text-2xl leading-none tracking-wide uppercase truncate flex items-center gap-2"><MoodIcon mood={partner?.currentMood} className="w-7 h-7 shrink-0 object-contain" />{partner?.currentMood || "Connected"}</p>
                     </div>
                   </div>
                   <p className="font-outfit text-sm text-neutral-400 leading-relaxed px-1">{getSuggestion(score)}</p>

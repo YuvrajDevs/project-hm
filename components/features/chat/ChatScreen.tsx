@@ -8,14 +8,13 @@ import { useMailbox } from "@/context/MailboxContext";
 import { Avatar } from "@/components/ui/Avatar";
 import { AmbientBackground } from "@/components/ui/AmbientBackground";
 import {
-  deleteChatMessage, markChatSeen, migrateChatToE2ee, sendChatMessage, setChatMessageSaved, subscribeToChat, type ChatDraft,
+  deleteChatMessage, markChatSeen, sendChatMessage, setChatMessageSaved, subscribeToChat, type ChatDraft,
 } from "@/lib/firestore-helpers";
 import { ChatMediaError, prepareImage, type VoiceClip } from "@/lib/chatMedia";
-import { ensureChatKeys } from "@/lib/e2ee";
 import type { ChatMessage } from "@/lib/types";
 import { useSensoryFeedback } from "@/hooks/useSensoryFeedback";
 import { useScrollLock } from "@/hooks/useScrollLock";
-import { cn } from "@/lib/utils";
+import { cn, partnerLabel } from "@/lib/utils";
 import { ChatBubble } from "./ChatBubble";
 import { Composer } from "./Composer";
 import { ImageViewer } from "./ImageViewer";
@@ -61,10 +60,7 @@ export const ChatScreen = ({ onClose }: { onClose: () => void }) => {
   useEffect(() => { presence.chatOpen = true; return () => { presence.chatOpen = false; }; }, []);
   const coupleId = user?.coupleId;
   const uid = user?.uid;
-  const partnerUid = partner?.uid;
-  const partnerName = partner?.displayName?.split(" ")[0] || "your partner";
-
-  useEffect(() => { if (uid) ensureChatKeys(uid).catch(console.error); }, [uid]);
+  const partnerName = partnerLabel(user, partner, "your partner");
 
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [loaded, setLoaded] = useState(false);
@@ -76,11 +72,6 @@ export const ChatScreen = ({ onClose }: { onClose: () => void }) => {
   const [preparing, setPreparing] = useState(false);
   const [view, setView] = useState<"chat" | "saved">("chat");
   const [newBelow, setNewBelow] = useState(false);
-  const [clearedNotice, setClearedNotice] = useState(false);
-  useEffect(() => {
-    if (!coupleId) return;
-    migrateChatToE2ee(coupleId).then((cleared) => { if (cleared) setClearedNotice(true); }).catch(console.error);
-  }, [coupleId]);
   const { playPop } = useSensoryFeedback();
   const viewport = useVisualViewport();
   useScrollLock();
@@ -93,13 +84,13 @@ export const ChatScreen = ({ onClose }: { onClose: () => void }) => {
   const firstLoad = useRef(true);
 
   useEffect(() => {
-    if (!coupleId || !partnerUid) return;
-    return subscribeToChat(coupleId, partnerUid, count, (next, more) => {
+    if (!coupleId) return;
+    return subscribeToChat(coupleId, count, (next, more) => {
       setMessages(next);
       setMayHaveMore(more);
       setLoaded(true);
     });
-  }, [coupleId, partnerUid, count]);
+  }, [coupleId, count]);
 
   // Stay at the bottom as messages arrive, unless the reader scrolled up to look at something
   useLayoutEffect(() => {
@@ -197,18 +188,18 @@ export const ChatScreen = ({ onClose }: { onClose: () => void }) => {
     return null;
   }, [messages, partnerSeen, uid]);
 
-  if (!user || !coupleId || !uid || !partnerUid) return null;
+  if (!user || !coupleId || !uid) return null;
 
   const send = async (draft: ChatDraft) => {
     setError("");
     playPop();
-    await sendChatMessage(coupleId, uid, partnerUid, draft);
+    await sendChatMessage(coupleId, uid, draft);
   };
 
   const sendText = (text: string) => {
     send({ kind: "text", text }).catch((err) => {
       console.error(err);
-      setError(err instanceof ChatMediaError ? err.message : "That message didn't send. Check your connection and try again.");
+      setError("That message didn't send. Check your connection and try again.");
     });
   };
 
@@ -229,14 +220,14 @@ export const ChatScreen = ({ onClose }: { onClose: () => void }) => {
   const sendSticker = (id: string) => {
     send({ kind: "sticker", sticker: id }).catch((err) => {
       console.error(err);
-      setError(err instanceof ChatMediaError ? err.message : "That sticker didn't send. Check your connection and try again.");
+      setError("That sticker didn't send. Check your connection and try again.");
     });
   };
 
   const sendVoice = (clip: VoiceClip) => {
     send({ kind: "voice", mime: clip.mime, data: clip.data, dur: clip.dur }).catch((err) => {
       console.error(err);
-      setError(err instanceof ChatMediaError ? err.message : "That voice note didn't send. Try again.");
+      setError("That voice note didn't send. Try again.");
     });
   };
 
@@ -250,7 +241,7 @@ export const ChatScreen = ({ onClose }: { onClose: () => void }) => {
     deleteChatMessage(coupleId, m.id).catch(() => setError("Couldn't unsend that. Try again."));
   };
 
-  const partnerTitle = partner?.partnerNickname || partner?.displayName || "Your person";
+  const partnerTitle = user?.partnerNickname?.trim() || partner?.displayName || "Your person";
   const saved = view === "saved";
   const roundButton =
     "w-10 h-10 shrink-0 rounded-full bg-[#1c1c1c] border border-[#232323] flex items-center justify-center text-neutral-400 hover:text-white hover:bg-[#242424] active:scale-90 transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/50";
@@ -399,11 +390,6 @@ export const ChatScreen = ({ onClose }: { onClose: () => void }) => {
 
         <div className="shrink-0 border-t border-white/5 bg-[var(--page)] pb-[env(safe-area-inset-bottom)]">
           <div className="w-full max-w-2xl mx-auto">
-            {clearedNotice && (
-              <p className="px-5 pt-2 text-neutral-400 font-outfit text-xs text-center">
-                For your privacy, we cleared your chat history — chat is now end-to-end encrypted.
-              </p>
-            )}
             {error && <p role="alert" className="px-5 pt-2 text-rose-400 font-outfit text-xs text-center">{error}</p>}
             <Composer onText={sendText} onSticker={sendSticker} onPhoto={sendPhoto} onVoice={sendVoice} onError={setError} preparing={preparing} />
           </div>

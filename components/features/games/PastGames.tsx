@@ -8,7 +8,7 @@ import { getGameHistory } from "@/lib/firestore-helpers";
 import { DECK_BY_ID, isKnownDeck } from "@/lib/games/decks";
 import { getCard, roundKey, totalScores, truthDarePlayer } from "@/lib/games/engine";
 import type { CoupleGame } from "@/lib/types";
-import { cn } from "@/lib/utils";
+import { cn, partnerLabel } from "@/lib/utils";
 import { DECK_ICONS, titleFont } from "./deckIcons";
 import { DeckTitle } from "./DeckTitle";
 
@@ -23,7 +23,7 @@ export const PastGames = ({ onClose }: { onClose: () => void }) => {
 
   const uid = user?.uid || "";
   const partnerUid = partner?.uid || "";
-  const partnerName = partner?.displayName?.split(" ")[0] || "Your partner";
+  const partnerName = partnerLabel(user, partner, "Your partner");
 
   useEffect(() => {
     if (!user?.coupleId) return;

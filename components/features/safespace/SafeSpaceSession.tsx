@@ -26,7 +26,7 @@ import {
   Sparkles
 } from "lucide-react";
 import { AmbientBackground } from "../../ui/AmbientBackground";
-import { cn, formatRelativeTime } from "@/lib/utils";
+import { cn, formatRelativeTime, partnerLabel } from "@/lib/utils";
 import { useSensoryFeedback } from "@/hooks/useSensoryFeedback";
 import { useScrollLock } from "@/hooks/useScrollLock";
 
@@ -64,7 +64,7 @@ export const SafeSpaceSession: React.FC<SafeSpaceSessionProps> = ({ onLeave, onC
   const coupleId = user?.coupleId;
   const uid = user?.uid;
   const sessionId = activeSafeSpace?.id;
-  const partnerName = partner?.displayName?.split(" ")[0] || "your partner";
+  const partnerName = partnerLabel(user, partner, "your partner");
 
   useScrollLock();
 

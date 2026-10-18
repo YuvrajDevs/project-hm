@@ -3,6 +3,7 @@ import { Bebas_Neue, Outfit, Inter, Playfair_Display } from "next/font/google";
 import { SITE_URL, SITE_NAME } from "@/lib/seo";
 import "./globals.css";
 import "./theme.css";
+import { ImagePreloader } from "@/components/ui/ImagePreloader";
 
 const bebasNeue = Bebas_Neue({
   weight: "400",
@@ -104,6 +105,7 @@ export default function RootLayout({
             url: SITE_URL,
           }}
         />
+        <ImagePreloader />
         {children}
       </body>
     </html>

@@ -110,13 +110,6 @@ service cloud.firestore {
           && request.resource.data.body is string && request.resource.data.body.size() <= 300
           && get(/databases/$(database)/documents/users/$(userId)).data.get('partnerId', null) == request.auth.uid;
       }
-
-      // Chat key backup: the owner only, never the partner. `chatPublicKey` itself is a field on
-      // this document (readable by the partner via the rule above, writable by the owner) since the
-      // partner needs it to derive the shared chat key - only the wrapped PRIVATE key backup lives here.
-      match /keys/{keyId} {
-        allow read, write: if isOwner(userId);
-      }
     }
 
     // ─── Invites ─────────────────────────────────────────────────────────────
@@ -270,21 +263,37 @@ service cloud.firestore {
         allow delete: if isPartOfCouple(coupleId);
       }
 
-      // Chat: end-to-end encrypted. The content is opaque ciphertext (`ct`), so the server can only
-      // check its size and shape, not per-kind rules like a mime whitelist or a voice-duration cap -
-      // those are enforced client-side (lib/chatMedia.ts) before encryption.
+      // Chat: photos and voice notes ride inside the message, so each message is size-capped.
       // Either person can save a message for themselves; only the sender can unsend it.
       match /chat/{messageId} {
         allow read: if isPartOfCouple(coupleId);
         allow create: if isPartOfCouple(coupleId)
-          && request.resource.data.keys().hasOnly(['senderUid', 'kind', 'v', 'iv', 'ct', 'createdAt'])
+          && request.resource.data.keys().hasOnly(['senderUid', 'kind', 'text', 'mime', 'data', 'w', 'h', 'dur', 'sticker', 'createdAt'])
           && request.resource.data.senderUid == request.auth.uid
           && request.resource.data.createdAt == request.time
-          && request.resource.data.kind in ['text', 'image', 'voice', 'sticker']
-          && request.resource.data.v == 1
-          && request.resource.data.iv is string && request.resource.data.iv.size() == 16
-          && request.resource.data.ct is string
-          && request.resource.data.ct.size() > 0 && request.resource.data.ct.size() <= 900000;
+          && (
+            (request.resource.data.kind == 'text'
+              && request.resource.data.text is string
+              && request.resource.data.text.size() > 0
+              && request.resource.data.text.size() <= 2000
+              && !('data' in request.resource.data))
+            || (request.resource.data.kind == 'image'
+              && request.resource.data.get('mime', '') in ['image/jpeg', 'image/webp']
+              && request.resource.data.get('data', null) is string
+              && request.resource.data.data.size() <= 700000
+              && !('text' in request.resource.data))
+            || (request.resource.data.kind == 'voice'
+              && request.resource.data.get('mime', '') in ['audio/webm', 'audio/mp4', 'audio/ogg']
+              && request.resource.data.get('data', null) is string
+              && request.resource.data.data.size() <= 700000
+              && request.resource.data.get('dur', null) is number
+              && request.resource.data.dur <= 120
+              && !('text' in request.resource.data))
+            || (request.resource.data.kind == 'sticker'
+              && request.resource.data.get('sticker', null) is string
+              && request.resource.data.sticker.matches('^s[0-9]{2}$')
+              && request.resource.data.keys().hasOnly(['senderUid', 'kind', 'sticker', 'createdAt']))
+          );
         allow update: if isPartOfCouple(coupleId)
           && changedOnly(['savedBy'])
           && request.resource.data.savedBy is list

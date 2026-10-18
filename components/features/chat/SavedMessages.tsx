@@ -8,6 +8,7 @@ import { setChatMessageSaved, subscribeToSavedChat } from "@/lib/firestore-helpe
 import type { ChatMessage } from "@/lib/types";
 import { MessageContent } from "./MessageContent";
 import { ImageViewer } from "./ImageViewer";
+import { partnerLabel } from "@/lib/utils";
 
 const stamp = (iso: string) =>
   new Date(iso).toLocaleString(undefined, { day: "numeric", month: "short", year: "numeric", hour: "numeric", minute: "2-digit" });
@@ -68,18 +69,17 @@ export const SavedMessages = ({ onOpenChat }: { onOpenChat: () => void }) => {
   const { user, partner } = useMailbox();
   const coupleId = user?.coupleId;
   const uid = user?.uid;
-  const partnerUid = partner?.uid;
   const [items, setItems] = useState<ChatMessage[] | null>(null);
   const [viewing, setViewing] = useState<ChatMessage | null>(null);
   const [error, setError] = useState("");
-  const partnerName = partner?.displayName?.split(" ")[0] || "Your partner";
+  const partnerName = partnerLabel(user, partner, "Your partner");
 
   useEffect(() => {
-    if (!coupleId || !uid || !partnerUid) return;
-    return subscribeToSavedChat(coupleId, uid, partnerUid, setItems);
-  }, [coupleId, uid, partnerUid]);
+    if (!coupleId || !uid) return;
+    return subscribeToSavedChat(coupleId, uid, setItems);
+  }, [coupleId, uid]);
 
-  if (!coupleId || !uid || !partnerUid) return null;
+  if (!coupleId || !uid) return null;
 
   return (
     <div className="space-y-6">
