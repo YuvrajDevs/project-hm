@@ -10,11 +10,18 @@ export const SITE_THEME_KEY = "hm_theme_site";
 
 export const SIGNED_IN_KEY = "hm_signed_in";
 
-/** Called whenever the sign-in state is known. */
+/**
+ * Called whenever the sign-in state is known. A fresh sign-in always starts the app in dark: a Light pick made in
+ * Settings during an earlier visit is cleared. Reloading while signed in keeps the pick.
+ */
 export const rememberSignedIn = (signedIn: boolean) => {
   try {
-    if (signedIn) localStorage.setItem(SIGNED_IN_KEY, "1");
-    else localStorage.removeItem(SIGNED_IN_KEY);
+    if (signedIn) {
+      if (localStorage.getItem(SIGNED_IN_KEY) !== "1") localStorage.removeItem(APP_THEME_KEY);
+      localStorage.setItem(SIGNED_IN_KEY, "1");
+    } else {
+      localStorage.removeItem(SIGNED_IN_KEY);
+    }
   } catch { /* storage blocked */ }
 };
 
