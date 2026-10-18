@@ -3,6 +3,8 @@ import { Bebas_Neue, Outfit, Inter, Playfair_Display } from "next/font/google";
 import { SITE_URL, SITE_NAME } from "@/lib/seo";
 import "./globals.css";
 import "./theme.css";
+import { ThemeGuard } from "@/components/ThemeGuard";
+import { THEME_BOOT_SCRIPT } from "@/lib/theme";
 import { ImagePreloader } from "@/components/ui/ImagePreloader";
 
 const bebasNeue = Bebas_Neue({
@@ -85,10 +87,11 @@ export default function RootLayout({
       className={`${bebasNeue.variable} ${outfit.variable} ${inter.variable} ${playfair.variable} antialiased dark scroll-smooth`}
     >
       <head>
-        {/* Apply the saved light/dark choice before the page paints, so it never flashes the wrong colour. Light is the default. */}
-        <script dangerouslySetInnerHTML={{ __html: 'try{if(localStorage.getItem("hm_theme")!=="dark")document.documentElement.setAttribute("data-theme","light")}catch(e){document.documentElement.setAttribute("data-theme","light")}' }} />
+        {/* Apply the theme before the page paints, so it never flashes the wrong colour: light on the public site, dark in the app by default */}
+        <script dangerouslySetInnerHTML={{ __html: THEME_BOOT_SCRIPT }} />
       </head>
       <body suppressHydrationWarning className={`${outfit.className} min-h-screen bg-[var(--page)] text-neutral-50 overflow-x-hidden flex flex-col`}>
+        <ThemeGuard />
         <JsonLd
           data={{
             "@context": "https://schema.org",

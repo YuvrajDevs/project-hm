@@ -4,6 +4,7 @@ import React, { createContext, useContext, useState, useEffect, useMemo, useRef 
 import { MailboxMessage, User, Couple, QuickReact, DailyCheckIn, SafeSpaceSession, CoupleEvent, AppNotification, ReactionType, ActiveGame } from "@/lib/types";
 import { db, auth, reauthenticate } from "@/lib/firebase";
 import { MotionConfig } from "framer-motion";
+import { rememberSignedIn } from "@/lib/theme";
 import { 
   onAuthStateChanged, 
   signOut as firebaseSignOut,
@@ -381,6 +382,9 @@ export const MailboxProvider: React.FC<{ children: React.ReactNode }> = ({ child
   useEffect(() => {
     return onAuthStateChanged(auth, (u) => {
       setFbUser(u);
+      // The theme follows whether someone is signed in (light site, dark app by default)
+      rememberSignedIn(!!u);
+      window.dispatchEvent(new Event("hm-auth"));
       if (!u) {
         // Signed out — clear everything
         setUser(null);

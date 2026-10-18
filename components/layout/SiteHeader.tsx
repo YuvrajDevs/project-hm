@@ -32,15 +32,6 @@ export const SiteHeader = ({ showCta = true }: { showCta?: boolean }) => {
   const pathname = usePathname();
   const [open, setOpen] = useState(false);
 
-  // Safety net: if React ever rebuilds the page it must not lose the theme. Light is the default.
-  useEffect(() => {
-    try {
-      if (localStorage.getItem("hm_theme") !== "dark" && !document.documentElement.hasAttribute("data-theme")) {
-        document.documentElement.setAttribute("data-theme", "light");
-      }
-    } catch { /* storage blocked: the page script already chose light */ }
-  }, []);
-
   // The menu closes when you go somewhere, and on Escape
   useEffect(() => { setOpen(false); }, [pathname]);
   useEffect(() => {

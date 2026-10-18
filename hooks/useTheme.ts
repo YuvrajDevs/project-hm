@@ -1,10 +1,10 @@
 "use client";
 
 import { useCallback, useSyncExternalStore } from "react";
+import { themeKey } from "@/lib/theme";
 
 export type Theme = "dark" | "light";
 
-export const THEME_KEY = "hm_theme";
 
 const subscribe = (notify: () => void) => {
   window.addEventListener("hm-theme", notify);
@@ -24,7 +24,7 @@ export const useTheme = () => {
   const setTheme = useCallback((next: Theme) => {
     if (next === "light") document.documentElement.setAttribute("data-theme", "light");
     else document.documentElement.removeAttribute("data-theme");
-    try { localStorage.setItem(THEME_KEY, next); } catch { /* storage can be blocked; the choice still applies until reload */ }
+    try { localStorage.setItem(themeKey(), next); } catch { /* storage can be blocked; the choice still applies until reload */ }
     window.dispatchEvent(new Event("hm-theme"));
   }, []);
 
