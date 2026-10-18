@@ -8,6 +8,7 @@ import { useMailbox } from "@/context/MailboxContext";
 import { motion, AnimatePresence } from "framer-motion";
 import { useRouter } from "next/navigation";
 import { MessageCircle, Cloud, Battery, Heart, ChevronRight, User } from "lucide-react";
+import { Wordmark } from "@/components/ui/Wordmark";
 
 // Step 0 is always name, steps 1–4 are profile questions
 const profileSteps = [
@@ -172,8 +173,8 @@ export default function Onboarding() {
       {/* Top bar */}
       <div className="flex-none flex items-center justify-between px-8 pt-8 pb-4 z-10">
         <div className="flex items-center gap-2">
-          <img src="/logo.png" alt="HM Logo" className="w-4 h-auto" />
-          <span className="font-bebas text-sm tracking-[0.4em] text-neutral-500 uppercase">Honest Mailbox</span>
+          <img src="/mascot.webp" alt="HM Logo" className="w-7 h-auto" />
+          <Wordmark className="text-xl text-neutral-500" />
         </div>
         <span className="font-bebas text-xs tracking-widest text-neutral-600 uppercase">
           {step + 1} / {TOTAL_STEPS}

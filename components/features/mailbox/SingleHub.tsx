@@ -5,6 +5,7 @@ import { motion } from "framer-motion";
 import { useRouter } from "next/navigation";
 import { Heart, Plus, User, Sparkles, MessageSquareHeart, Settings } from "lucide-react";
 import { AmbientBackground } from "@/components/ui/AmbientBackground";
+import { Wordmark } from "@/components/ui/Wordmark";
 
 export const SingleHub = () => {
   const router = useRouter();
@@ -16,8 +17,8 @@ export const SingleHub = () => {
       {/* HUD / Header */}
       <div className="fixed top-0 left-0 right-0 p-8 flex justify-between items-center z-50">
         <div className="flex items-center gap-3">
-          <img src="/logo.png" alt="HM Logo" className="w-6 h-auto" />
-          <span className="font-bebas text-xl tracking-[0.2em] uppercase">Honest Mailbox</span>
+          <img src="/mascot.webp" alt="HM Logo" className="w-9 h-auto -translate-y-[3px]" />
+          <Wordmark className="text-2xl" />
         </div>
         
         <button 
@@ -42,7 +43,7 @@ export const SingleHub = () => {
               transition={{ duration: 0.3, ease: "easeOut" }}
               className="flex items-center justify-center mx-auto relative z-10 will-change-transform transform-gpu"
             >
-              <img src="/logo.png" alt="Honest Mailbox Logo" className="w-24 h-auto object-contain drop-shadow-2xl" />
+              <img src="/mascot.webp" alt="Honest Mailbox Logo" className="w-24 h-auto object-contain drop-shadow-2xl" />
             </motion.div>
             <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-48 h-48 rounded-full pointer-events-none" style={{ backgroundImage: "radial-gradient(circle at center, rgba(236,72,153,0.15), transparent 70%)" }} />
           </div>

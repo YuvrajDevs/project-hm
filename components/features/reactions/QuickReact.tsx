@@ -8,6 +8,7 @@ import { X, Send, Sparkles } from "lucide-react";
 import { useSensoryFeedback } from "@/hooks/useSensoryFeedback";
 import { REACTION_ICONS } from "@/lib/constants";
 import { useScrollLock } from "@/hooks/useScrollLock";
+import { AccentWords } from "@/components/ui/Wordmark";
 
 interface ReactionConfig {
     type: ReactionType;
@@ -93,7 +94,7 @@ export const QuickReact = ({ onClose }: { onClose: () => void }) => {
         {!selected ? (
             <div className="p-6 md:p-10 space-y-8">
                 <div className="space-y-1 text-center">
-                    <h2 className="text-3xl font-bebas tracking-wider text-white uppercase">Your Headspace</h2>
+                    <h2 className="text-3xl font-bebas tracking-wider text-white uppercase"><AccentWords text="Your Headspace" /></h2>
                     <p className="text-neutral-500 font-outfit text-[10px] uppercase tracking-[0.2em]">Select your current signal</p>
                 </div>
 

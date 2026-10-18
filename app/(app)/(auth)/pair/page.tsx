@@ -9,6 +9,7 @@ import { Share2, Link as LinkIcon, Check, Copy, ArrowRight, Loader2, Heart } fro
 import { useMailbox } from "@/context/MailboxContext";
 import { createInvite, acceptInvite, InviteError } from "@/lib/firestore-helpers";
 import { PENDING_INVITE_KEY } from "@/lib/constants";
+import { Wordmark } from "@/components/ui/Wordmark";
 
 const INVITE_ERRORS: Record<InviteError, string> = {
   "invalid": "That code isn't valid or was already used",
@@ -156,8 +157,8 @@ function Pair() {
       {/* Top bar */}
       <div className="flex-none flex items-center justify-between px-8 pt-8 pb-4 z-10">
         <div className="flex items-center gap-2">
-          <img src="/logo.png" alt="HM Logo" className="w-4 h-auto" />
-          <span className="font-bebas text-sm tracking-[0.4em] text-neutral-500 uppercase">Honest Mailbox</span>
+          <img src="/mascot.webp" alt="HM Logo" className="w-7 h-auto" />
+          <Wordmark className="text-xl text-neutral-500" />
         </div>
         {mode !== "choice" ? (
           <button

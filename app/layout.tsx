@@ -16,12 +16,12 @@ const outfit = Outfit({
   subsets: ["latin"],
 });
 
-// Used for one accent phrase on the landing page ("two hearts"), so only the italic bold cut is loaded
+// Used for one accent phrase on the landing page ("two hearts"), so only the italic semibold and bold cuts are loaded
 const playfair = Playfair_Display({
   variable: "--font-playfair-display",
   subsets: ["latin"],
   style: ["italic"],
-  weight: ["700"],
+  weight: ["600", "700"],
   display: "swap",
 });
 

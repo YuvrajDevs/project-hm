@@ -11,6 +11,7 @@ import { ArrowRight, Check, Flame } from "lucide-react";
 import { DECKS, slotFor } from "@/lib/games/decks";
 import { SiteHeader } from "@/components/layout/SiteHeader";
 import { SiteFooter } from "@/components/layout/SiteFooter";
+import { AccentWords } from "@/components/ui/Wordmark";
 
 const GAME_COUNT = 9; // the nine games described on /games
 const DECK_COUNT = DECKS.filter((d) => slotFor(d.id) === "questions").length;
@@ -399,7 +400,7 @@ export const LandingPage = () => {
             className="relative font-bebas uppercase text-[3.6rem] leading-[0.95] sm:text-8xl md:text-9xl tracking-wide"
           >
             Your safe{" "}<br />
-            space{" "}<Image src="/logo.png" alt="" width={256} height={256} priority className="inline-block align-middle h-[1.25em] w-[1.25em] object-contain -my-[0.15em] drop-shadow-[0_8px_16px_rgba(0,0,0,0.35)]" />{" "}for{" "}<br />
+            space{" "}<Image src="/mascot.webp" alt="" width={256} height={256} priority className="inline-block align-middle h-[1.25em] w-[1.25em] object-contain -my-[0.15em] drop-shadow-[0_2px_4px_rgba(0,0,0,0.18)]" />{" "}for{" "}<br />
             <span className="font-playfair italic font-bold normal-case tracking-normal text-[0.92em] leading-none">Two Hearts</span>
           </motion.h1>
           <p className="sr-only">A private mailbox for two hearts</p>
@@ -452,7 +453,7 @@ export const LandingPage = () => {
       <section aria-label="What couples say" className="mt-24">
         <div className="max-w-6xl mx-auto px-6 mb-10 flex items-center gap-3">
           <FloatingMail icon="signal_love" className="w-8 h-8" />
-          <h2 className="font-bebas text-4xl sm:text-5xl tracking-wide uppercase leading-none">Kind words</h2>
+          <h2 className="font-bebas text-4xl sm:text-5xl tracking-wide uppercase leading-none"><AccentWords text="Kind Words" /></h2>
         </div>
         {[0, 1].map((row) => {
           const list = row === 0 ? TESTIMONIALS.slice(0, 4) : TESTIMONIALS.slice(4);

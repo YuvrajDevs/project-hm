@@ -15,6 +15,7 @@ import { AmbientBackground } from "../../ui/AmbientBackground";
 import { cn } from "@/lib/utils";
 import { GamesShelf } from "../games/GamesShelf";
 import { BucketList } from "../notes/BucketList";
+import { AccentWords } from "@/components/ui/Wordmark";
 
 interface MailboxScreenProps {
     onOpenCheckIn?: () => void;
@@ -33,7 +34,7 @@ export const MailboxScreen: React.FC<MailboxScreenProps> = ({ onOpenCheckIn, onC
         <div className="max-w-4xl mx-auto px-6 pt-12 space-y-12 relative z-10">
             <header className="flex justify-between items-end">
                 <div className="space-y-2">
-                    <h1 className="text-6xl font-bebas text-white tracking-widest uppercase leading-none">The Mailbox</h1>
+                    <h1 className="text-6xl font-bebas text-white tracking-widest uppercase leading-none"><AccentWords text="The Mailbox" /></h1>
                     <p className="text-neutral-500 font-outfit text-[10px] uppercase tracking-[0.4em]">Honest thoughts, safely landed.</p>
                 </div>
             </header>
@@ -76,7 +77,7 @@ export const MailboxScreen: React.FC<MailboxScreenProps> = ({ onOpenCheckIn, onC
             {/* White Flag: a one-tap way to pause an argument */}
             <section className="tone-slate rounded-[1.5rem] p-6 flex flex-col md:flex-row md:items-center justify-between gap-4">
                 <div className="space-y-1">
-                    <h2 className="text-2xl font-bebas text-white tracking-widest uppercase leading-none">White Flag</h2>
+                    <h2 className="text-2xl font-bebas text-white tracking-widest uppercase leading-none"><AccentWords text="White Flag" /></h2>
                     <p className="text-neutral-500 font-outfit text-xs leading-relaxed">
                         Mid-argument and want to stop fighting? Raise it. It isn&apos;t an apology, just a signal that you two matter more than winning.
                     </p>
