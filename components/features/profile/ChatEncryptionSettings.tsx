@@ -6,7 +6,7 @@ import { doc, getDoc } from "firebase/firestore";
 import { db } from "@/lib/firebase";
 import { useMailbox } from "@/context/MailboxContext";
 import {
-  backupKeyExists, backupLocalKey, fingerprint, hasLocalPrivateKey, restoreFromBackup,
+  backupKeyExists, backupLocalKey, fingerprint, hasLocalPrivateKey, restoreFromBackup, rotateKeys,
 } from "@/lib/e2ee";
 
 // Lets each person verify the pairing (a safety number, from each side's public key) and optionally
@@ -80,6 +80,18 @@ export const ChatEncryptionSettings = () => {
     }
   };
 
+  const skipRestore = async () => {
+    setMessage("");
+    setBusy(true);
+    try {
+      await rotateKeys(uid);
+      setHasBackup(false);
+      setStatus("ready");
+    } finally {
+      setBusy(false);
+    }
+  };
+
   return (
     <section className="space-y-4">
       <h2 className="text-sm font-bebas text-neutral-500 tracking-[0.2em] uppercase">Chat Encryption</h2>
@@ -138,6 +150,14 @@ export const ChatEncryptionSettings = () => {
                 className="w-full py-3 bg-white text-black rounded-xl font-bebas tracking-widest uppercase hover:bg-neutral-200 active:scale-[0.98] transition-all disabled:opacity-50"
               >
                 {busy ? "Restoring..." : "Restore"}
+              </button>
+              <button
+                type="button"
+                onClick={skipRestore}
+                disabled={busy}
+                className="w-full text-xs font-outfit text-neutral-500 underline disabled:opacity-50"
+              >
+                Start fresh instead
               </button>
             </>
           ) : (
