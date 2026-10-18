@@ -71,6 +71,41 @@ export async function prepareImage(file: File): Promise<PreparedImage> {
   throw new ChatMediaError("That picture is too large to send. Try a smaller one.");
 }
 
+/**
+ * A much smaller picture for Truth or Dare proof: it is stored inside the game itself, which holds up to ten rounds,
+ * so each one stays under about 60 KB.
+ */
+export const MAX_PROOF_CHARS = 80_000;
+export async function prepareProofImage(file: File): Promise<PreparedImage> {
+  if (!file.type.startsWith("image/")) throw new ChatMediaError("That file isn't a picture.");
+  let bitmap: ImageBitmap;
+  try { bitmap = await openBitmap(file); } catch { throw new ChatMediaError("Couldn't open that picture. Try a different one."); }
+  try {
+    for (const edgePx of [560, 480, 400, 320]) {
+      const scale = Math.min(1, edgePx / Math.max(bitmap.width, bitmap.height));
+      const w = Math.max(1, Math.round(bitmap.width * scale));
+      const h = Math.max(1, Math.round(bitmap.height * scale));
+      const canvas = document.createElement("canvas");
+      canvas.width = w;
+      canvas.height = h;
+      const ctx = canvas.getContext("2d");
+      if (!ctx) throw new ChatMediaError("Couldn't prepare that picture.");
+      ctx.fillStyle = "#fff";
+      ctx.fillRect(0, 0, w, h);
+      ctx.drawImage(bitmap, 0, 0, w, h);
+      for (const quality of [0.62, 0.5, 0.4]) {
+        const blob = await canvasToBlob(canvas, quality);
+        if (!blob) continue;
+        const data = await blobToBase64(blob);
+        if (data.length <= MAX_PROOF_CHARS) return { mime: "image/jpeg", data, w, h };
+      }
+    }
+  } finally {
+    bitmap.close?.();
+  }
+  throw new ChatMediaError("That picture is too large to send. Try a different one.");
+}
+
 const RECORDER_TYPES = ["audio/webm;codecs=opus", "audio/webm", "audio/mp4", "audio/ogg;codecs=opus"];
 
 export const pickRecorderType = () =>

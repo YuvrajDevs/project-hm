@@ -12,6 +12,7 @@ import {
   deleteDoc,
   getDocs,
   arrayUnion,
+  deleteField,
   Timestamp,
   writeBatch,
   runTransaction,
@@ -513,6 +514,14 @@ export const submitGameAnswer = (coupleId: string, gameId: string, round: number
 
 export const chooseTruthOrDare = (coupleId: string, gameId: string, round: number, choice: "truth" | "dare") =>
   updateDoc(gameRef(coupleId, gameId), { [`td.r${round}.choice`]: choice });
+
+/** Truth or dare: what the player said for a truth (kept short, the partner reads it before deciding) */
+export const answerTruth = (coupleId: string, gameId: string, round: number, text: string) =>
+  updateDoc(gameRef(coupleId, gameId), { [`td.r${round}.answer`]: text.trim().slice(0, 500) });
+
+/** Truth or dare: a small photo showing the dare was done. Pass null to take it back. */
+export const submitDareProof = (coupleId: string, gameId: string, round: number, proof: { mime: string; data: string; w: number; h: number } | null) =>
+  updateDoc(gameRef(coupleId, gameId), { [`td.r${round}.proof`]: proof ?? deleteField() });
 
 export const judgeTruthOrDare = (coupleId: string, gameId: string, round: number, result: "done" | "skipped") =>
   updateDoc(gameRef(coupleId, gameId), { [`td.r${round}.result`]: result });

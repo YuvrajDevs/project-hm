@@ -263,7 +263,8 @@ const Canvas = ({ strokes, canDraw, tool, onStroke }: { strokes: string[]; canDr
     // A square pad, as big as fits on screen, so a drawing looks the same on both phones
     <div className="flex-1 min-h-0 w-full flex items-center justify-center" style={{ containerType: "size" }}>
       <svg
-        style={{ width: "min(100cqw, 100cqh)", height: "min(100cqw, 100cqh)" }}
+        // The pad stays white in light mode too (a class like bg-white would flip to dark there)
+        style={{ width: "min(100cqw, 100cqh)", height: "min(100cqw, 100cqh)", backgroundColor: "#ffffff" }}
         ref={ref}
         viewBox={`0 0 ${GRID} ${GRID}`}
         // Stretch the 0–1000 grid to the pad exactly, so where the finger touches is where the line appears
@@ -273,7 +274,7 @@ const Canvas = ({ strokes, canDraw, tool, onStroke }: { strokes: string[]; canDr
         onPointerUp={up}
         onPointerLeave={up}
         onPointerCancel={up}
-        className={cn("rounded-[1.5rem] bg-white", canDraw ? "cursor-crosshair touch-none" : "")}
+        className={cn("rounded-[1.5rem]", canDraw ? "cursor-crosshair touch-none" : "")}
       >
         {strokes.map((s, i) => {
           const { color, width, points } = parseStroke(s);
