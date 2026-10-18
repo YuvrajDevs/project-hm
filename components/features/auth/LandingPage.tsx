@@ -58,16 +58,18 @@ const TESTIMONIALS = [
 // The small-text style used across the app (e.g. "Honest thoughts, safely landed.")
 const SMALL = "font-outfit text-[11px] uppercase tracking-[0.35em]";
 
-const Asterisk = ({ className = "" }: { className?: string }) => (
-  <svg viewBox="0 0 24 24" className={className} aria-hidden="true" fill="none" stroke="currentColor" strokeWidth={3.2} strokeLinecap="round">
-    <path d="M12 2v20M3.3 7l17.4 10M3.3 17L20.7 7" />
-  </svg>
-);
+// Pixel envelopes from the app's own icon set, used as small floating decoration
+const FLOATERS = [
+  { icon: "signal_love", pos: "left-0 top-6 sm:left-[6%] sm:top-12", size: "w-9 sm:w-14", motion: { d: "7s", delay: "0s", dx: "10px", dy: "-16px", r0: "-10deg", r1: "6deg" } },
+  { icon: "signal_peace", pos: "right-0 top-2 sm:right-[7%] sm:top-8", size: "w-11 sm:w-16", motion: { d: "9s", delay: "-2s", dx: "-12px", dy: "-12px", r0: "8deg", r1: "-6deg" } },
+  { icon: "signal_brighter", pos: "left-1 top-[47%] sm:left-[3%] sm:top-[52%]", size: "w-8 sm:w-12", motion: { d: "8s", delay: "-4s", dx: "8px", dy: "14px", r0: "6deg", r1: "-10deg" } },
+  { icon: "signal_closeness", pos: "right-1 top-[52%] sm:right-[3%] sm:top-[46%]", size: "w-10 sm:w-14", motion: { d: "10s", delay: "-1s", dx: "-10px", dy: "16px", r0: "-8deg", r1: "8deg" } },
+  { icon: "signal_appreciative", pos: "hidden sm:block right-[30%] top-0", size: "w-7 sm:w-9", motion: { d: "6.5s", delay: "-3s", dx: "6px", dy: "-10px", r0: "4deg", r1: "-8deg" } },
+] as const;
 
-const Sparkle = ({ className = "" }: { className?: string }) => (
-  <svg viewBox="0 0 24 24" className={className} aria-hidden="true" fill="currentColor">
-    <path d="M12 0c.6 6.6 4.9 11.4 12 12-7.1.6-11.4 5.4-12 12-.6-6.6-4.9-11.4-12-12 7.100-.6 11.4-5.4 12-12z" />
-  </svg>
+const FloatingMail = ({ icon, className }: { icon: string; className: string }) => (
+  // eslint-disable-next-line @next/next/no-img-element
+  <img src={`/icons/${icon}.png`} alt="" aria-hidden="true" draggable={false} className={`object-contain pointer-events-none select-none ${className}`} />
 );
 
 // ─── Mockups: small, static pictures of the real app ────────────────────────
@@ -375,17 +377,30 @@ export const LandingPage = () => {
 
         {/* Hero */}
         <section id="top" className="relative pt-8 sm:pt-16 text-center">
-          <Asterisk className="absolute left-0 top-10 sm:left-10 sm:top-16 w-10 h-10 sm:w-14 sm:h-14 text-[#5a4fd8]" />
-          <Sparkle className="absolute right-2 top-6 sm:right-16 sm:top-14 w-8 h-8 sm:w-10 sm:h-10 text-[#ffd91a] [:root[data-theme=light]_&]:text-[#d49a00]" />
+          <div aria-hidden="true" className="absolute inset-0 pointer-events-none">
+            {FLOATERS.map((f) => (
+              <span
+                key={f.icon}
+                className={`absolute ${f.pos}`}
+              >
+                <span
+                  className="floaty block"
+                  style={{ "--d": f.motion.d, "--delay": f.motion.delay, "--dx": f.motion.dx, "--dy": f.motion.dy, "--r0": f.motion.r0, "--r1": f.motion.r1 } as React.CSSProperties}
+                >
+                  <FloatingMail icon={f.icon} className={f.size} />
+                </span>
+              </span>
+            ))}
+          </div>
           <motion.h1
             initial={{ opacity: 0, y: 16 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.6, ease: [0.16, 1, 0.3, 1] }}
-            className="font-bebas uppercase text-[3.6rem] leading-[0.95] sm:text-8xl md:text-9xl tracking-wide"
+            className="relative font-bebas uppercase text-[3.6rem] leading-[0.95] sm:text-8xl md:text-9xl tracking-wide"
           >
             Your safe{" "}<br />
             space{" "}<Image src="/logo.png" alt="" width={256} height={256} priority className="inline-block align-middle h-[1.25em] w-[1.25em] object-contain -my-[0.15em] drop-shadow-[0_8px_16px_rgba(0,0,0,0.35)]" />{" "}for{" "}<br />
-            two hearts
+            <span className="font-playfair italic font-bold normal-case tracking-normal text-[0.92em] leading-none">Two Hearts</span>
           </motion.h1>
           <p className="sr-only">A private mailbox for two hearts</p>
 
@@ -436,7 +451,7 @@ export const LandingPage = () => {
       {/* Scrolling testimonials */}
       <section aria-label="What couples say" className="mt-24">
         <div className="max-w-6xl mx-auto px-6 mb-10 flex items-center gap-3">
-          <Asterisk className="w-6 h-6 text-[#5a4fd8]" />
+          <FloatingMail icon="signal_love" className="w-8 h-8" />
           <h2 className="font-bebas text-4xl sm:text-5xl tracking-wide uppercase leading-none">Kind words</h2>
         </div>
         {[0, 1].map((row) => {
@@ -463,7 +478,7 @@ export const LandingPage = () => {
       {/* Closing quote */}
       <section aria-label="Closing" className="px-6 mt-24">
         <div className="max-w-3xl mx-auto text-center space-y-8">
-          <Sparkle className="w-6 h-6 text-[#ffd91a] [:root[data-theme=light]_&]:text-[#d49a00] mx-auto" />
+          <FloatingMail icon="signal_peace" className="w-10 h-10 mx-auto" />
           <blockquote className="font-bebas uppercase text-4xl sm:text-6xl leading-[1.05] tracking-wide">
             The strongest couples aren&apos;t the ones who never struggle. They&apos;re the ones who keep talking.
           </blockquote>
