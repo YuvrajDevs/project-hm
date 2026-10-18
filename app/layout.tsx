@@ -75,8 +75,8 @@ export default function RootLayout({
       className={`${bebasNeue.variable} ${outfit.variable} ${inter.variable} antialiased dark scroll-smooth`}
     >
       <head>
-        {/* Apply the saved light/dark choice before the page paints, so it never flashes the wrong colour */}
-        <script dangerouslySetInnerHTML={{ __html: 'try{if(localStorage.getItem("hm_theme")==="light")document.documentElement.setAttribute("data-theme","light")}catch(e){}' }} />
+        {/* Apply the saved light/dark choice before the page paints, so it never flashes the wrong colour. Light is the default. */}
+        <script dangerouslySetInnerHTML={{ __html: 'try{if(localStorage.getItem("hm_theme")!=="dark")document.documentElement.setAttribute("data-theme","light")}catch(e){document.documentElement.setAttribute("data-theme","light")}' }} />
       </head>
       <body suppressHydrationWarning className={`${outfit.className} min-h-screen bg-[var(--page)] text-neutral-50 overflow-x-hidden flex flex-col`}>
         <JsonLd

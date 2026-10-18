@@ -19,7 +19,7 @@ const subscribe = (notify: () => void) => {
 const read = (): Theme => (document.documentElement.getAttribute("data-theme") === "light" ? "light" : "dark");
 
 export const useTheme = () => {
-  const theme = useSyncExternalStore(subscribe, read, () => "dark" as Theme);
+  const theme = useSyncExternalStore(subscribe, read, () => "light" as Theme);
 
   const setTheme = useCallback((next: Theme) => {
     if (next === "light") document.documentElement.setAttribute("data-theme", "light");

@@ -257,3 +257,16 @@
     scroll-behavior: auto !important;
   }
 }
+
+/* Scrolling testimonials: two rows drifting in opposite directions, paused while hovered */
+.marquee { overflow: hidden; }
+.marquee-track { display: flex; width: max-content; animation: marquee 50s linear infinite; }
+.marquee-reverse { animation-direction: reverse; }
+.marquee:hover .marquee-track { animation-play-state: paused; }
+@keyframes marquee { from { transform: translateX(0); } to { transform: translateX(-50%); } }
+
+/* Legal pages in light mode: the policy text is dark on the cream page (the dark-mode rules above force light text) */
+:root[data-theme="light"] .policy-content :where(p, span, li, tr, td, th, div) { color: #2a2a2a !important; }
+:root[data-theme="light"] .policy-content :where(h1, h2, h3, h4, h5, h6, b, strong) { color: #121212 !important; }
+:root[data-theme="light"] .policy-content a { color: #be185d !important; }
+:root[data-theme="light"] .policy-content :where(table, td, th) { border-color: rgb(18 18 18 / 0.2) !important; }

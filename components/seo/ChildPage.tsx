@@ -29,7 +29,7 @@ export function ChildPage({ page }: { page: ChildEntry }) {
     : null;
 
   return (
-    <article className="max-w-3xl mx-auto px-6 py-16 space-y-12">
+    <article className="max-w-3xl mx-auto px-6 pt-4 pb-16 space-y-10">
       <Breadcrumbs
         items={[
           { label: "Home", href: "/" },

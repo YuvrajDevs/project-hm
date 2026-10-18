@@ -1,11 +1,17 @@
 "use client";
 
 import React, { useState } from 'react';
-import Link from 'next/link';
-import { ArrowLeft, Mail, Send, CheckCircle2, MessageSquareHeart, ShieldCheck } from 'lucide-react';
+import { Mail, Send, CheckCircle2, Copy, Check, ShieldCheck } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { AmbientBackground } from '@/components/ui/AmbientBackground';
-import { sendContactMessage } from '@/lib/firestore-helpers';
+import { Breadcrumbs } from '@/components/seo/Breadcrumbs';
+
+// Every message is sent from the person's own email app to this address
+const CONTACT_EMAIL = 'thehonestmailbox@gmail.com';
+const PURPOSES: Record<string, string> = {
+  general: 'General support / questions',
+  data_request: 'Privacy / data request',
+  technical: 'Technical issue',
+};
 
 export default function ContactPage() {
   const [formData, setFormData] = useState({
@@ -14,50 +20,35 @@ export default function ContactPage() {
     purpose: 'general',
     message: ''
   });
-  const [status, setStatus] = useState<'idle' | 'sending' | 'sent' | 'error'>('idle');
+  const [status, setStatus] = useState<'idle' | 'sent'>('idle');
+  const [copied, setCopied] = useState(false);
   const [website, setWebsite] = useState('');
 
-  const handleSubmit = async (e: React.FormEvent) => {
+  const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     if (!formData.email || !formData.message.trim()) return;
     // Bots fill every field, including the one people cannot see
     if (website) { setStatus('sent'); return; }
     
-    setStatus('sending');
-    try {
-      await sendContactMessage(formData);
-      setStatus('sent');
-    } catch (err) {
-      console.error(err);
-      setStatus('error');
-    }
+    // Opens the person's email app with the message ready to send to our address
+    const subject = `[${PURPOSES[formData.purpose] || 'Contact'}] ${formData.name.trim() || formData.email}`;
+    const body = `${formData.message.trim()}\n\n--\nName: ${formData.name.trim() || '-'}\nReply to: ${formData.email}`;
+    window.location.href = `mailto:${CONTACT_EMAIL}?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(body)}`;
+    setStatus('sent');
   };
 
   return (
-    <div className="min-h-screen bg-[var(--page)] text-neutral-300 font-inter selection:bg-pink-500/30 overflow-x-hidden">
-      <div className="fixed inset-0 z-0 pointer-events-none opacity-40">
-        <AmbientBackground variant="standard" />
-      </div>
+    <div className="max-w-2xl mx-auto px-6 pt-4 pb-16">
+      <Breadcrumbs items={[{ label: 'Home', href: '/' }, { label: 'Contact', href: '/contact' }]} />
 
-      <div className="max-w-2xl mx-auto px-6 py-12 md:py-20 relative z-10">
-        
-        {/* Header */}
-        <div className="mb-12">
-          <Link href="/" className="inline-flex items-center gap-2 text-neutral-500 hover:text-white transition-colors uppercase tracking-widest font-inter text-sm mb-8 group">
-            <ArrowLeft className="w-4 h-4 group-hover:-translate-x-1 transition-transform" /> Back
-          </Link>
-          <div className="flex items-center gap-3 mb-6">
-            <img src="/logo.png" alt="Honest Mailbox Logo" className="w-8 h-auto" />
-            <span className="font-inter text-2xl tracking-[0.2em] text-white uppercase font-bold">Honest Mailbox</span>
-          </div>
-          <h1 className="text-4xl md:text-5xl font-inter font-bold tracking-widest uppercase text-white mb-4">Contact & Support</h1>
-          
-          <div className="bg-[#1c1c1c] border-l-2 border-pink-500/50 p-6 rounded-r-2xl mt-8">
-            <p className="text-sm text-neutral-300 leading-relaxed font-inter">
-              If you have questions about your account, need help using the app, or want to request access, updates, or deletion of your personal data, you can contact us here.
-            </p>
-          </div>
+      <header className="mt-10 mb-12 space-y-6">
+        <h1 className="text-4xl md:text-5xl font-bebas tracking-widest uppercase text-white leading-tight">Contact &amp; Support</h1>
+        <div className="bg-[#1c1c1c] border-l-2 border-pink-500/50 p-6 rounded-r-2xl">
+          <p className="text-sm text-neutral-300 leading-relaxed font-outfit">
+            If you have questions about your account, need help using the app, or want to request access, updates, or deletion of your personal data, you can contact us here.
+          </p>
         </div>
+      </header>
 
         <AnimatePresence mode="wait">
           {status === 'sent' ? (
@@ -70,12 +61,25 @@ export default function ContactPage() {
               <div className="w-20 h-20 bg-green-500/10 rounded-full flex items-center justify-center mx-auto text-green-500">
                 <CheckCircle2 className="w-10 h-10" />
               </div>
-              <div className="space-y-2">
-                <h2 className="text-3xl font-bebas tracking-widest uppercase text-white">Message Sent</h2>
+              <div className="space-y-3">
+                <h2 className="text-3xl font-bebas tracking-widest uppercase text-white">Almost There</h2>
                 <p className="text-sm text-neutral-400 font-outfit leading-relaxed">
-                  We have received your inquiry. We aim to respond within a reasonable timeframe.
+                  Your email app should now be open with your message ready. Press send there and we&apos;ll reply to the email you gave us.
+                </p>
+                <p className="text-xs text-neutral-500 font-outfit leading-relaxed">
+                  Nothing opened? Write to us at the address below.
                 </p>
               </div>
+              <button
+                type="button"
+                onClick={async () => {
+                  try { await navigator.clipboard.writeText(CONTACT_EMAIL); setCopied(true); setTimeout(() => setCopied(false), 2000); } catch { /* the address is selectable below */ }
+                }}
+                className="inline-flex items-center gap-2 rounded-xl bg-[#1c1c1c] border border-[#2a2a2a] px-4 py-3 font-mono text-sm text-white hover:bg-[#242424] active:scale-95 transition-all"
+              >
+                {CONTACT_EMAIL}
+                {copied ? <Check className="w-4 h-4 text-green-500" /> : <Copy className="w-4 h-4 text-neutral-500" />}
+              </button>
               <div className="pt-6 border-t border-white/5 text-[10px] text-neutral-600 uppercase tracking-widest">
                 Data Protection Protocol Active
               </div>
@@ -83,7 +87,7 @@ export default function ContactPage() {
                 onClick={() => setStatus('idle')}
                 className="text-pink-500 font-bebas uppercase tracking-widest text-sm hover:text-pink-400"
               >
-                Send another message
+                Write another message
               </button>
             </motion.div>
           ) : (
@@ -146,6 +150,7 @@ export default function ContactPage() {
               <textarea 
                 required
                 rows={5}
+                maxLength={1500}
                 value={formData.message}
                 onChange={(e) => setFormData({...formData, message: e.target.value})}
                 placeholder="How can we help?"
@@ -156,16 +161,11 @@ export default function ContactPage() {
             <div className="pt-2">
               <button 
                 type="submit"
-                disabled={status === 'sending'}
-                className="w-full bg-white text-black font-inter font-bold text-xl py-4 rounded-2xl hover:bg-neutral-200 transition-all active:scale-[0.98] disabled:opacity-50 flex items-center justify-center gap-3 shadow-[0_10px_30px_rgba(255,255,255,0.1)]"
+                className="w-full bg-white text-black font-inter font-bold text-xl py-4 rounded-2xl hover:bg-neutral-200 transition-all active:scale-[0.98] flex items-center justify-center gap-3 shadow-[0_10px_30px_rgba(255,255,255,0.1)]"
               >
-                {status === 'sending' ? 'Sending...' : (
-                  <><Send className="w-5 h-5" /> Send Message</>
-                )}
+                <Send className="w-5 h-5" /> Send Message
               </button>
-              {status === 'error' && (
-                <p className="text-rose-500 text-xs font-inter text-center mt-3">Your message was not sent. Check your connection and try again.</p>
-              )}
+              <p className="text-[11px] text-neutral-500 font-outfit text-center mt-3 leading-relaxed">This opens your email app with the message ready to send to {CONTACT_EMAIL}.</p>
             </div>
 
               {/* Compliance Badges */}
@@ -191,14 +191,13 @@ export default function ContactPage() {
           </div>
           <p className="text-sm text-neutral-400 font-inter">
             You can also contact us directly at: <br/>
-            <span className="text-white font-mono text-base mt-2 block">support@honestmailbox.com</span>
+            <a href={`mailto:${CONTACT_EMAIL}`} className="text-white font-mono text-base mt-2 block hover:underline">thehonestmailbox@gmail.com</a>
           </p>
           <div className="text-[10px] text-neutral-700 font-inter font-bold tracking-[0.3em] uppercase">
             Private • Just You Two
           </div>
         </div>
 
-      </div>
     </div>
   );
 }
