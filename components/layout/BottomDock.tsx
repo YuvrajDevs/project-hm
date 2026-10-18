@@ -51,7 +51,7 @@ export const BottomDock: React.FC<BottomDockProps> = ({
             animate={{ y: 0, opacity: 1 }}
             exit={{ y: 100, opacity: 0 }}
             transition={{ type: "spring", damping: 20, stiffness: 100 }}
-            className="pointer-events-auto relative flex items-center gap-1 p-2 bg-[#161616] border border-white/10 rounded-[1.5rem] shadow-[0_20px_50px_rgba(0,0,0,0.5)]"
+            className="pointer-events-auto relative flex items-center gap-1 p-2 bg-[#0e0e0e] border border-[#232323] rounded-[1.5rem] shadow-[0_20px_50px_rgba(0,0,0,0.5)]"
           >
         {/* Far Left: Inbox Button */}
         <button
@@ -61,7 +61,7 @@ export const BottomDock: React.FC<BottomDockProps> = ({
         >
           <Inbox className="w-6 h-6 group-hover:scale-110 transition-transform" />
           {showInboxDot && (
-            <span className="absolute top-3.5 right-3.5 w-2.5 h-2.5 bg-pink-500 rounded-full border-2 border-black" aria-label="New messages" />
+            <span className="absolute top-3.5 right-3.5 w-2.5 h-2.5 bg-pink-500 rounded-full border-2 border-[#0e0e0e]" aria-label="New messages" />
           )}
           <span className="absolute -top-12 left-1/2 -translate-x-1/2 px-3 py-1 bg-white text-black text-[10px] font-bebas tracking-widest uppercase rounded-lg opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none">
             Inbox
@@ -80,7 +80,7 @@ export const BottomDock: React.FC<BottomDockProps> = ({
         >
           <Smile className="w-6 h-6 group-hover:scale-110 transition-transform" />
           {showEmojiDot && (
-            <span className="absolute top-4 right-4 w-2 h-2 bg-pink-500 rounded-full border-2 border-black" />
+            <span className="absolute top-4 right-4 w-2 h-2 bg-pink-500 rounded-full border-2 border-[#0e0e0e]" />
           )}
           <span className="absolute -top-12 left-1/2 -translate-x-1/2 px-3 py-1 bg-white text-black text-[10px] font-bebas tracking-widest uppercase rounded-lg opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none">
             React

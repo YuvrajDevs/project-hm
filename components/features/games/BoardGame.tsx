@@ -42,7 +42,7 @@ export const BoardGame = ({ game, uid, partnerUid, partnerName, coupleId, onLeav
     if (!myTurn) return;
     if (connect4 ? c4Landing(board, cell) < 0 : board[cell]) return;
     playPop();
-    run(() => playBoardMove(coupleId, game.id, uid, cell));
+    run(() => playBoardMove(game, coupleId, uid, cell));
   };
 
   const status = game.winner === "draw" ? <StatusLine>It&apos;s a draw</StatusLine>
@@ -147,7 +147,7 @@ export const BoardGame = ({ game, uid, partnerUid, partnerName, coupleId, onLeav
 
       <div className="h-14 shrink-0 flex items-center justify-center">
         {game.winner ? (
-          <BigButton onClick={() => run(async () => { await nextBoardRound(coupleId, game.id); playChime(); })} disabled={busy}>
+          <BigButton onClick={() => run(async () => { await nextBoardRound(game, coupleId); playChime(); })} disabled={busy}>
             Play Again
           </BigButton>
         ) : (
