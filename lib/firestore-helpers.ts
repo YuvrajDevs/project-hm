@@ -439,9 +439,12 @@ const archiveIfFinished = async (coupleId: string, gameId: string) => {
   const game = snap.data() as CoupleGame;
   if (!isFinished(game)) return;
   const id = `${game.startedAt}_${game.deck}`.replace(/[^\w-]/g, "_");
+  // Truth or dare photos stay inside the live game and are never kept; the archived copy says one was deleted
+  const { withoutPhotos } = await import("./games/engine");
+  const kept = withoutPhotos(game);
   // If the partner already stored it, the copy is there and history entries can't be overwritten,
   // so the write fails and the points aren't counted a second time
-  const stored = await setDoc(doc(db, "couples", coupleId, "game_history", id), { ...game, archivedAt: new Date().toISOString() })
+  const stored = await setDoc(doc(db, "couples", coupleId, "game_history", id), { ...kept, archivedAt: new Date().toISOString() })
     .then(() => true, () => false);
   if (!stored) return;
   // Add this game's points to the couple's running score
@@ -454,6 +457,33 @@ const archiveIfFinished = async (coupleId: string, gameId: string) => {
       [`gameScores.${b}`]: increment(pts[b] || 0),
     }).catch(console.error);
   }
+};
+
+/** Remove one past game, and the points it added to the running score. */
+export const deleteGameHistoryEntry = async (coupleId: string, game: CoupleGame & { id: string }) => {
+  const { totalScores } = await import("./games/engine");
+  const [a, b] = game.players;
+  const pts = totalScores(game, [a, b]);
+  const batch = writeBatch(db);
+  batch.delete(doc(db, "couples", coupleId, "game_history", game.id));
+  if (pts[a] || pts[b]) {
+    batch.update(doc(db, "couples", coupleId), {
+      [`gameScores.${a}`]: increment(-(pts[a] || 0)),
+      [`gameScores.${b}`]: increment(-(pts[b] || 0)),
+    });
+  }
+  await batch.commit();
+};
+
+/** Delete every past game for both of you and put the running score back to 0 : 0. */
+export const clearGameHistory = async (coupleId: string) => {
+  const snap = await getDocs(collection(db, "couples", coupleId, "game_history"));
+  for (let i = 0; i < snap.docs.length; i += 400) {
+    const batch = writeBatch(db);
+    snap.docs.slice(i, i + 400).forEach(d => batch.delete(d.ref));
+    await batch.commit();
+  }
+  await updateDoc(doc(db, "couples", coupleId), { gameScores: {} });
 };
 
 export const getGameHistory = async (coupleId: string) => {

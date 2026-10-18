@@ -187,3 +187,19 @@ export const c4Winner = (board: string[]): string | null => {
   if (line) return board[line[0]];
   return board.every(Boolean) ? "draw" : null;
 };
+
+/**
+ * A finished game as it is kept in history: the written truths stay, the dare photos do not.
+ * Each round that had a photo is marked so the replay can say it was deleted.
+ */
+export const withoutPhotos = (game: CoupleGame): CoupleGame => {
+  if (!game.td) return game;
+  const td: NonNullable<CoupleGame["td"]> = {};
+  for (const [round, entry] of Object.entries(game.td)) {
+    if (!entry?.proof) { td[round] = entry; continue; }
+    const copy = { ...entry, proofRemoved: true };
+    delete copy.proof;
+    td[round] = copy;
+  }
+  return { ...game, td };
+};
