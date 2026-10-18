@@ -1,4 +1,5 @@
 import { initializeApp, getApps, getApp } from "firebase/app";
+import { initializeAppCheck, ReCaptchaV3Provider } from "firebase/app-check";
 import { initializeFirestore, getFirestore, connectFirestoreEmulator } from "firebase/firestore";
 import { 
   getAuth, 
@@ -39,6 +40,18 @@ const db = (() => {
   catch { return getFirestore(app); }
 })();
 const auth = getAuth(app);
+
+// App Check proves a request comes from this app and not a script. It only runs when a reCAPTCHA v3 site key
+// is set; turn on enforcement for Firestore in the Firebase console once real traffic shows up as verified.
+const appCheckKey = process.env.NEXT_PUBLIC_APPCHECK_SITE_KEY;
+if (appCheckKey && !useEmulators && typeof window !== "undefined" && !(globalThis as { __hmAppCheck?: boolean }).__hmAppCheck) {
+  (globalThis as { __hmAppCheck?: boolean }).__hmAppCheck = true;
+  try {
+    initializeAppCheck(app, { provider: new ReCaptchaV3Provider(appCheckKey), isTokenAutoRefreshEnabled: true });
+  } catch (err) {
+    console.error("App Check failed to start:", err);
+  }
+}
 
 if (useEmulators && !(globalThis as { __hmEmulators?: boolean }).__hmEmulators) {
   (globalThis as { __hmEmulators?: boolean }).__hmEmulators = true;

@@ -876,7 +876,8 @@ export const ensureUserDoc = async (fbUser: FirebaseUser) => {
   });
 };
 
-const INVITE_TTL_MS = 7 * 24 * 60 * 60 * 1000;
+export const INVITE_CODE_LENGTH = 8;
+const INVITE_TTL_MS = 3 * 24 * 60 * 60 * 1000;
 
 const randomString = (length: number, chars: string) => {
   const bytes = crypto.getRandomValues(new Uint32Array(length));
@@ -894,7 +895,7 @@ export const createInvite = async (uid: string) => {
     if (stillValid) return existing;
   }
 
-  const code = randomString(6, "ABCDEFGHJKLMNPQRSTUVWXYZ23456789");
+  const code = randomString(INVITE_CODE_LENGTH, "ABCDEFGHJKLMNPQRSTUVWXYZ23456789");
   await setDoc(doc(db, "invites", code), {
     createdBy: uid,
     createdAt: Timestamp.now(),
@@ -966,7 +967,7 @@ export const subscribeToEvents = (coupleId: string, callback: (events: CoupleEve
 export const saveCoupleEvent = async (coupleId: string, event: Omit<CoupleEvent, "id" | "createdAt">) => {
   return addDoc(getCoupleCollection(coupleId, "events"), {
     ...event,
-    createdAt: Timestamp.now()
+    createdAt: serverTimestamp()
   });
 };
 
@@ -1037,7 +1038,7 @@ export const addBucketItem = async (coupleId: string, uid: string, text: string,
       uid: partnerUid,
       type: "BUCKET",
       title: "Bucket List",
-      body: `${name || "Your partner"} added "${text.slice(0, 60)}" to your bucket list.`,
+      body: `${name || "Your partner"} added something to your bucket list.`,
     });
   }
 };
@@ -1175,10 +1176,11 @@ export interface ChatDraft {
   w?: number;
   h?: number;
   dur?: number;
+  sticker?: string;
 }
 
 const chatPreview = (draft: ChatDraft) =>
-  draft.kind === "image" ? "Sent a photo" : draft.kind === "voice" ? "Sent a voice note" : (draft.text || "").slice(0, 100);
+  draft.kind === "image" ? "Sent a photo" : draft.kind === "sticker" ? "Sent a sticker" : draft.kind === "voice" ? "Sent a voice note" : "Sent you a message";
 
 /**
  * Add a message and update the chat summary on the couple in one go. The partner gets a
@@ -1191,7 +1193,7 @@ export const sendChatMessage = async (
   opts: { partnerUid?: string; name?: string; notify?: boolean } = {}
 ) => {
   const fields: Record<string, unknown> = { kind: draft.kind };
-  for (const key of ["text", "mime", "data", "w", "h", "dur"] as const) {
+  for (const key of ["text", "mime", "data", "w", "h", "dur", "sticker"] as const) {
     if (draft[key] !== undefined) fields[key] = draft[key];
   }
   const now = new Date().toISOString();

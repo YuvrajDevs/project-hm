@@ -78,7 +78,7 @@ export const ChatBubble = ({
   onSave: () => void;
   onUnsend: () => void;
 }) => {
-  const media = message.kind === "image";
+  const media = message.kind === "image" || message.kind === "sticker";
   return (
     <div className={cn("flex flex-col", mine ? "items-end" : "items-start", joinsPrev ? "mt-0.5" : "mt-3")}>
       <div className={cn("group flex items-center gap-1.5 max-w-[84%]", mine && "flex-row-reverse")}>
@@ -90,7 +90,7 @@ export const ChatBubble = ({
           }}
           className={cn(
             "min-w-0 rounded-[1.4rem] rounded-br-md cursor-pointer transition-shadow",
-            media ? "overflow-hidden border border-white/10" : message.kind === "voice" ? "px-3.5 py-3" : "px-4 py-2.5",
+            message.kind === "sticker" ? "overflow-hidden" : media ? "overflow-hidden border border-white/10" : message.kind === "voice" ? "px-3.5 py-3" : "px-4 py-2.5",
             !media && (mine ? "bg-white text-black" : "bg-white/[0.07] border border-white/10 text-white"),
             !mine && "rounded-br-[1.4rem] rounded-bl-md",
             joinsPrev && (mine ? "rounded-tr-md" : "rounded-tl-md"),

@@ -220,6 +220,13 @@ export const ChatScreen = ({ onClose }: { onClose: () => void }) => {
     }
   };
 
+  const sendSticker = (id: string) => {
+    send({ kind: "sticker", sticker: id }).catch((err) => {
+      console.error(err);
+      setError("That sticker didn't send. Check your connection and try again.");
+    });
+  };
+
   const sendVoice = (clip: VoiceClip) => {
     send({ kind: "voice", mime: clip.mime, data: clip.data, dur: clip.dur }).catch((err) => {
       console.error(err);
@@ -387,7 +394,7 @@ export const ChatScreen = ({ onClose }: { onClose: () => void }) => {
         <div className="shrink-0 border-t border-white/5 bg-[var(--page)] pb-[env(safe-area-inset-bottom)]">
           <div className="w-full max-w-2xl mx-auto">
             {error && <p role="alert" className="px-5 pt-2 text-rose-400 font-outfit text-xs text-center">{error}</p>}
-            <Composer onText={sendText} onPhoto={sendPhoto} onVoice={sendVoice} onError={setError} preparing={preparing} />
+            <Composer onText={sendText} onSticker={sendSticker} onPhoto={sendPhoto} onVoice={sendVoice} onError={setError} preparing={preparing} />
           </div>
         </div>
       </div>

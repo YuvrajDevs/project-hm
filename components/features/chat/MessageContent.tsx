@@ -4,6 +4,7 @@ import React, { useEffect, useMemo, useRef, useState } from "react";
 import { Pause, Play } from "lucide-react";
 import type { ChatMessage } from "@/lib/types";
 import { formatClock, mediaUrl } from "@/lib/chatMedia";
+import { isStickerId, stickerUrl } from "@/lib/stickers";
 import { cn } from "@/lib/utils";
 
 export type Tone = "mine" | "theirs";
@@ -117,6 +118,14 @@ export const MessageContent = ({ message, tone, partnerName, onOpenImage }: {
           draggable={false}
         />
       </button>
+    );
+  }
+  if (message.kind === "sticker") {
+    // An unknown id (from a newer app version) shows nothing rather than a broken picture
+    if (!isStickerId(message.sticker)) return <p className="font-outfit text-sm opacity-70 px-4 py-2.5">Sticker</p>;
+    return (
+      // eslint-disable-next-line @next/next/no-img-element
+      <img src={stickerUrl(message.sticker)} alt="Sticker" width={144} height={144} decoding="async" draggable={false} className="block w-36 h-36 object-cover rounded-[inherit]" />
     );
   }
   if (message.kind === "voice") return <VoiceNote message={message} tone={tone} />;
