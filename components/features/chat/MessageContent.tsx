@@ -100,9 +100,6 @@ const VoiceNote = ({ message, tone }: { message: ChatMessage; tone: Tone }) => {
 export const MessageContent = ({ message, tone, partnerName, onOpenImage }: {
   message: ChatMessage; tone: Tone; partnerName: string; onOpenImage?: (message: ChatMessage) => void;
 }) => {
-  if (message.decryptFailed) {
-    return <p className="font-outfit text-sm italic opacity-70 px-4 py-2.5">Can&apos;t decrypt this message.</p>;
-  }
   if (message.kind === "image" && message.data && message.mime) {
     const ratio = message.w && message.h ? message.w / message.h : 4 / 3;
     return (
