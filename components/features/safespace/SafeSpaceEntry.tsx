@@ -3,7 +3,7 @@
 import React, { useState } from "react";
 import { motion } from "framer-motion";
 import { useMailbox } from "@/context/MailboxContext";
-import { Coffee, ShieldCheck, ArrowRight, MessageCircle } from "lucide-react";
+import { ShieldCheck, ArrowRight, MessageCircle } from "lucide-react";
 import { useSensoryFeedback } from "@/hooks/useSensoryFeedback";
 
 const openRoom = () => window.dispatchEvent(new CustomEvent('openSafeSpace'));
@@ -68,10 +68,6 @@ export const SafeSpaceEntry = () => {
 
   return (
     <div className="w-full tone-indigo rounded-[1.5rem] p-6 md:p-8 flex flex-row items-center justify-between gap-4 overflow-hidden relative group">
-      <div className="absolute top-0 right-0 p-8 opacity-5 pointer-events-none group-hover:scale-110 transition-transform duration-700">
-        <Coffee className="w-32 h-32" />
-      </div>
-
       <div className="flex flex-col gap-1 relative z-10 flex-1">
         <h3 className="text-2xl md:text-3xl font-bebas text-white tracking-wider uppercase leading-none">The Safe Space</h3>
         <p className="text-white/60 font-outfit text-xs leading-relaxed">A quiet room for the two of you. Write when you&apos;re ready; it stays open until one of you closes it.</p>

@@ -135,7 +135,7 @@ const PendingRow = ({ games, noun, onOpen }: { games: ActiveGame[]; noun: string
           {games.slice(0, 3).map(g => {
             const Icon = DECK_ICONS[g.deck];
             return (
-              <div key={g.id} className={cn("w-10 h-10 rounded-xl bg-gradient-to-br flex items-center justify-center ring-2 ring-[#1a1a1a]", DECK_BY_ID[g.deck].cards[0])}>
+              <div key={g.id} className={cn("w-10 h-10 rounded-xl bg-gradient-to-br flex items-center justify-center ring-1 ring-white/80", DECK_BY_ID[g.deck].cards[0])}>
                 <Icon className="w-4 h-4 text-white" />
               </div>
             );

@@ -3,8 +3,8 @@
 import React, { useState, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { useMailbox } from "@/context/MailboxContext";
-import { Activity, ArrowRight, X, Zap, Send, Sparkles, Heart } from "lucide-react";
-import { MoodSelector } from "./MoodSelector";
+import { ArrowRight, X, Zap, Send, Heart, Smile, Link2 } from "lucide-react";
+import { MoodSelector, MoodIcon, MOOD_TYPES } from "./MoodSelector";
 import { ReactionType } from "@/lib/types";
 import { useSensoryFeedback } from "@/hooks/useSensoryFeedback";
 
@@ -12,20 +12,6 @@ interface DailyCheckInPopupProps {
   onClose: () => void;
 }
 
-const LABEL_TO_TYPE: Record<string, ReactionType> = {
-    "Love": "LOVE",
-    "Peace": "PEACE",
-    "Closeness": "CLOSENESS",
-    "Reassurance": "REASSURANCE",
-    "Brighter": "FEELING_BETTER",
-    "Appreciative": "APPRECIATIVE",
-    "Not Okay": "NOT_OKAY",
-    "Gloomy": "GLOOMY",
-    "Anxious": "ANXIOUS",
-    "In Conflict": "CONFLICT",
-    "Tired": "TIRED",
-    "Energized": "ENERGIZED"
-};
 
 export const DailyCheckInPopup: React.FC<DailyCheckInPopupProps> = ({ onClose }) => {
   const { user, partner, checkins, updateMood, sendSignal, saveDailyCheckIn, todayId: today } = useMailbox();
@@ -63,7 +49,7 @@ export const DailyCheckInPopup: React.FC<DailyCheckInPopupProps> = ({ onClose })
       });
 
       // 2. Send signal (triggers splash)
-      const type = LABEL_TO_TYPE[moodStatus];
+      const type = MOOD_TYPES[moodStatus];
       if (type) {
         await sendSignal(type, undefined, false, `checkin_${today}_${user.uid}`);
       }
@@ -97,234 +83,152 @@ export const DailyCheckInPopup: React.FC<DailyCheckInPopupProps> = ({ onClose })
     return "Gentle connection needed. A hug or simple reassurance would be great.";
   };
 
+  const score = calculateSyncScore();
+  const stepIndex = step === "mood" ? 0 : step === "connection" ? 1 : step === "moodStatus" ? 2 : -1;
+  const partnerName = partner?.displayName?.split(" ")[0] || "Your partner";
+
+  // One slider screen for mood and connection: a big number on a coloured card, the slider under it
+  const slider = (value: number, set: (n: number) => void, tone: string, low: string, high: string) => (
+    <div className="space-y-4">
+      <div className={`${tone} rounded-[1.5rem] p-8 flex items-center justify-center`}>
+        <span className="font-bebas text-[7rem] leading-none select-none tabular-nums">{value}</span>
+      </div>
+      <div className="px-1">
+        <input
+          type="range" min="1" max="10" value={value} onChange={(e) => set(parseInt(e.target.value))}
+          className="w-full h-1.5 bg-white/10 rounded-full appearance-none cursor-pointer accent-white"
+        />
+        <div className="flex justify-between mt-3 font-bebas text-[10px] tracking-[0.3em] text-neutral-500 uppercase">
+          <span>{low}</span><span>{high}</span>
+        </div>
+      </div>
+    </div>
+  );
+
+  const primary = "w-full h-14 bg-white text-black font-bebas text-lg tracking-widest uppercase rounded-2xl flex items-center justify-center gap-2 hover:bg-neutral-200 active:scale-95 disabled:opacity-30 transition-all";
+
   return (
     <div className="fixed inset-0 z-[100] flex items-center justify-center p-6 overlay-backdrop">
-      <motion.div 
-        initial={{ opacity: 0, scale: 0.9, y: 20 }}
-        animate={{ opacity: 1, scale: 1, y: 0 }}
-        exit={{ opacity: 0, scale: 0.9, y: 20 }}
-        className="w-full max-w-[340px] md:max-w-xl bg-neutral-900 border border-white/10 rounded-[1.5rem] overflow-hidden shadow-2xl relative"
+      <motion.div
+        initial={{ opacity: 0, y: 24 }}
+        animate={{ opacity: 1, y: 0 }}
+        exit={{ opacity: 0, y: 24 }}
+        className="w-full max-w-md overlay-panel rounded-[1.5rem] p-6 flex flex-col gap-6 max-h-[calc(100dvh-3rem)] overflow-y-auto no-scrollbar"
       >
-        <div className="absolute top-0 right-0 p-6 opacity-5 pointer-events-none">
-          <Sparkles className="w-24 h-24" />
-        </div>
-
-        {/* Header with close button */}
-        <div className="p-6 pb-0 flex justify-between items-center relative z-10">
-          <div className="flex items-center gap-2">
-            <div className="w-2 h-2 rounded-full bg-pink-500 animate-pulse" />
+        {/* Header: label, close, and three dashes while answering */}
+        <div className="space-y-4 shrink-0">
+          <div className="flex items-center justify-between">
             <span className="font-bebas text-[10px] tracking-[0.4em] text-neutral-500 uppercase">Daily Heart-Sync</span>
+            <button onClick={onClose} aria-label="Close" className="w-10 h-10 rounded-full bg-[#1c1c1c] border border-[#232323] flex items-center justify-center text-neutral-400 hover:text-white transition-all">
+              <X className="w-4 h-4" />
+            </button>
           </div>
-          <button onClick={onClose} aria-label="Close" className="p-2 rounded-full bg-[#1c1c1c] hover:bg-[#242424] transition-colors">
-            <X className="w-4 h-4 text-neutral-400" />
-          </button>
+          {stepIndex >= 0 && (
+            <div className="flex gap-1">
+              {[0, 1, 2].map(i => <span key={i} className={`h-1 flex-1 rounded-full ${i <= stepIndex ? "bg-white" : "bg-white/15"}`} />)}
+            </div>
+          )}
         </div>
 
-        <div className="p-6 pt-6">
-          <AnimatePresence mode="wait">
-            {step === "intro" && (
-              <motion.div key="intro" initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -10 }} className="space-y-8 text-center py-4">
-                <div className="flex justify-center">
-                    <div className="w-16 h-16 rounded-2xl bg-[#161616] border border-[#2a2a2a] flex items-center justify-center">
-                        <Zap className="w-8 h-8 text-yellow-400 shadow-[0_0_15px_rgba(250,204,21,0.3)]" />
-                    </div>
+        <AnimatePresence mode="wait" initial={false}>
+          {step === "intro" && (
+            <motion.div key="intro" initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -10 }} className="space-y-6">
+              <div className="tone-amber rounded-[1.5rem] p-8 space-y-6">
+                <div className="w-12 h-12 rounded-xl bg-black/10 flex items-center justify-center">
+                  <Zap className="w-6 h-6" />
                 </div>
-                <div className="space-y-3">
-                    <h2 className="text-4xl font-bebas text-white tracking-wider uppercase leading-none">Time to Sync Up</h2>
-                    <p className="text-neutral-500 font-outfit text-sm leading-relaxed px-4">
-                      Taking 30 seconds to check in helps you stay aligned and deeply connected through the day&apos;s noise.
-                    </p>
+                <div className="space-y-2">
+                  <h2 className="font-bebas text-5xl tracking-wide uppercase leading-none">Time to sync up</h2>
+                  <p className="font-outfit text-sm leading-relaxed">A 30-second check-in keeps the two of you aligned through the day&apos;s noise. {partnerName} sees it when you finish.</p>
                 </div>
-                <button 
-                  onClick={() => {
-                    playTick();
-                    setStep("mood");
-                  }}
-                  className="w-full bg-white text-black font-bebas text-lg py-4 rounded-2xl hover:bg-neutral-200 active:scale-95 transition-all shadow-xl"
-                >
-                    Start Sync
-                </button>
-              </motion.div>
-            )}
+              </div>
+              <button onClick={() => { playTick(); setStep("mood"); }} className={primary}>Start sync <ArrowRight className="w-4 h-4" /></button>
+            </motion.div>
+          )}
 
-            {step === "mood" && (
-              <motion.div key="mood" initial={{ opacity: 0, x: 20 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: -20 }} className="space-y-8 py-4">
-                <div className="space-y-1">
-                    <h3 className="text-3xl font-bebas text-white tracking-widest uppercase">How&apos;s your mood?</h3>
-                    <p className="text-neutral-500 font-outfit text-xs uppercase tracking-widest leading-relaxed">Honest feeling right now</p>
+          {step === "mood" && (
+            <motion.div key="mood" initial={{ opacity: 0, x: 20 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: -20 }} className="space-y-6">
+              <div className="flex items-center gap-4">
+                <div className="w-12 h-12 rounded-xl bg-[#1c1c1c] border border-[#232323] flex items-center justify-center shrink-0"><Smile className="w-5 h-5 text-neutral-300" /></div>
+                <div className="space-y-1 min-w-0">
+                  <h3 className="font-bebas text-3xl tracking-widest uppercase leading-none">How&apos;s your mood?</h3>
+                  <p className="font-outfit text-xs text-neutral-500">Your honest feeling right now.</p>
                 </div>
-                <div className="space-y-8">
-                    <div className="relative pt-2">
-                        <input 
-                            type="range" min="1" max="10" value={mood} onChange={(e) => setMood(parseInt(e.target.value))}
-                            className="w-full h-1.5 bg-white/10 rounded-full appearance-none cursor-pointer accent-white"
-                        />
-                        <div className="flex justify-between mt-4 text-[11px] font-bebas text-neutral-500 tracking-[0.2em] uppercase">
-                            <span>Mellow</span>
-                            <span>Radiant</span>
-                        </div>
-                    </div>
-                    <div className="text-8xl font-bebas text-center text-white select-none">{mood}</div>
-                    <button 
-                      onClick={() => {
-                        playTick();
-                        setStep("connection");
-                      }}
-                      className="w-full bg-white text-black font-bebas text-xl py-4 rounded-2xl flex items-center justify-center gap-2 hover:bg-neutral-200 transition-colors"
-                    >
-                        Next <ArrowRight className="w-5 h-5" />
-                    </button>
-                </div>
-              </motion.div>
-            )}
+              </div>
+              {slider(mood, setMood, "tone-rose", "Mellow", "Radiant")}
+              <button onClick={() => { playTick(); setStep("connection"); }} className={primary}>Next <ArrowRight className="w-4 h-4" /></button>
+            </motion.div>
+          )}
 
-            {step === "connection" && (
-              <motion.div key="connection" initial={{ opacity: 0, x: 20 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: -20 }} className="space-y-8 py-4">
-                <div className="space-y-1">
-                    <h3 className="text-3xl font-bebas text-white tracking-widest uppercase leading-tight">Connection level?</h3>
-                    <p className="text-neutral-500 font-outfit text-xs uppercase tracking-widest">Us, right in this moment</p>
+          {step === "connection" && (
+            <motion.div key="connection" initial={{ opacity: 0, x: 20 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: -20 }} className="space-y-6">
+              <div className="flex items-center gap-4">
+                <div className="w-12 h-12 rounded-xl bg-[#1c1c1c] border border-[#232323] flex items-center justify-center shrink-0"><Link2 className="w-5 h-5 text-neutral-300" /></div>
+                <div className="space-y-1 min-w-0">
+                  <h3 className="font-bebas text-3xl tracking-widest uppercase leading-none">How connected?</h3>
+                  <p className="font-outfit text-xs text-neutral-500">The two of you, right now.</p>
                 </div>
-                <div className="space-y-8">
-                    <div className="relative pt-2">
-                        <input 
-                            type="range" min="1" max="10" value={connection} onChange={(e) => setConnection(parseInt(e.target.value))}
-                            className="w-full h-1.5 bg-white/10 rounded-full appearance-none cursor-pointer accent-white"
-                        />
-                        <div className="flex justify-between mt-4 text-[11px] font-bebas text-neutral-500 tracking-[0.2em] uppercase">
-                            <span>Distant</span>
-                            <span>One Heartbeat</span>
-                        </div>
-                    </div>
-                    <div className="text-8xl font-bebas text-center text-white select-none">{connection}</div>
-                    <button 
-                      onClick={() => {
-                        playTick();
-                        setStep("moodStatus");
-                      }}
-                      className="w-full bg-white text-black font-bebas text-xl py-4 rounded-2xl flex items-center justify-center gap-2 hover:bg-neutral-200 transition-colors"
-                    >
-                        Final Step <ArrowRight className="w-5 h-5" />
-                    </button>
-                </div>
-              </motion.div>
-            )}
+              </div>
+              {slider(connection, setConnection, "tone-blue", "Distant", "One heartbeat")}
+              <button onClick={() => { playTick(); setStep("moodStatus"); }} className={primary}>Last step <ArrowRight className="w-4 h-4" /></button>
+            </motion.div>
+          )}
 
-            {step === "moodStatus" && (
-                <motion.div key="moodStatus" initial={{ opacity: 0, x: 20 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: -20 }} className="space-y-8 py-4">
-                    <div className="space-y-1 text-center">
-                        <h3 className="text-3xl font-bebas text-white tracking-widest uppercase">Headspace?</h3>
-                        <p className="text-neutral-500 font-outfit text-[10px] uppercase tracking-widest">Pick your current emoji signal</p>
-                    </div>
-                    <div className="space-y-10">
-                        <div className="max-h-[35vh] overflow-y-auto pr-2 no-scrollbar">
-                            <MoodSelector 
-                                selectedMood={moodStatus}
-                                onSelect={(m) => setMoodStatus(m)}
-                            />
-                        </div>
-                        <button 
-                            disabled={!moodStatus || saving}
-                            onClick={handleSubmit}
-                            className="w-full bg-white text-black font-bebas text-xl py-5 rounded-2xl flex items-center justify-center gap-2 disabled:opacity-30 transition-all shadow-[0_0_15px_rgba(255,255,255,0.1)]"
-                        >
-                            {saving ? "Saving..." : error ? "Try Again" : <><Send className="w-5 h-5" /> Finish Sync</>}
-                        </button>
-                    </div>
-                </motion.div>
-            )}
+          {step === "moodStatus" && (
+            <motion.div key="moodStatus" initial={{ opacity: 0, x: 20 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: -20 }} className="space-y-6">
+              <div className="space-y-1">
+                <h3 className="font-bebas text-3xl tracking-widest uppercase leading-none">Pick a feeling</h3>
+                <p className="font-outfit text-xs text-neutral-500">{partnerName} sees this on your profile.</p>
+              </div>
+              <div className="max-h-[38vh] overflow-y-auto no-scrollbar">
+                <MoodSelector selectedMood={moodStatus} onSelect={(m) => setMoodStatus(m)} />
+              </div>
+              {error && <p className="font-outfit text-xs text-rose-400">{error}</p>}
+              <button disabled={!moodStatus || saving} onClick={handleSubmit} className={primary}>
+                {saving ? "Saving..." : error ? "Try again" : <><Send className="w-4 h-4" /> Finish sync</>}
+              </button>
+            </motion.div>
+          )}
 
-            {step === "summary" && (
-              <motion.div key="summary" initial={{ opacity: 0, scale: 0.95 }} animate={{ opacity: 1, scale: 1 }} className="space-y-8 py-2">
-                {!partnerCheckIn ? (
-                  <div className="flex flex-col items-center py-8 text-center space-y-6">
-                     <motion.div 
-                      animate={{ 
-                        scale: [1, 1.2, 1],
-                        opacity: [0.5, 1, 0.5]
-                      }} 
-                      transition={{ duration: 4, repeat: Infinity, ease: "easeInOut" }}
-                      className="relative"
-                     >
-                        <Heart className="w-20 h-20 text-pink-500/20 fill-pink-500/10" />
-                        <Activity className="w-10 h-10 text-pink-500 absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2" />
-                     </motion.div>
-                     <div className="space-y-2">
-                        <h3 className="text-3xl font-bebas text-white tracking-widest uppercase">Successfully Saved</h3>
-                        <p className="text-neutral-500 font-outfit text-sm leading-relaxed max-w-[240px] mx-auto">
-                          Your heart is synced to the archive. Waiting for {partner?.displayName} to complete their check-in.
-                        </p>
-                     </div>
-                     <button 
-                       onClick={onClose}
-                       className="w-full bg-[#161616] border border-[#2a2a2a] text-neutral-400 font-bebas tracking-widest uppercase py-4 rounded-2xl hover:text-white transition-colors"
-                     >
-                       Close for now
-                     </button>
+          {step === "summary" && (
+            <motion.div key="summary" initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} className="space-y-6">
+              {!partnerCheckIn ? (
+                <>
+                  <div className="tone-pink rounded-[1.5rem] p-8 space-y-4 text-center">
+                    <div className="w-12 h-12 rounded-xl bg-black/15 flex items-center justify-center mx-auto">
+                      <Heart className="w-6 h-6" />
+                    </div>
+                    <h3 className="font-bebas text-4xl tracking-wide uppercase leading-none">You&apos;re synced</h3>
+                    <p className="font-outfit text-sm leading-relaxed">Saved. Waiting for {partnerName} to finish theirs, then you&apos;ll see how in sync you are.</p>
                   </div>
-                ) : (
-                  <div className="space-y-6 pb-4">
-                     <div className="text-center space-y-2 mb-2">
-                        <h3 className="text-3xl font-bebas text-transparent bg-clip-text bg-gradient-to-r from-pink-400 to-blue-400 tracking-widest uppercase">Sync Complete</h3>
-                        <p className="text-neutral-500 font-outfit text-[10px] uppercase tracking-widest">You two are connected.</p>
-                     </div>
-                     
-                     <div className="space-y-4">
-                         {/* Score Banner */}
-                         <div className="flex items-center justify-between bg-[#161616] border border-[#2a2a2a] p-6 rounded-3xl relative overflow-hidden">
-                            <div className="absolute inset-0 bg-gradient-to-r from-pink-500/5 to-transparent pointer-events-none" />
-                            <div className="flex items-center gap-4 relative z-10">
-                                <motion.div 
-                                    animate={{ scale: [1, 1.1, 1] }} 
-                                    transition={{ repeat: Infinity, duration: 2 }}
-                                >
-                                    <Heart className="w-6 h-6 text-pink-500 fill-pink-500/20" />
-                                </motion.div>
-                                <div>
-                                    <h4 className="font-bebas text-xs tracking-widest uppercase text-neutral-400 m-0">Synchronicity</h4>
-                                    <div className="text-4xl font-bebas text-white leading-none mt-1">{calculateSyncScore()}%</div>
-                                </div>
-                            </div>
-                            <div className="text-right flex flex-col items-end relative z-10">
-                                <span className="font-bebas text-[10px] tracking-widest text-neutral-600 uppercase">Status</span>
-                                <span className={calculateSyncScore() > 70 ? "text-green-400 font-bebas text-lg" : "text-orange-400 font-bebas text-lg"}>
-                                    {calculateSyncScore() > 70 ? "Deep Sync" : "Adapting"}
-                                </span>
-                            </div>
-                         </div>
-        
-                         {/* Headspace Comparison */}
-                         <div className="grid grid-cols-2 gap-4">
-                            <div className="p-4 bg-[#161616] border border-[#2a2a2a] rounded-3xl flex flex-col items-center justify-center gap-1">
-                                <span className="font-bebas text-[10px] tracking-widest text-neutral-600 uppercase">You</span>
-                                <span className="font-bebas text-xl text-white tracking-wide uppercase truncate max-w-full">{user?.currentMood || "Synced"}</span>
-                            </div>
-                            <div className="p-4 bg-[#161616] border border-[#2a2a2a] rounded-3xl flex flex-col items-center justify-center gap-1">
-                                <span className="font-bebas text-[10px] tracking-widest text-neutral-500 uppercase">{partner?.displayName?.split(' ')[0]}</span>
-                                <span className="font-bebas text-xl text-white tracking-wide uppercase truncate max-w-full">{partner?.currentMood || "Connected"}</span>
-                            </div>
-                         </div>
-        
-                         {/* Advice */}
-                         <div className="p-6 bg-blue-500/5 border border-blue-500/10 rounded-3xl flex items-start gap-4">
-                            <Activity className="w-5 h-5 text-blue-400 shrink-0 mt-1" />
-                            <p className="text-neutral-400 font-outfit text-sm italic leading-relaxed">
-                                {getSuggestion(calculateSyncScore())}
-                            </p>
-                        </div>
-                     </div>
-
-                     <button 
-                       onClick={onClose}
-                       className="w-full bg-white text-black font-bebas text-lg py-4 rounded-2xl hover:bg-neutral-200 transition-all font-bold"
-                     >
-                       Continue Journey
-                     </button>
+                  <button onClick={onClose} className={primary}>Close for now</button>
+                </>
+              ) : (
+                <>
+                  <div className={`${score > 70 ? "tone-emerald" : "tone-amber"} rounded-[1.5rem] p-8 flex items-end justify-between gap-4`}>
+                    <div className="space-y-1">
+                      <span className="font-bebas text-[10px] tracking-[0.4em] uppercase opacity-70">Synchronicity</span>
+                      <div className="font-bebas text-7xl leading-none tabular-nums">{score}%</div>
+                    </div>
+                    <span className="font-bebas text-xl tracking-widest uppercase pb-1">{score > 70 ? "Deep sync" : "Adapting"}</span>
                   </div>
-                )}
-              </motion.div>
-            )}
-          </AnimatePresence>
-        </div>
+                  <div className="grid grid-cols-2 gap-3">
+                    <div className="tone-pink rounded-[1.5rem] p-5 space-y-1">
+                      <span className="font-bebas text-[10px] tracking-[0.3em] uppercase opacity-70">You</span>
+                      <p className="font-bebas text-2xl tracking-wide uppercase truncate flex items-center gap-2"><MoodIcon mood={user?.currentMood} className="w-7 h-7 shrink-0 object-contain" />{user?.currentMood || "Synced"}</p>
+                    </div>
+                    <div className="tone-blue rounded-[1.5rem] p-5 space-y-1">
+                      <span className="font-bebas text-[10px] tracking-[0.3em] uppercase opacity-70 truncate block">{partnerName}</span>
+                      <p className="font-bebas text-2xl tracking-wide uppercase truncate flex items-center gap-2"><MoodIcon mood={partner?.currentMood} className="w-7 h-7 shrink-0 object-contain" />{partner?.currentMood || "Connected"}</p>
+                    </div>
+                  </div>
+                  <p className="font-outfit text-sm text-neutral-400 leading-relaxed px-1">{getSuggestion(score)}</p>
+                  <button onClick={onClose} className={primary}>Continue</button>
+                </>
+              )}
+            </motion.div>
+          )}
+        </AnimatePresence>
       </motion.div>
     </div>
   );

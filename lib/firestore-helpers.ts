@@ -516,56 +516,42 @@ export const judgeTruthOrDare = (coupleId: string, gameId: string, round: number
   updateDoc(gameRef(coupleId, gameId), { [`td.r${round}.result`]: result });
 
 /** Move to the next card. Both tapping "Next" at once still moves only one card. */
-export const advanceGame = async (coupleId: string, gameId: string, fromRound: number) => {
-  await runTransaction(db, async (tx) => {
-    const snap = await tx.get(gameRef(coupleId, gameId));
-    if (!snap.exists() || snap.data().round !== fromRound) return;
-    tx.update(gameRef(coupleId, gameId), { round: fromRound + 1 });
-  });
-};
+export const advanceGame = (coupleId: string, gameId: string, fromRound: number) =>
+  updateDoc(gameRef(coupleId, gameId), { round: fromRound + 1 });
 
 /**
  * Board games: place a piece. Runs as a transaction so a move only lands on the player's own turn,
  * in an empty cell, and the win is counted exactly once.
  */
-export const playBoardMove = async (coupleId: string, gameId: string, uid: string, cell: number) => {
+export const playBoardMove = async (game: CoupleGame & { id: string }, coupleId: string, uid: string, cell: number) => {
   const { c4Landing, c4Winner, xoWinner } = await import("./games/engine");
-  await runTransaction(db, async (tx) => {
-    const snap = await tx.get(gameRef(coupleId, gameId));
-    if (!snap.exists()) return;
-    const g = snap.data() as CoupleGame;
-    if (!g.board || g.winner || g.turn !== uid) return;
-    const connect4 = DECK_BY_ID[g.deck]?.mechanic === "connect4";
-    // In four in a row the tap picks a column; the coin falls to the lowest free cell
-    const target = connect4 ? c4Landing(g.board, cell) : cell;
-    if (target < 0 || g.board[target]) return;
-    const board = [...g.board];
-    board[target] = uid;
-    const winner = connect4 ? c4Winner(board) : xoWinner(board);
-    const other = g.players.find(p => p !== uid) ?? uid;
-    tx.update(gameRef(coupleId, gameId), {
-      board,
-      turn: winner ? g.turn : other,
-      winner: winner ?? null,
-      ...(winner && winner !== "draw" ? { [`wins.${winner}`]: (g.wins?.[winner] ?? 0) + 1 } : {}),
-    });
+  if (!game.board || game.winner || game.turn !== uid) return;
+  const connect4 = DECK_BY_ID[game.deck]?.mechanic === "connect4";
+  // In four in a row the tap picks a column; the coin falls to the lowest free cell
+  const target = connect4 ? c4Landing(game.board, cell) : cell;
+  if (target < 0 || game.board[target]) return;
+  const board = [...game.board];
+  board[target] = uid;
+  const winner = connect4 ? c4Winner(board) : xoWinner(board);
+  const other = game.players.find(p => p !== uid) ?? uid;
+  // A plain update shows on this screen at once; a transaction would wait for the server first
+  await updateDoc(gameRef(coupleId, game.id), {
+    board,
+    turn: winner ? game.turn : other,
+    winner: winner ?? null,
+    ...(winner && winner !== "draw" ? { [`wins.${winner}`]: (game.wins?.[winner] ?? 0) + 1 } : {}),
   });
 };
 
 /** Board games: clear the board for another round. Whoever went second last time goes first. */
-export const nextBoardRound = async (coupleId: string, gameId: string) => {
-  await runTransaction(db, async (tx) => {
-    const snap = await tx.get(gameRef(coupleId, gameId));
-    if (!snap.exists()) return;
-    const g = snap.data() as CoupleGame;
-    if (!g.board || !g.winner) return;
-    const match = (g.match ?? 1) + 1;
-    tx.update(gameRef(coupleId, gameId), {
-      board: g.board.map(() => ""),
-      winner: null,
-      match,
-      turn: g.players[(match - 1) % 2],
-    });
+export const nextBoardRound = async (game: CoupleGame & { id: string }, coupleId: string) => {
+  if (!game.board || !game.winner) return;
+  const match = (game.match ?? 1) + 1;
+  await updateDoc(gameRef(coupleId, game.id), {
+    board: game.board.map(() => ""),
+    winner: null,
+    match,
+    turn: game.players[(match - 1) % 2],
   });
 };
 

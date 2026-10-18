@@ -1,5 +1,5 @@
 import { initializeApp, getApps, getApp } from "firebase/app";
-import { getFirestore, connectFirestoreEmulator } from "firebase/firestore";
+import { initializeFirestore, getFirestore, connectFirestoreEmulator } from "firebase/firestore";
 import { 
   getAuth, 
   setPersistence, 
@@ -32,7 +32,12 @@ const useEmulators = process.env.NEXT_PUBLIC_USE_EMULATORS === "1"
 const app = getApps().length > 0
   ? getApp()
   : initializeApp(useEmulators ? { ...firebaseConfig, projectId: "demo-honest-mailbox" } : firebaseConfig);
-const db = getFirestore(app);
+// Auto-detect lets the live connection fall back to long polling where a network buffers streaming
+// responses, which is what made one person see a move seconds after the other
+const db = (() => {
+  try { return initializeFirestore(app, { experimentalAutoDetectLongPolling: true }); }
+  catch { return getFirestore(app); }
+})();
 const auth = getAuth(app);
 
 if (useEmulators && !(globalThis as { __hmEmulators?: boolean }).__hmEmulators) {

@@ -159,7 +159,7 @@ const ItemRow = ({ item, uid, partnerName, onToggle, onRemove }: {
     exit={{ opacity: 0, height: 0, marginTop: 0 }}
     className={cn(
       "group flex items-center gap-4 rounded-2xl border p-4 transition-colors",
-      item.done ? "tone-slate" : "tone-emerald"
+      item.done ? "tone-emerald" : "tone-slate"
     )}
   >
     <button
@@ -167,13 +167,13 @@ const ItemRow = ({ item, uid, partnerName, onToggle, onRemove }: {
       onClick={() => onToggle(item)}
       className={cn(
         "w-8 h-8 shrink-0 rounded-full border-2 flex items-center justify-center transition-all active:scale-90",
-        item.done ? "bg-emerald-400 border-emerald-400 text-black" : "border-white/25 hover:border-white/60"
+        item.done ? "bg-white border-white text-emerald-700" : "border-white/25 hover:border-white/60"
       )}
     >
-      {item.done && <Check className="w-4 h-4" />}
+      {item.done && <Check className="w-4 h-4" style={{ color: "#107238" }} />}
     </button>
     <div className="flex-1 min-w-0">
-      <p className={cn("font-outfit text-sm break-words", item.done ? "text-neutral-500 line-through" : "text-white")}>{item.text}</p>
+      <p className={cn("font-outfit text-sm break-words", item.done ? "text-white/70 line-through" : "text-white")}>{item.text}</p>
       <p className="font-outfit text-[11px] text-neutral-500 mt-0.5">
         {item.done
           ? `Done${item.doneAt ? ` on ${new Date(item.doneAt).toLocaleDateString(undefined, { day: "numeric", month: "short" })}` : ""}`
