@@ -27,7 +27,7 @@ export default function Error({
   return (
     <div className="min-h-screen bg-[var(--page)] text-white flex items-center justify-center p-6">
       <div className="w-full max-w-sm bg-[#161616] border border-[#2a2a2a] rounded-[1.5rem] p-8 text-center space-y-6">
-        <img src="/logo.png" alt="" className="w-12 h-auto mx-auto" />
+        <img src="/mascot.webp" alt="" className="w-12 h-auto mx-auto" />
         <div className="space-y-2">
           <h1 className="text-3xl font-bebas tracking-widest uppercase">Something Went Wrong</h1>
           <p className="text-neutral-400 font-outfit text-sm leading-relaxed">

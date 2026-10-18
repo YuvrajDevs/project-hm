@@ -9,6 +9,7 @@ import { addBucketItem, deleteBucketItem, setBucketItemDone, subscribeToBucketLi
 import type { BucketItem } from "@/lib/types";
 import { useSensoryFeedback } from "@/hooks/useSensoryFeedback";
 import { cn, partnerLabel } from "@/lib/utils";
+import { AccentWords } from "@/components/ui/Wordmark";
 
 const PREVIEW = 5;
 
@@ -46,7 +47,7 @@ export const BucketList = () => {
     <section className="space-y-5">
       <div className="flex items-end justify-between gap-4">
         <div className="space-y-1">
-          <h2 className="text-3xl font-bebas text-white tracking-widest uppercase leading-none">Bucket List</h2>
+          <h2 className="text-3xl font-bebas text-white tracking-widest uppercase leading-none"><AccentWords text="Bucket List" /></h2>
           <p className="text-[10px] text-neutral-500 font-bebas tracking-[0.2em] uppercase">Things to do together</p>
         </div>
         {items.length > 0 && (

@@ -6,6 +6,7 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { Menu, Moon, Sun, X } from "lucide-react";
 import { useTheme } from "@/hooks/useTheme";
+import { Wordmark } from "@/components/ui/Wordmark";
 
 // The one top bar for every public page (landing, games, questions, conflict resolution, legal, contact).
 export const SITE_NAV = [
@@ -57,8 +58,8 @@ export const SiteHeader = ({ showCta = true }: { showCta?: boolean }) => {
     <header className="sticky top-0 z-40 bg-gradient-to-b from-[var(--page)] via-[var(--page)]/90 to-transparent">
       <div className="relative max-w-6xl mx-auto px-6 py-6 flex items-center justify-between gap-4">
         <Link href="/" aria-label="Honest Mailbox, home" className="flex items-center gap-3 active:scale-95 transition-transform">
-          <Image src="/logo.png" alt="" width={256} height={256} priority className="w-7 h-7 object-contain" />
-          <span className="font-bebas text-xl tracking-widest text-white uppercase">Honest Mailbox</span>
+          <Image src="/mascot.webp" alt="" width={256} height={256} priority className="w-9 h-9 object-contain -translate-y-[3px]" />
+          <Wordmark className="text-2xl text-white" />
         </Link>
 
         <div className="flex items-center gap-3">

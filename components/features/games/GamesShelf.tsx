@@ -14,6 +14,7 @@ import { useSensoryFeedback } from "@/hooks/useSensoryFeedback";
 import { cn, partnerLabel } from "@/lib/utils";
 import { DECK_ICONS, openGame, openQuestions, titleFont } from "./deckIcons";
 import { DeckTitle } from "./DeckTitle";
+import { AccentWords } from "@/components/ui/Wordmark";
 
 // The history reads every card back, so its code only loads when opened
 const PastGames = dynamic(() => import("./PastGames").then(m => m.PastGames));
@@ -297,7 +298,7 @@ const DeckSection = ({ title, subtitle, decks, active, noun, showScore, onPick, 
     <section className="space-y-6">
       <div className="flex items-end justify-between gap-4">
         <div className="space-y-1 min-w-0">
-          <h2 className="text-3xl font-bebas text-white tracking-widest uppercase leading-none">{title}</h2>
+          <h2 className="text-3xl font-bebas text-white tracking-widest uppercase leading-none">{title.trim().split(/\s+/).length === 2 ? <AccentWords text={title} /> : title}</h2>
           <p className="text-[10px] text-neutral-500 font-bebas tracking-[0.2em] uppercase">{subtitle}</p>
         </div>
         {showScore && <ScoreTally />}

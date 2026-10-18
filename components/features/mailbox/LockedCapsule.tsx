@@ -9,6 +9,7 @@ import { useMailbox } from "@/context/MailboxContext";
 import { useSensoryFeedback } from "@/hooks/useSensoryFeedback";
 import { EditMessage } from "./EditMessage";
 import { AnimatePresence } from "framer-motion";
+import { AccentWords } from "@/components/ui/Wordmark";
 
 export const LockedCapsule = ({ message }: { message: MailboxMessage }) => {
   const { user, deleteForMe, unsendCapsule } = useMailbox();
@@ -139,7 +140,7 @@ export const LockedCapsule = ({ message }: { message: MailboxMessage }) => {
             <Lock className="w-6 h-6 text-pink-500/80" />
         </div>
         <div>
-            <h2 className="text-xl font-bebas tracking-[0.2em] uppercase text-white">Time Capsule</h2>
+            <h2 className="text-xl font-bebas tracking-[0.2em] uppercase text-white"><AccentWords text="Time Capsule" /></h2>
             <p className="text-sm font-outfit text-neutral-400 font-light mt-1 max-w-xs mx-auto">
                 {isSender
                     ? "Your words are sealed. No one can read them until the timer runs out."

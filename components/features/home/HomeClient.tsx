@@ -20,6 +20,7 @@ import dynamic from "next/dynamic";
 import { useScrollLock } from "@/hooks/useScrollLock";
 import { hasUnreadChat } from "@/lib/chat";
 import { partnerLabel } from "@/lib/utils";
+import { Wordmark } from "@/components/ui/Wordmark";
 
 // Screens and dialogs that are not on the first screen load on demand, so opening the app
 // downloads and runs only what the home screen needs.
@@ -291,7 +292,7 @@ export function HomeClient() {
           animate={{ opacity: [0.3, 0.6, 0.3], scale: [0.95, 1, 0.95] }}
           transition={{ repeat: Infinity, duration: 2, ease: "easeInOut" }}
         >
-          <Image src="/logo.png" alt="HM Logo" width={256} height={256} className="w-12 h-auto grayscale opacity-50" />
+          <Image src="/mascot.webp" alt="HM Logo" width={256} height={256} className="w-12 h-auto grayscale opacity-50" />
         </motion.div>
       </div>
     );
@@ -309,7 +310,7 @@ export function HomeClient() {
       <div className={`${COVER} bg-[var(--page)] flex items-center justify-center`}>
         <div className="flex flex-col items-center gap-6">
           <div className="flex items-center justify-center mb-2">
-            <Image src="/logo.png" alt="HM Logo" width={256} height={256} className="w-16 h-auto drop-shadow-lg" />
+            <Image src="/mascot.webp" alt="HM Logo" width={256} height={256} className="w-16 h-auto drop-shadow-lg" />
           </div>
           <div className="flex flex-col items-center gap-6">
             <div className="flex items-center gap-3">
@@ -380,8 +381,8 @@ export function HomeClient() {
             className="flex justify-between items-center w-full fixed top-0 left-0 p-8 z-50 bg-gradient-to-b from-[var(--page)] via-[var(--page)]/90 to-transparent pointer-events-none"
           >
             <div className="flex items-center gap-3 pointer-events-auto">
-              <Image src="/logo.png" alt="HM Logo" width={256} height={256} className="w-6 h-auto" />
-              <span className="font-bebas text-xl tracking-widest text-white uppercase">Honest Mailbox</span>
+              <Image src="/mascot.webp" alt="HM Logo" width={256} height={256} className="w-9 h-auto -translate-y-[3px]" />
+              <Wordmark className="text-2xl text-white" />
             </div>
 
             <div className="flex items-center gap-2 pointer-events-auto">

@@ -97,7 +97,7 @@ export const BottomDock: React.FC<BottomDockProps> = ({
                     activeView === "mailbox" ? "bg-pink-500 text-white shadow-[0_0_30px_rgba(236,72,153,0.4)]" : "bg-[#1c1c1c] border border-[#2a2a2a] text-white"
                 )}
             >
-                <img src="/logo.png" alt="HM Logo" className="w-9 h-auto group-hover:scale-110 transition-transform" />
+                <img src="/mascot.webp" alt="HM Logo" className="w-10 h-auto group-hover:scale-110 transition-transform" />
             </button>
             <span className="absolute -top-14 left-1/2 -translate-x-1/2 px-4 py-1.5 bg-white text-black text-[10px] font-bebas tracking-widest uppercase rounded-lg opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none whitespace-nowrap">
                 Home

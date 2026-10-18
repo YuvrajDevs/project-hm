@@ -16,6 +16,7 @@ import type { PartnerNote } from "@/lib/types";
 import { useSensoryFeedback } from "@/hooks/useSensoryFeedback";
 import { cn, partnerLabel } from "@/lib/utils";
 import { useScrollLock } from "@/hooks/useScrollLock";
+import { AccentWords } from "@/components/ui/Wordmark";
 
 const PREVIEW = 4;
 const MAX_LENGTH = 140;
@@ -88,7 +89,7 @@ export const PartnerNotes = () => {
     <section className="space-y-5">
       <div className="flex items-end justify-between gap-4">
         <div className="space-y-1">
-          <h2 className="text-3xl font-bebas text-white tracking-widest uppercase leading-none">Partner Notes</h2>
+          <h2 className="text-3xl font-bebas text-white tracking-widest uppercase leading-none"><AccentWords text="Partner Notes" /></h2>
           <p className="text-[10px] text-neutral-500 font-bebas tracking-[0.2em] uppercase">{`Things to remember about ${partnerName}`}</p>
         </div>
         <button

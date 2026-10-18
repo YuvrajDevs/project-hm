@@ -9,6 +9,7 @@ import type { MailboxMessage } from "@/lib/types";
 import { cn } from "@/lib/utils";
 import { LockedCapsule } from "./LockedCapsule";
 import { MessageCard } from "./MessageCard";
+import { AccentWords } from "@/components/ui/Wordmark";
 
 type Filter = "week" | "saved";
 
@@ -83,7 +84,7 @@ export const OurThoughts = ({ onComposeClick }: { onComposeClick?: () => void })
     <section className="space-y-6">
       <div className="flex items-center justify-between gap-4">
         <div className="space-y-1">
-          <h2 className="text-3xl font-bebas text-white tracking-widest uppercase leading-none">Our Thoughts</h2>
+          <h2 className="text-3xl font-bebas text-white tracking-widest uppercase leading-none"><AccentWords text="Our Thoughts" /></h2>
           <p className="text-[10px] text-neutral-500 font-bebas tracking-[0.2em] uppercase">
             {filter === "week" ? `Kept for ${THOUGHT_DAYS} days` : "Only you can see these"}
           </p>
