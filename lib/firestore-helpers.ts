@@ -47,6 +47,8 @@ import {
 import { DECK_BY_ID, slotFor, type DeckId } from "./games/decks";
 import type { User as FirebaseUser } from "firebase/auth";
 import { REACTION_ICONS } from "./constants";
+import { getAesKeyForCouple, encryptDraft, decryptMessage, rotateKeys } from "./e2ee.ts";
+import { ChatMediaError } from "./chatMedia.ts";
 
 /**
  * Generic converter for Firestore to maintain type safety
@@ -807,6 +809,9 @@ export const unpairPartner = async (uid: string, partnerUid: string) => {
     await destroyCoupleData(coupleId);
   }
 
+  // A fresh chat key for whoever comes next: the old shared key dies with this pairing
+  await rotateKeys(uid).catch((err) => console.error("Could not rotate chat key while unpairing:", err));
+
   // Then both links are cleared together, and the partner is told
   const batch = writeBatch(db);
   batch.update(userRef, {
@@ -830,6 +835,8 @@ export const unpairPartner = async (uid: string, partnerUid: string) => {
 };
 
 export const clearLeftStatus = async (uid: string) => {
+  // A fresh chat key before whatever comes next: the old shared key died with that pairing
+  await rotateKeys(uid).catch((err) => console.error("Could not rotate chat key after a partner left:", err));
   const userRef = doc(db, "users", uid);
   return updateDoc(userRef, {
     coupleId: null,
@@ -1139,8 +1146,10 @@ export const sendContactMessage = async (message: { name?: string; email: string
 /**
  * Chat Helpers
  *
- * Photos and voice notes are squeezed on the device and stored inside the message itself, so chat
- * needs no file storage. The security rules cap how large one message can be.
+ * Messages are end-to-end encrypted (lib/e2ee.ts): the stored doc never holds plaintext content,
+ * only senderUid/kind/v/iv/ct/createdAt/savedBy. Photos and voice notes are squeezed on the device
+ * and encrypted into the same payload as the rest of the message, so chat needs no file storage.
+ * The security rules cap how large one message can be.
  */
 const toChat = (d: QueryDocumentSnapshot): ChatMessage => {
   const data = d.data({ serverTimestamps: "estimate" });
@@ -1152,19 +1161,46 @@ const toChat = (d: QueryDocumentSnapshot): ChatMessage => {
   } as ChatMessage;
 };
 
+// Decrypts one raw doc into the plaintext shape the UI expects. Never throws: a missing/invalid
+// schema, a missing shared key, or a failed decrypt (tamper, or a key that's been rotated away) all
+// land on `decryptFailed`, which MessageContent shows as a placeholder instead of crashing.
+const decryptChat = async (raw: ChatMessage, coupleId: string, partnerUid: string): Promise<ChatMessage> => {
+  if (raw.v !== 1 || !raw.iv || !raw.ct) return { ...raw, decryptFailed: true };
+  try {
+    const aesKey = await getAesKeyForCouple(coupleId, partnerUid);
+    if (!aesKey) return { ...raw, decryptFailed: true };
+    const fields = await decryptMessage(coupleId, raw.senderUid, raw.kind, raw.iv, raw.ct, aesKey);
+    return { ...raw, ...fields, decryptFailed: false };
+  } catch {
+    return { ...raw, decryptFailed: true };
+  }
+};
+
 // The newest `count` messages, oldest first
-export const subscribeToChat = (coupleId: string, count: number, callback: (messages: ChatMessage[], mayHaveMore: boolean) => void) => {
+export const subscribeToChat = (
+  coupleId: string,
+  partnerUid: string,
+  count: number,
+  callback: (messages: ChatMessage[], mayHaveMore: boolean) => void
+) => {
   const q = query(collection(db, "couples", coupleId, "chat"), orderBy("createdAt", "asc"), limitToLast(count));
-  return onSnapshot(q, { includeMetadataChanges: true }, (snap) => {
-    callback(snap.docs.map(toChat), snap.size >= count);
+  return onSnapshot(q, { includeMetadataChanges: true }, async (snap) => {
+    const messages = await Promise.all(snap.docs.map(toChat).map((m) => decryptChat(m, coupleId, partnerUid)));
+    callback(messages, snap.size >= count);
   });
 };
 
 // Everything this person has saved, newest first. Sorted here so no extra database index is needed.
-export const subscribeToSavedChat = (coupleId: string, uid: string, callback: (messages: ChatMessage[]) => void) => {
+export const subscribeToSavedChat = (
+  coupleId: string,
+  uid: string,
+  partnerUid: string,
+  callback: (messages: ChatMessage[]) => void
+) => {
   const q = query(collection(db, "couples", coupleId, "chat"), where("savedBy", "array-contains", uid));
-  return onSnapshot(q, (snap) => {
-    callback(snap.docs.map(toChat).sort((a, b) => b.createdAt.localeCompare(a.createdAt)));
+  return onSnapshot(q, async (snap) => {
+    const messages = await Promise.all(snap.docs.map(toChat).map((m) => decryptChat(m, coupleId, partnerUid)));
+    callback(messages.sort((a, b) => b.createdAt.localeCompare(a.createdAt)));
   });
 };
 
@@ -1180,21 +1216,22 @@ export interface ChatDraft {
 }
 
 /**
- * Add a message and update the chat summary on the couple in one go. The partner's app sees the summary
- * change and shows a toast (see NotificationToastManager); nothing is stored as a notification.
+ * Encrypt, add the message and update the chat summary on the couple in one go. The partner's app sees
+ * the (plaintext) summary change and shows a toast (see NotificationToastManager); nothing is stored as
+ * a notification. Throws ChatMediaError if the partner hasn't published a chat key yet.
  */
 export const sendChatMessage = async (
   coupleId: string,
   uid: string,
+  partnerUid: string,
   draft: ChatDraft
 ) => {
-  const fields: Record<string, unknown> = { kind: draft.kind };
-  for (const key of ["text", "mime", "data", "w", "h", "dur", "sticker"] as const) {
-    if (draft[key] !== undefined) fields[key] = draft[key];
-  }
+  const aesKey = await getAesKeyForCouple(coupleId, partnerUid);
+  if (!aesKey) throw new ChatMediaError("Your partner hasn't set up encrypted chat yet.");
+  const { v, iv, ct } = await encryptDraft(coupleId, uid, draft.kind, draft, aesKey);
   const now = new Date().toISOString();
   const batch = writeBatch(db);
-  batch.set(doc(collection(db, "couples", coupleId, "chat")), { ...fields, senderUid: uid, createdAt: serverTimestamp() });
+  batch.set(doc(collection(db, "couples", coupleId, "chat")), { senderUid: uid, kind: draft.kind, v, iv, ct, createdAt: serverTimestamp() });
   batch.update(doc(db, "couples", coupleId), {
     chatLastAt: now,
     chatLastBy: uid,
@@ -1217,3 +1254,20 @@ export const setChatMessageSaved = (coupleId: string, messageId: string, uid: st
 
 export const deleteChatMessage = (coupleId: string, messageId: string) =>
   deleteDoc(doc(db, "couples", coupleId, "chat", messageId));
+
+// One-time cleanup for the move to end-to-end encryption: messages written before this shipped have
+// no `v` field and can't be decrypted (no key existed yet when they were sent), so they are cleared
+// rather than migrated - see the migration note in SECURITY.md. Safe to call from both partners'
+// devices and more than once: the first call to find anything sets chatMigratedV2, so later calls are
+// a no-op. Returns true only when it actually cleared something, so the caller can show a one-time notice.
+export const migrateChatToE2ee = async (coupleId: string): Promise<boolean> => {
+  const coupleSnap = await getDoc(doc(db, "couples", coupleId));
+  if (coupleSnap.data()?.chatMigratedV2) return false;
+
+  const snap = await getDocs(collection(db, "couples", coupleId, "chat"));
+  const stale = snap.docs.filter((d) => d.data().v === undefined).map((d) => d.ref);
+  if (stale.length > 0) await deleteRefs(stale);
+
+  await updateDoc(doc(db, "couples", coupleId), { chatMigratedV2: true });
+  return stale.length > 0;
+};
