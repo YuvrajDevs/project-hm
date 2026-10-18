@@ -161,6 +161,8 @@ const GameReplay = ({ game, uid, partnerUid, partnerName }: { game: CoupleGame; 
         const answers = game.answers?.[roundKey(r)] || {};
         let title = "";
         let lines: { who: "you" | "them"; text: string }[] = [];
+        let proof: { mime: string; data: string } | undefined;
+        let proofBy: "you" | "them" = "you";
 
         if (card.kind === "choice") {
           title = card.prompt ?? `${card.a} or ${card.b}`;
@@ -181,7 +183,13 @@ const GameReplay = ({ game, uid, partnerUid, partnerName }: { game: CoupleGame; 
           const td = game.td?.[roundKey(r)];
           const player = truthDarePlayer(game, r);
           title = td?.choice === "dare" ? card.dare : card.truth;
-          lines = [{ who: player === uid ? "you" : "them", text: `${td?.choice === "dare" ? "Dare" : "Truth"}, ${td?.result === "done" ? "done" : "skipped"}` }];
+          const by = player === uid ? "you" : "them";
+          lines = [
+            { who: by, text: `${td?.choice === "dare" ? "Dare" : "Truth"}, ${td?.result === "done" ? "done" : "skipped"}` },
+            { who: by, text: td?.answer ? `“${td.answer}”` : "" },
+          ];
+          proof = td?.proof;
+          proofBy = by;
         }
 
         return (
@@ -195,6 +203,14 @@ const GameReplay = ({ game, uid, partnerUid, partnerName }: { game: CoupleGame; 
                 {l.text}
               </p>
             ))}
+            {proof && (
+              // eslint-disable-next-line @next/next/no-img-element
+              <img
+                src={`data:${proof.mime};base64,${proof.data}`}
+                alt={proofBy === "you" ? "Your photo" : `Photo from ${partnerName}`}
+                className="mt-1 w-full max-w-xs max-h-56 object-cover rounded-2xl border border-white/15"
+              />
+            )}
           </div>
         );
       })}
