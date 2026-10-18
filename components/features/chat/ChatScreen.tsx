@@ -1,6 +1,7 @@
 "use client";
 
 import React, { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
+import { presence } from "@/lib/presence";
 import { AnimatePresence, motion } from "framer-motion";
 import { ArrowDown, ArrowLeft, Bookmark, MessageCircleHeart } from "lucide-react";
 import { useMailbox } from "@/context/MailboxContext";
@@ -21,7 +22,6 @@ import { SavedMessages } from "./SavedMessages";
 
 const PAGE = 40;
 const RUN_GAP_MS = 5 * 60 * 1000;      // messages this close together read as one run
-const NOTIFY_GAP_MS = 10 * 60 * 1000;  // the partner is told once per burst, not for every line
 const NEAR_BOTTOM = 96;
 
 const dayKey = (iso: string) => new Date(iso).toDateString();
@@ -56,6 +56,8 @@ const useVisualViewport = () => {
 // The chat, full screen. Back goes home; Saved swaps the conversation for what you have saved from it.
 export const ChatScreen = ({ onClose }: { onClose: () => void }) => {
   const { user, partner, couple } = useMailbox();
+  // While the chat is open, new messages show right here, so no toast for them
+  useEffect(() => { presence.chatOpen = true; return () => { presence.chatOpen = false; }; }, []);
   const coupleId = user?.coupleId;
   const uid = user?.uid;
   const partnerName = partner?.displayName?.split(" ")[0] || "your partner";
@@ -190,13 +192,8 @@ export const ChatScreen = ({ onClose }: { onClose: () => void }) => {
 
   const send = async (draft: ChatDraft) => {
     setError("");
-    const startsBurst = couple?.chatLastBy !== uid || !couple?.chatLastAt || Date.now() - Date.parse(couple.chatLastAt) > NOTIFY_GAP_MS;
     playPop();
-    await sendChatMessage(coupleId, uid, draft, {
-      partnerUid: partner?.uid,
-      name: user.displayName?.split(" ")[0],
-      notify: startsBurst,
-    });
+    await sendChatMessage(coupleId, uid, draft);
   };
 
   const sendText = (text: string) => {
