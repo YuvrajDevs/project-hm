@@ -12,9 +12,29 @@ Honest Mailbox holds private things between two people. This file says what prot
 - **App Check:** wired in `lib/firebase.ts`; active when `NEXT_PUBLIC_APPCHECK_SITE_KEY` is set.
 - **Supply chain:** Dependabot (weekly), `npm audit` in CI, lockfile installs (`npm ci`).
 
-## What is NOT end-to-end encrypted yet
+## Chat end-to-end encryption
 
-Chat, notes and check-ins are protected by access rules and Google's encryption in transit and at rest, but they are readable by anyone with access to the Firebase project. True end-to-end encryption for chat is a separate piece of work.
+Chat (`lib/e2ee.ts`, `lib/e2eeCrypto.ts`) is end-to-end encrypted: each device holds an ECDH (P-256)
+keypair, only the public half is ever written to Firestore, and the two public keys are combined
+(ECDH + HKDF) into a single AES-256-GCM key used for every message in that pairing. Only the two
+partners' devices can ever derive that key.
+
+Limits, stated plainly:
+- **No forward secrecy.** One static key encrypts every message in a pairing; it is not rotated per
+  message or per session. A device that captures the current key (not just the ciphertext) could read
+  every message encrypted with it, past or future, until the key is rotated.
+- **Metadata is still visible** to anyone with Firebase project access: who sent a message, when, its
+  kind (text/image/voice/sticker), and how often you talk - just not the content.
+- **Losing the backup passphrase (or skipping backup) means chat history on that device is gone for
+  good.** There is no recovery path beyond the optional passphrase backup in Settings; resetting
+  generates a new key and makes every earlier message permanently unreadable, by design.
+- **Re-pairing or a partner leaving rotates the key** (`rotateKeys` in `lib/e2ee.ts`) - the old shared
+  key is discarded and anything still encrypted with it becomes unreadable. In practice the couple's
+  whole chat history is also deleted on unpair/reset (`resetCoupleHistory`), so this mostly matters for
+  the lost-passphrase case.
+- **Mailbox, notes and check-ins are not end-to-end encrypted yet** - they're protected by access rules
+  and Google's encryption in transit and at rest, but readable by anyone with access to the Firebase
+  project. That's a separate piece of work.
 
 ## Switch these on (cannot be done from code)
 
