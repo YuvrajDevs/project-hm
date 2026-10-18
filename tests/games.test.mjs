@@ -89,3 +89,21 @@ test("scribble guesses ignore case, spaces and plurals", async () => {
   assert.ok(!guessMatches("dog", "cat"));
   assert.ok(!guessMatches("  ", "cat"));
 });
+
+test("history keeps the written truth but never a dare photo", async () => {
+  const { withoutPhotos } = await import("../lib/games/engine.ts");
+  const game = {
+    td: {
+      r0: { choice: "truth", result: "done", answer: "I once cried at an ad" },
+      r1: { choice: "dare", result: "done", proof: { mime: "image/jpeg", data: "AAAA", w: 10, h: 10 } },
+      r2: { choice: "dare", result: "skipped" },
+    },
+  };
+  const kept = withoutPhotos(game);
+  assert.equal(kept.td.r0.answer, "I once cried at an ad");
+  assert.equal(kept.td.r1.proof, undefined);
+  assert.equal(kept.td.r1.proofRemoved, true);
+  assert.equal(kept.td.r2.proofRemoved, undefined);
+  assert.ok(game.td.r1.proof, "the live game is left alone");
+  assert.equal(withoutPhotos({}).td, undefined);
+});

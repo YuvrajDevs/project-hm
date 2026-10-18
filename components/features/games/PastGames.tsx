@@ -2,9 +2,9 @@
 
 import React, { useEffect, useState } from "react";
 import { motion } from "framer-motion";
-import { ArrowLeft, ChevronRight, X } from "lucide-react";
+import { ArrowLeft, ChevronRight, Trash2, X } from "lucide-react";
 import { useMailbox } from "@/context/MailboxContext";
-import { getGameHistory } from "@/lib/firestore-helpers";
+import { clearGameHistory, deleteGameHistoryEntry, getGameHistory } from "@/lib/firestore-helpers";
 import { DECK_BY_ID, isKnownDeck } from "@/lib/games/decks";
 import { getCard, roundKey, totalScores, truthDarePlayer } from "@/lib/games/engine";
 import type { CoupleGame } from "@/lib/types";
@@ -20,6 +20,8 @@ export const PastGames = ({ onClose }: { onClose: () => void }) => {
   const [entries, setEntries] = useState<Entry[] | null>(null);
   const [error, setError] = useState("");
   const [open, setOpen] = useState<Entry | null>(null);
+  const [confirm, setConfirm] = useState<"all" | "one" | null>(null);
+  const [busy, setBusy] = useState(false);
 
   const uid = user?.uid || "";
   const partnerUid = partner?.uid || "";
@@ -31,6 +33,29 @@ export const PastGames = ({ onClose }: { onClose: () => void }) => {
       .then(list => setEntries(list.filter(e => isKnownDeck(e.deck))))
       .catch((err) => { console.error(err); setError("Couldn't load past games. Check your connection."); setEntries([]); });
   }, [user?.coupleId]);
+
+  const coupleId = user?.coupleId;
+  const remove = async () => {
+    if (!coupleId || !confirm) return;
+    setBusy(true);
+    setError("");
+    try {
+      if (confirm === "all") {
+        await clearGameHistory(coupleId);
+        setEntries([]);
+      } else if (open) {
+        await deleteGameHistoryEntry(coupleId, open);
+        setEntries((list) => (list ?? []).filter(e => e.id !== open.id));
+        setOpen(null);
+      }
+      setConfirm(null);
+    } catch (err) {
+      console.error(err);
+      setError("That didn't go through. Check your connection and try again.");
+    } finally {
+      setBusy(false);
+    }
+  };
 
   useEffect(() => {
     window.dispatchEvent(new CustomEvent("popupStateChange", { detail: { isOpen: true } }));
@@ -57,7 +82,7 @@ export const PastGames = ({ onClose }: { onClose: () => void }) => {
           {open ? (
             <button
               aria-label="Back to past games"
-              onClick={() => setOpen(null)}
+              onClick={() => { setOpen(null); setConfirm(null); }}
               className="w-10 h-10 rounded-full bg-[#1c1c1c] border border-[#232323] flex items-center justify-center text-neutral-400 hover:text-white transition-all"
             >
               <ArrowLeft className="w-4 h-4" />
@@ -114,6 +139,37 @@ export const PastGames = ({ onClose }: { onClose: () => void }) => {
             </div>
           )}
         </div>
+
+        {/* Delete: one game from its page, or everything from the list. Either one asks first. */}
+        {(open || (entries && entries.length > 0)) && (
+          <div className="shrink-0 border-t border-white/10 pt-4">
+            {confirm ? (
+              <div className="space-y-3">
+                <p className="font-outfit text-xs text-neutral-300 leading-relaxed">
+                  {confirm === "all"
+                    ? "This deletes every past game for both of you and sets your score back to 0 : 0. It can't be undone."
+                    : "This deletes this game for both of you and takes its points off your score. It can't be undone."}
+                </p>
+                {error && <p role="alert" className="font-outfit text-xs text-rose-400">{error}</p>}
+                <div className="grid grid-cols-2 gap-3">
+                  <button onClick={() => setConfirm(null)} disabled={busy} className="h-11 rounded-xl bg-[#1c1c1c] border border-[#2a2a2a] font-bebas tracking-widest uppercase text-sm text-neutral-300 hover:bg-[#242424] active:scale-95 transition-all">
+                    Keep
+                  </button>
+                  <button onClick={remove} disabled={busy} className="h-11 rounded-xl bg-red-500 text-white font-bebas tracking-widest uppercase text-sm hover:bg-red-400 active:scale-95 disabled:opacity-50 transition-all">
+                    {busy ? "Deleting..." : "Delete"}
+                  </button>
+                </div>
+              </div>
+            ) : (
+              <button
+                onClick={() => setConfirm(open ? "one" : "all")}
+                className="w-full h-11 rounded-xl border border-red-500/40 text-red-400 font-bebas tracking-widest uppercase text-sm flex items-center justify-center gap-2 hover:bg-red-500/10 active:scale-95 transition-all"
+              >
+                <Trash2 className="w-4 h-4" /> {open ? "Delete this game" : "Clear all history"}
+              </button>
+            )}
+          </div>
+        )}
       </motion.div>
     </motion.div>
   );
@@ -161,6 +217,7 @@ const GameReplay = ({ game, uid, partnerUid, partnerName }: { game: CoupleGame; 
         const answers = game.answers?.[roundKey(r)] || {};
         let title = "";
         let lines: { who: "you" | "them"; text: string }[] = [];
+        let hadPhoto = false;
 
         if (card.kind === "choice") {
           title = card.prompt ?? `${card.a} or ${card.b}`;
@@ -181,7 +238,12 @@ const GameReplay = ({ game, uid, partnerUid, partnerName }: { game: CoupleGame; 
           const td = game.td?.[roundKey(r)];
           const player = truthDarePlayer(game, r);
           title = td?.choice === "dare" ? card.dare : card.truth;
-          lines = [{ who: player === uid ? "you" : "them", text: `${td?.choice === "dare" ? "Dare" : "Truth"}, ${td?.result === "done" ? "done" : "skipped"}` }];
+          const by = player === uid ? "you" : "them";
+          lines = [
+            { who: by, text: `${td?.choice === "dare" ? "Dare" : "Truth"}, ${td?.result === "done" ? "done" : "skipped"}` },
+            { who: by, text: td?.answer ? `“${td.answer}”` : "" },
+          ];
+          hadPhoto = !!(td?.proof || td?.proofRemoved);
         }
 
         return (
@@ -195,6 +257,9 @@ const GameReplay = ({ game, uid, partnerUid, partnerName }: { game: CoupleGame; 
                 {l.text}
               </p>
             ))}
+            {hadPhoto && (
+              <p className="font-outfit text-xs italic text-neutral-500">Photo deleted to keep it private</p>
+            )}
           </div>
         );
       })}
