@@ -1,6 +1,6 @@
 import test from "node:test";
 import assert from "node:assert/strict";
-import { THEME_BOOT_SCRIPT } from "../lib/theme.ts";
+import { THEME_BOOT_SCRIPT, rememberSignedIn } from "../lib/theme.ts";
 
 // Run the pre-paint script against a fake page and report whether it chose light
 const runBoot = (store, { throws = false } = {}) => {
@@ -36,4 +36,23 @@ test("the two choices do not leak into each other", () => {
 test("a stored Firebase sign-in counts as signed in, and blocked storage falls back to light", () => {
   assert.equal(runBoot({ "firebase:authUser:key:[DEFAULT]": "{}" }), false);
   assert.equal(runBoot({}, { throws: true }), true);
+});
+
+test("every fresh sign-in starts the app in dark, but a reload keeps the Settings choice", () => {
+  const store = {};
+  globalThis.localStorage = {
+    getItem: (k) => (k in store ? store[k] : null),
+    setItem: (k, v) => { store[k] = String(v); },
+    removeItem: (k) => { delete store[k]; },
+  };
+  store.hm_theme_app = "light";           // picked in Settings on an earlier visit
+  rememberSignedIn(true);                  // a new sign-in
+  assert.equal(store.hm_theme_app, undefined);
+  assert.equal(store.hm_signed_in, "1");
+  store.hm_theme_app = "light";           // picked again while signed in
+  rememberSignedIn(true);                  // the page reloads, still signed in
+  assert.equal(store.hm_theme_app, "light");
+  rememberSignedIn(false);                 // signed out
+  assert.equal(store.hm_signed_in, undefined);
+  delete globalThis.localStorage;
 });
