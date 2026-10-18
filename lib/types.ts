@@ -210,7 +210,7 @@ export interface PartnerNote {
 }
 
 // 💬 Chat: the everyday conversation between the two of them (couples/{id}/chat)
-export type ChatKind = "text" | "image" | "voice";
+export type ChatKind = "text" | "image" | "voice" | "sticker";
 
 export interface ChatMessage {
   id: string;
@@ -222,6 +222,7 @@ export interface ChatMessage {
   w?: number;          // photos: size in pixels, so the bubble holds its shape while loading
   h?: number;
   dur?: number;        // voice notes: seconds
+  sticker?: string;    // stickers: the id of one of the sticker pictures that ship with the app
   createdAt: string;
   savedBy?: string[];  // people who saved it for themselves
   pending?: boolean;   // still on its way to the server

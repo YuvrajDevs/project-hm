@@ -51,3 +51,6 @@ next-env.d.ts
 .firebase/
 .firebaserc
 firebase-export-*
+
+# source artwork for chat stickers (compressed copies live in public/stickers)
+/Memes/

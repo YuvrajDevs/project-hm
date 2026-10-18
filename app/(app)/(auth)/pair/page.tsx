@@ -28,7 +28,7 @@ export default function PairPage() {
 function Pair() {
   const { fbUser, user } = useMailbox();
   const searchParams = useSearchParams();
-  const linkCode = (searchParams.get("code") || "").toUpperCase().slice(0, 6);
+  const linkCode = (searchParams.get("code") || "").toUpperCase().slice(0, 8);
 
   const [mode, setMode] = useState<"choice" | "create" | "join" | "success">(linkCode ? "join" : "choice");
   const [coupleId, setCoupleId] = useState("");
@@ -93,7 +93,7 @@ function Pair() {
 
   const handleJoin = async () => {
     const current = auth.currentUser;
-    if (inputCode.length !== 6 || !current) return;
+    if (inputCode.length < 6 || !current) return;
     setLoading(true);
     setError("");
 
@@ -247,7 +247,7 @@ function Pair() {
                 </div>
 
                 <div className="w-full bg-[#161616] border border-[#2a2a2a] rounded-3xl p-8 flex flex-col items-center gap-6">
-                  <div className="text-6xl font-mono font-bold tracking-[0.25em] text-white">
+                  <div className="text-5xl font-mono font-bold tracking-[0.18em] text-white">
                     {inviteCode}
                   </div>
                   <button
@@ -256,7 +256,7 @@ function Pair() {
                   >
                     {copied ? <><Check className="w-4 h-4" /> Link Copied!</> : <><Copy className="w-4 h-4" /> Share Invite Link</>}
                   </button>
-                  <p className="text-neutral-600 font-outfit text-[10px] uppercase tracking-widest">Valid for 7 days, for one person</p>
+                  <p className="text-neutral-600 font-outfit text-[10px] uppercase tracking-widest">Valid for 3 days, for one person</p>
                 </div>
 
                 <div className="flex items-center gap-3 text-neutral-600">
@@ -278,17 +278,17 @@ function Pair() {
               >
                 <div>
                   <h1 className="text-4xl font-bebas text-white tracking-[0.15em] uppercase leading-none mb-2">Enter Code</h1>
-                  <p className="text-neutral-500 font-outfit text-xs uppercase tracking-[0.3em]">Your partner&apos;s 6-character code</p>
+                  <p className="text-neutral-500 font-outfit text-xs uppercase tracking-[0.3em]">Your partner&apos;s invite code</p>
                 </div>
 
                 <input
                   type="text"
-                  maxLength={6}
+                  maxLength={8}
                   value={inputCode}
                   onChange={(e) => setInputCode(e.target.value.toUpperCase())}
-                  placeholder="· · · · · ·"
+                  placeholder="· · · · · · · ·"
                   autoFocus
-                  className="w-full bg-[#161616] border border-[#2a2a2a] rounded-2xl py-6 text-center text-4xl font-mono tracking-[0.6em] text-white focus:outline-none focus:border-blue-500/40 transition-all placeholder:text-neutral-800"
+                  className="w-full bg-[#161616] border border-[#2a2a2a] rounded-2xl py-6 text-center text-3xl font-mono tracking-[0.35em] text-white focus:outline-none focus:border-blue-500/40 transition-all placeholder:text-neutral-800"
                 />
 
                 {error && (
@@ -303,7 +303,7 @@ function Pair() {
 
                 <button
                   onClick={handleJoin}
-                  disabled={loading || inputCode.length !== 6}
+                  disabled={loading || inputCode.length < 6}
                   className="w-full bg-white text-black font-bebas text-xl py-5 rounded-2xl flex items-center justify-center gap-2 hover:bg-neutral-200 active:scale-95 transition-all disabled:opacity-30"
                 >
                   {loading

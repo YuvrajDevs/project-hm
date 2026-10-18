@@ -134,6 +134,16 @@ test("invites can be created and fetched by code, never listed", async () => {
   await assertFails(getDocs(collection(db(BOB), "invites")));
 });
 
+test("invite codes must be well formed and short-lived", async () => {
+  await seedUsers();
+  const day = 24 * 60 * 60 * 1000;
+  await assertSucceeds(createInvite(ALICE, "ABCD2345", 3 * day));                                // current 8-letter code
+  await assertFails(createInvite(ALICE, "abc", 60_000));                                         // wrong shape
+  await assertFails(createInvite(ALICE, "ABCDEFGH23", 60_000));                                  // too long
+  await assertFails(createInvite(ALICE, "LONGLIVE", 30 * day));                                  // would live a month
+  await assertFails(setDoc(doc(db(ALICE), "invites", "EXTRA234"), { createdBy: ALICE, used: false, expiresAt: Timestamp.fromMillis(Date.now() + 60_000), admin: true }));
+});
+
 test("an invite cannot be created in someone else's name", async () => {
   await assertFails(setDoc(doc(db(MALLORY), "invites", "FAKE01"), { createdBy: ALICE, used: false }));
 });
@@ -352,8 +362,11 @@ test("a user can delete their own profile and nobody else's", async () => {
 
 // ─── Contact form ───────────────────────────────────────────────────────────
 test("the contact form accepts well-formed messages and is not readable", async () => {
-  await assertSucceeds(addDoc(collection(db(null), "contactMessages"), { name: "", email: "a@example.com", purpose: "general", message: "hello", createdAt: Timestamp.now() }));
-  await assertFails(addDoc(collection(db(null), "contactMessages"), { email: "a@example.com", message: "x".repeat(5000) }));
+  await assertSucceeds(addDoc(collection(db(null), "contactMessages"), { name: "", email: "a@example.com", purpose: "general", message: "hello", createdAt: serverTimestamp() }));
+  await assertFails(addDoc(collection(db(null), "contactMessages"), { email: "a@example.com", message: "x".repeat(5000), createdAt: serverTimestamp() }));
+  await assertFails(addDoc(collection(db(null), "contactMessages"), { email: "not-an-email", message: "hi", createdAt: serverTimestamp() }));
+  await assertFails(addDoc(collection(db(null), "contactMessages"), { email: "a@example.com", message: "hi", createdAt: Timestamp.fromMillis(1) })); // chosen time
+  await assertFails(addDoc(collection(db(null), "contactMessages"), { email: "a@example.com", message: "" , createdAt: serverTimestamp() }));
   await assertFails(getDocs(collection(db(ALICE), "contactMessages")));
 });
 
@@ -486,6 +499,18 @@ test("a message must be from the sender, stamped by the server, and well formed"
   await assertFails(setDoc(chatRef(ALICE, "x5"), { ...textMsg(ALICE), savedBy: [ALICE] }));          // extra fields
   await assertFails(setDoc(chatRef(ALICE, "x6"), { ...textMsg(ALICE), kind: "video" }));
   await assertSucceeds(setDoc(chatRef(ALICE, "ok"), textMsg(ALICE, "a".repeat(2000))));
+});
+
+test("stickers carry only a known id", async () => {
+  await seedCouple();
+  const sticker = (id, extra = {}) => ({ senderUid: ALICE, kind: "sticker", sticker: id, createdAt: serverTimestamp(), ...extra });
+  await assertSucceeds(setDoc(chatRef(ALICE, "s1"), sticker("s00")));
+  await assertSucceeds(setDoc(chatRef(BOB, "s2"), { ...sticker("s26"), senderUid: BOB }));
+  await assertFails(setDoc(chatRef(ALICE, "s3"), sticker("../../x")));                    // not an id
+  await assertFails(setDoc(chatRef(ALICE, "s4"), sticker("s0")));                        // wrong shape
+  await assertFails(setDoc(chatRef(ALICE, "s5"), sticker("s01", { data: "A".repeat(100) }))); // no payload on a sticker
+  await assertFails(setDoc(chatRef(ALICE, "s6"), sticker("s01", { text: "hi" })));
+  await assertFails(setDoc(chatRef(MALLORY, "s7"), { ...sticker("s01"), senderUid: MALLORY }));
 });
 
 test("photos and voice notes are size- and type-capped", async () => {

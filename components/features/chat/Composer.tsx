@@ -1,7 +1,8 @@
 "use client";
 
 import React, { useEffect, useRef, useState } from "react";
-import { ArrowUp, ImagePlus, Loader2, Mic, Trash2 } from "lucide-react";
+import { ArrowUp, ImagePlus, Loader2, Mic, Smile, Trash2 } from "lucide-react";
+import { STICKER_IDS, stickerUrl } from "@/lib/stickers";
 import { useVoiceRecorder } from "@/hooks/useVoiceRecorder";
 import { MAX_VOICE_SECONDS, formatClock, type VoiceClip } from "@/lib/chatMedia";
 import { cn } from "@/lib/utils";
@@ -10,14 +11,16 @@ const iconButton =
   "w-11 h-11 shrink-0 rounded-full flex items-center justify-center transition-all active:scale-90 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/50 disabled:opacity-30";
 
 // The bar at the bottom of the chat: write, attach a photo, or record a voice note
-export const Composer = ({ onText, onPhoto, onVoice, onError, preparing }: {
+export const Composer = ({ onText, onSticker, onPhoto, onVoice, onError, preparing }: {
   onText: (text: string) => void;
+  onSticker: (id: string) => void;
   onPhoto: (file: File) => void;
   onVoice: (clip: VoiceClip) => void;
   onError: (message: string) => void;
   preparing: boolean;
 }) => {
   const [text, setText] = useState("");
+  const [stickers, setStickers] = useState(false);
   const field = useRef<HTMLTextAreaElement>(null);
   const picker = useRef<HTMLInputElement>(null);
   const voice = useVoiceRecorder(onVoice, onError);
@@ -59,6 +62,25 @@ export const Composer = ({ onText, onPhoto, onVoice, onError, preparing }: {
   }
 
   return (
+    <>
+    {stickers && (
+      <div role="group" aria-label="Stickers" className="px-3 pt-3">
+        <div className="grid grid-cols-4 sm:grid-cols-5 gap-2 max-h-[34vh] overflow-y-auto no-scrollbar rounded-[1.5rem] bg-[#161616] border border-[#232323] p-3">
+          {STICKER_IDS.map((id) => (
+            <button
+              key={id}
+              type="button"
+              onClick={() => { onSticker(id); setStickers(false); }}
+              aria-label={`Send sticker ${id.slice(1)}`}
+              className="aspect-square rounded-2xl overflow-hidden active:scale-90 hover:ring-2 hover:ring-white/40 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/60 transition-all"
+            >
+              {/* eslint-disable-next-line @next/next/no-img-element */}
+              <img src={stickerUrl(id)} alt="" width={96} height={96} loading="lazy" decoding="async" draggable={false} className="w-full h-full object-cover" />
+            </button>
+          ))}
+        </div>
+      </div>
+    )}
     <form
       onSubmit={(e) => { e.preventDefault(); send(); }}
       className="flex items-end gap-2 p-3"
@@ -84,6 +106,16 @@ export const Composer = ({ onText, onPhoto, onVoice, onError, preparing }: {
         className={cn(iconButton, "bg-[#1c1c1c] border border-[#2a2a2a] text-neutral-300 hover:text-white hover:bg-[#242424]")}
       >
         {preparing ? <Loader2 className="w-4 h-4 animate-spin" /> : <ImagePlus className="w-4 h-4" />}
+      </button>
+
+      <button
+        type="button"
+        onClick={() => setStickers((v) => !v)}
+        aria-label="Stickers"
+        aria-expanded={stickers}
+        className={cn(iconButton, stickers ? "bg-white text-black" : "bg-[#1c1c1c] border border-[#2a2a2a] text-neutral-300 hover:text-white hover:bg-[#242424]")}
+      >
+        <Smile className="w-4 h-4" />
       </button>
 
       <textarea
@@ -126,5 +158,6 @@ export const Composer = ({ onText, onPhoto, onVoice, onError, preparing }: {
         </button>
       )}
     </form>
+    </>
   );
 };
