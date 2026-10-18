@@ -75,7 +75,7 @@ export const Composer = ({ onText, onSticker, onPhoto, onVoice, onError, prepari
               className="aspect-square rounded-2xl overflow-hidden active:scale-90 hover:ring-2 hover:ring-white/40 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/60 transition-all"
             >
               {/* eslint-disable-next-line @next/next/no-img-element */}
-              <img src={stickerUrl(id)} alt="" width={96} height={96} loading="lazy" decoding="async" draggable={false} className="w-full h-full object-cover" />
+              <img src={stickerUrl(id)} alt="" width={96} height={96} decoding="async" draggable={false} className="w-full h-full object-cover bg-white/5" />
             </button>
           ))}
         </div>

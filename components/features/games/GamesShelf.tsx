@@ -11,7 +11,7 @@ import { DECKS, DECK_BY_ID, MAX_OPEN_GAMES, SECTIONS, slotFor, type DeckInfo } f
 import { answeredCount } from "@/lib/games/engine";
 import type { ActiveGame } from "@/lib/types";
 import { useSensoryFeedback } from "@/hooks/useSensoryFeedback";
-import { cn } from "@/lib/utils";
+import { cn, partnerLabel } from "@/lib/utils";
 import { DECK_ICONS, openGame, openQuestions, titleFont } from "./deckIcons";
 import { DeckTitle } from "./DeckTitle";
 
@@ -98,7 +98,7 @@ const ScoreTally = () => {
   const scores = couple?.gameScores ?? {};
   const mine = user?.uid ? scores[user.uid] ?? 0 : 0;
   const theirs = partner?.uid ? scores[partner.uid] ?? 0 : 0;
-  const partnerName = partner?.displayName?.split(" ")[0] || "Partner";
+  const partnerName = partnerLabel(user, partner, "Partner");
   return (
     <div className="shrink-0 rounded-2xl bg-[#161616] border border-[#2a2a2a] px-3.5 py-2 text-center" aria-label={`Score: you ${mine}, ${partnerName} ${theirs}`}>
       {/* Yours first in pink, theirs in blue: "1:2" */}
@@ -117,7 +117,7 @@ const PendingRow = ({ games, noun, onOpen }: { games: ActiveGame[]; noun: string
   const { user, partner } = useMailbox();
   const { playTick, vibrateTick } = useSensoryFeedback();
   const uid = user?.uid || "";
-  const partnerName = partner?.displayName?.split(" ")[0] || "your partner";
+  const partnerName = partnerLabel(user, partner, "your partner");
   const waitingOnYou = games.filter(g => ["Join", "Answer", "Play"].includes(describe(g, uid, partner?.uid || "", partnerName).action)).length;
   const newest = DECK_BY_ID[games[0].deck];
 
@@ -159,7 +159,7 @@ const PendingRow = ({ games, noun, onOpen }: { games: ActiveGame[]; noun: string
 const GameRow = ({ game }: { game: ActiveGame }) => {
   const { user, partner } = useMailbox();
   const { playTick, vibrateTick } = useSensoryFeedback();
-  const partnerName = partner?.displayName?.split(" ")[0] || "your partner";
+  const partnerName = partnerLabel(user, partner, "your partner");
   const deck = DECK_BY_ID[game.deck];
   const Icon = DECK_ICONS[game.deck];
   const { status, action } = describe(game, user?.uid || "", partner?.uid || "", partnerName);
@@ -192,7 +192,7 @@ const GameRow = ({ game }: { game: ActiveGame }) => {
 const PendingList = ({ games, busy, onClose, onOpen }: { games: ActiveGame[]; busy: boolean; onClose: (g: ActiveGame) => void; onOpen: () => void }) => {
   const { user, partner } = useMailbox();
   const uid = user?.uid || "";
-  const partnerName = partner?.displayName?.split(" ")[0] || "your partner";
+  const partnerName = partnerLabel(user, partner, "your partner");
   return (
     <div className="space-y-2">
       {games.map((g, i) => {
@@ -344,7 +344,7 @@ const GameLobby = ({ deck, onClose }: { deck: DeckInfo; onClose: () => void }) =
   const Icon = DECK_ICONS[deck.id];
   const uid = user?.uid || "";
   const partnerUid = partner?.uid || "";
-  const partnerName = partner?.displayName?.split(" ")[0] || "your partner";
+  const partnerName = partnerLabel(user, partner, "your partner");
 
   // Fetch the game code while the person reads the panel, so tapping Start doesn't wait for a download
   useEffect(() => { import("@/lib/games/engine").catch(() => {}); }, []);

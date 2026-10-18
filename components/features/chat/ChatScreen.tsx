@@ -11,11 +11,12 @@ import {
   deleteChatMessage, markChatSeen, migrateChatToE2ee, sendChatMessage, setChatMessageSaved, subscribeToChat, type ChatDraft,
 } from "@/lib/firestore-helpers";
 import { ChatMediaError, prepareImage, type VoiceClip } from "@/lib/chatMedia";
-import { backupKeyExists, ensureChatKeys, hasLocalPrivateKey, restoreFromBackup, rotateKeys } from "@/lib/e2ee";
+import { ensureChatKeys, type KeyStatus } from "@/lib/e2ee";
+import { DeviceKeyGate } from "./DeviceKeyGate";
 import type { ChatMessage } from "@/lib/types";
 import { useSensoryFeedback } from "@/hooks/useSensoryFeedback";
 import { useScrollLock } from "@/hooks/useScrollLock";
-import { cn } from "@/lib/utils";
+import { cn, partnerLabel } from "@/lib/utils";
 import { ChatBubble } from "./ChatBubble";
 import { Composer } from "./Composer";
 import { ImageViewer } from "./ImageViewer";
@@ -62,25 +63,11 @@ export const ChatScreen = ({ onClose }: { onClose: () => void }) => {
   const coupleId = user?.coupleId;
   const uid = user?.uid;
   const partnerUid = partner?.uid;
-  const partnerName = partner?.displayName?.split(" ")[0] || "your partner";
+  const partnerName = partnerLabel(user, partner, "your partner");
 
-  // A device with no local key but a Firestore backup must restore it, not silently generate a
-  // second, unpublished keypair - that would desync this device's shared key from the partner's.
-  const [keyState, setKeyState] = useState<"checking" | "needsRestore" | "ready">("checking");
-  const [restorePass, setRestorePass] = useState("");
-  const [restoreBusy, setRestoreBusy] = useState(false);
-  const [restoreError, setRestoreError] = useState("");
-  useEffect(() => {
-    if (!uid) return;
-    (async () => {
-      if (!(await hasLocalPrivateKey()) && (await backupKeyExists(uid))) {
-        setKeyState("needsRestore");
-        return;
-      }
-      await ensureChatKeys(uid);
-      setKeyState("ready");
-    })().catch(console.error);
-  }, [uid]);
+  const [keyStatus, setKeyStatus] = useState<KeyStatus | "checking">("checking");
+  const [keyEpoch, setKeyEpoch] = useState(0);
+  useEffect(() => { if (uid) ensureChatKeys(uid).then(setKeyStatus).catch((e) => { console.error(e); setKeyStatus("ready"); }); }, [uid, keyEpoch]);
 
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [loaded, setLoaded] = useState(false);
@@ -109,13 +96,13 @@ export const ChatScreen = ({ onClose }: { onClose: () => void }) => {
   const firstLoad = useRef(true);
 
   useEffect(() => {
-    if (!coupleId || !partnerUid) return;
+    if (!coupleId || !partnerUid || keyStatus !== "ready") return;
     return subscribeToChat(coupleId, partnerUid, count, (next, more) => {
       setMessages(next);
       setMayHaveMore(more);
       setLoaded(true);
     });
-  }, [coupleId, partnerUid, count]);
+  }, [coupleId, partnerUid, count, keyStatus]);
 
   // Stay at the bottom as messages arrive, unless the reader scrolled up to look at something
   useLayoutEffect(() => {
@@ -214,59 +201,6 @@ export const ChatScreen = ({ onClose }: { onClose: () => void }) => {
   }, [messages, partnerSeen, uid]);
 
   if (!user || !coupleId || !uid || !partnerUid) return null;
-  if (keyState === "checking") return null;
-
-  if (keyState === "needsRestore") {
-    const skip = async () => {
-      setRestoreBusy(true);
-      try { await rotateKeys(uid); setKeyState("ready"); } finally { setRestoreBusy(false); }
-    };
-    const restore = async () => {
-      setRestoreBusy(true);
-      setRestoreError("");
-      try {
-        await restoreFromBackup(uid, restorePass);
-        setKeyState("ready");
-      } catch {
-        setRestoreError("That passphrase didn't work.");
-      } finally {
-        setRestoreBusy(false);
-      }
-    };
-    return (
-      <div
-        role="dialog"
-        aria-modal="true"
-        className="fixed inset-x-0 inset-y-0 z-[100] flex flex-col items-center justify-center gap-4 bg-[var(--page)] text-white px-6 text-center"
-      >
-        <p className="font-bebas text-2xl tracking-widest uppercase">Restore chat on this device</p>
-        <p className="font-outfit text-sm text-neutral-400 max-w-xs leading-relaxed">
-          This device doesn&apos;t have your chat key yet. Enter your backup passphrase, or start fresh
-          (older chat messages won&apos;t be readable on this device).
-        </p>
-        <input
-          type="password"
-          value={restorePass}
-          onChange={(e) => setRestorePass(e.target.value)}
-          placeholder="Backup passphrase"
-          className="w-full max-w-xs px-4 py-3 rounded-xl bg-[#1c1c1c] border border-[#2a2a2a] text-sm font-outfit text-white placeholder:text-neutral-600 focus:outline-none focus:ring-2 focus:ring-white/30"
-        />
-        {restoreError && <p role="alert" className="text-rose-400 text-xs font-outfit">{restoreError}</p>}
-        <button
-          type="button"
-          onClick={restore}
-          disabled={restoreBusy || !restorePass}
-          className="w-full max-w-xs py-3 bg-white text-black rounded-xl font-bebas tracking-widest uppercase hover:bg-neutral-200 active:scale-[0.98] transition-all disabled:opacity-50"
-        >
-          {restoreBusy ? "Restoring..." : "Restore"}
-        </button>
-        <button type="button" onClick={skip} disabled={restoreBusy} className="text-xs font-outfit text-neutral-500 underline disabled:opacity-50">
-          Start fresh instead
-        </button>
-        <button type="button" onClick={onClose} className="text-xs font-outfit text-neutral-600">Back</button>
-      </div>
-    );
-  }
 
   const send = async (draft: ChatDraft) => {
     setError("");
@@ -319,7 +253,7 @@ export const ChatScreen = ({ onClose }: { onClose: () => void }) => {
     deleteChatMessage(coupleId, m.id).catch(() => setError("Couldn't unsend that. Try again."));
   };
 
-  const partnerTitle = partner?.partnerNickname || partner?.displayName || "Your person";
+  const partnerTitle = user?.partnerNickname?.trim() || partner?.displayName || "Your person";
   const saved = view === "saved";
   const roundButton =
     "w-10 h-10 shrink-0 rounded-full bg-[#1c1c1c] border border-[#232323] flex items-center justify-center text-neutral-400 hover:text-white hover:bg-[#242424] active:scale-90 transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/50";
@@ -384,6 +318,9 @@ export const ChatScreen = ({ onClose }: { onClose: () => void }) => {
 
       {/* The conversation stays mounted while Saved is open, so nothing reloads when you come back */}
       <div className={cn("relative z-10 flex-1 min-h-0 flex flex-col", saved && "hidden")}>
+        {uid && keyStatus === "needs-unlock" && (
+          <DeviceKeyGate uid={uid} onDone={() => { setKeyStatus("checking"); setKeyEpoch((n) => n + 1); }} />
+        )}
         <div
           ref={scroller}
           onScroll={onScroll}

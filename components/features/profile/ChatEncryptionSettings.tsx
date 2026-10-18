@@ -8,6 +8,7 @@ import { useMailbox } from "@/context/MailboxContext";
 import {
   backupKeyExists, backupLocalKey, fingerprint, hasLocalPrivateKey, restoreFromBackup, rotateKeys,
 } from "@/lib/e2ee";
+import { partnerLabel } from "@/lib/utils";
 
 // Lets each person verify the pairing (a safety number, from each side's public key) and optionally
 // back up their chat key with a passphrase so it can be restored on a new device. Out of scope here:
@@ -29,7 +30,7 @@ export const ChatEncryptionSettings = () => {
   useEffect(() => {
     if (!uid) return;
     (async () => {
-      const [hasLocal, backup] = await Promise.all([hasLocalPrivateKey(), backupKeyExists(uid)]);
+      const [hasLocal, backup] = await Promise.all([hasLocalPrivateKey(uid), backupKeyExists(uid)]);
       setHasBackup(backup);
       setStatus(!hasLocal && backup ? "needsRestore" : "ready");
 
@@ -121,7 +122,7 @@ export const ChatEncryptionSettings = () => {
             )}
             {partnerFingerprint && (
               <div>
-                <p className="text-[10px] text-neutral-500 uppercase tracking-wider">{partner?.displayName?.split(" ")[0] || "Your partner"}</p>
+                <p className="text-[10px] text-neutral-500 uppercase tracking-wider">{partnerLabel(user, partner, "Your partner")}</p>
                 <p className="font-mono text-sm text-white tracking-wide">{partnerFingerprint}</p>
               </div>
             )}

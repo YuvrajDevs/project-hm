@@ -3,7 +3,7 @@
 import React from "react";
 import { motion } from "framer-motion";
 import { useMailbox } from "@/context/MailboxContext";
-import { cn } from "@/lib/utils";
+import { cn, partnerLabel } from "@/lib/utils";
 import { formatRelativeTime, getCheckInDateId } from "@/lib/utils";
 import { REACTION_ICONS } from "@/lib/constants";
 
@@ -16,7 +16,7 @@ export const MoodStatusHub = () => {
   const { user, partner, couple, todayId } = useMailbox();
 
   const needsUpdate = !user?.moodUpdatedAt || getCheckInDateId(new Date(user.moodUpdatedAt), couple?.dayTimezone) !== todayId;
-  const partnerName = partner?.displayName?.split(" ")[0] || "Partner";
+  const partnerName = partnerLabel(user, partner, "Partner");
 
   const openSignalSelector = () => window.dispatchEvent(new CustomEvent("openSignalSelector"));
   const replayPartnerSignal = () => window.dispatchEvent(new CustomEvent("triggerSignalSplash"));

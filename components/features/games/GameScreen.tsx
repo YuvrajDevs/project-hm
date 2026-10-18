@@ -13,7 +13,7 @@ import { getCard, isRoundComplete, roundKey, totalScores, truthDarePlayer, type 
 import type { CoupleGame } from "@/lib/types";
 import { presence } from "@/lib/presence";
 import { useSensoryFeedback } from "@/hooks/useSensoryFeedback";
-import { cn } from "@/lib/utils";
+import { cn, partnerLabel } from "@/lib/utils";
 import { DECK_ICONS, openGame, titleFont } from "./deckIcons";
 import { BoardGame } from "./BoardGame";
 import { Scribble } from "./Scribble";
@@ -39,7 +39,7 @@ export const GameScreen = ({ gameId, onLeave }: { gameId: string; onLeave: () =>
   const uid = user?.uid || "";
   const partnerUid = partner?.uid || "";
   const coupleId = user?.coupleId || "";
-  const partnerName = partner?.displayName?.split(" ")[0] || "Your partner";
+  const partnerName = partnerLabel(user, partner, "Your partner");
 
   useScrollLock();
 
