@@ -11,6 +11,7 @@ import { useAuthGuard } from "@/hooks/useAuthGuard";
 import { useTheme } from "@/hooks/useTheme";
 import { cn } from "@/lib/utils";
 import { LeavePartnerModal } from "@/components/features/profile/LeavePartnerModal";
+import { ChatEncryptionSettings } from "@/components/features/profile/ChatEncryptionSettings";
 
 export default function SettingsPage() {
   const router = useRouter();
@@ -208,6 +209,8 @@ export default function SettingsPage() {
             </div>
           </div>
         </section>
+
+        {couple && <ChatEncryptionSettings />}
 
         {/* Privacy, in plain words */}
         <section className="space-y-4">
