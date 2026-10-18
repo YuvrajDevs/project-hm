@@ -261,7 +261,7 @@ export interface CoupleGame {
   startedAt: string;
   joined: Record<string, boolean>;
   answers?: Record<string, Record<string, GameAnswer>>;  // round key -> uid -> answer
-  td?: Record<string, { choice?: "truth" | "dare"; result?: "done" | "skipped" }>;
+  td?: Record<string, { choice?: "truth" | "dare"; result?: "done" | "skipped"; answer?: string; proof?: { mime: string; data: string; w: number; h: number } }>;
 
   // Scribble, per round: the drawing so far, wrong guesses, and how the round ended
   strokes?: Record<string, string[]>;  // round key -> strokes, each "x,y x,y …" on a 0–1000 grid

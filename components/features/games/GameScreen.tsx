@@ -2,13 +2,14 @@
 
 import React, { useEffect, useRef, useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { ArrowRight, X } from "lucide-react";
+import { ArrowRight, Camera, X } from "lucide-react";
 import { useMailbox } from "@/context/MailboxContext";
 import {
-  advanceGame, chooseTruthOrDare, endGame, joinGame, judgeTruthOrDare,
+  advanceGame, answerTruth, chooseTruthOrDare, submitDareProof, endGame, joinGame, judgeTruthOrDare,
   replayGame, submitGameAnswer,
 } from "@/lib/firestore-helpers";
 import { DECK_BY_ID, type DeckInfo } from "@/lib/games/decks";
+import { ChatMediaError, prepareProofImage } from "@/lib/chatMedia";
 import { getCard, isRoundComplete, roundKey, totalScores, truthDarePlayer, type GameCard } from "@/lib/games/engine";
 import type { CoupleGame } from "@/lib/types";
 import { presence } from "@/lib/presence";
@@ -330,10 +331,9 @@ const CardFace = ({ gradient, className, children }: { gradient: string; classNa
 const cardTextSize = (text: string) =>
   text.length > 90 ? "text-[1.9rem]" : text.length > 55 ? "text-[2.2rem]" : "text-[2.6rem]";
 
-// The main card for single-question games, with a second card peeking out behind it
+// The main card for single-question games
 const StackCard = ({ deck, text, eyebrow, children }: { deck: DeckInfo; text: string; eyebrow?: string; children?: React.ReactNode }) => (
   <div className="relative flex-1 min-h-0">
-    <div className={cn("absolute inset-0 rounded-[1.5rem] bg-gradient-to-br opacity-50 -rotate-[4deg] scale-[0.97] translate-x-1", deck.cards[1])} />
     <CardFace gradient={deck.cards[0]} className="h-full">
       {children ?? (
         <div className="h-full flex flex-col justify-center gap-3 px-8 py-10 overflow-y-auto">
@@ -488,7 +488,25 @@ const TruthDareRound = ({ game, card, round, uid, partnerName, busy, coupleId, g
 
   return (
     <>
-      <StackCard deck={deck} text={text} eyebrow={eyebrow} />
+      <StackCard deck={deck} text={text} eyebrow={eyebrow}>
+        <div className={cn("h-full flex flex-col overflow-y-auto", td?.choice ? "gap-3 px-5 py-5 justify-center" : "gap-4 px-6 py-7")}>
+          <div className="space-y-2">
+            <p className="text-[10px] text-white/80 font-bebas tracking-[0.4em] uppercase">{eyebrow}</p>
+            <h2 className={cn("font-bebas uppercase tracking-wide text-white leading-[1.05]", td?.choice ? "text-[1.3rem]" : cardTextSize(text))}>{text}</h2>
+          </div>
+          {td?.choice && (
+            <ProofPanel
+              key={round}
+              td={td}
+              myTurn={myTurn}
+              partnerName={partnerName}
+              locked={!!td.result}
+              onAnswer={(t) => answerTruth(coupleId, gameId, round, t)}
+              onProof={(p) => submitDareProof(coupleId, gameId, round, p)}
+            />
+          )}
+        </div>
+      </StackCard>
       <Footer>
         <div className="grid grid-cols-2 gap-3">
           {buttons.map(b => (
@@ -507,11 +525,122 @@ const TruthDareRound = ({ game, card, round, uid, partnerName, busy, coupleId, g
             : !td?.choice
               ? (myTurn ? <StatusText>Your pick</StatusText> : <StatusText pulse>{`${partnerName} is choosing`}</StatusText>)
               : myTurn
-                ? <StatusText pulse>{td.choice === "truth" ? `Answer out loud · ${partnerName} decides` : `Do it · ${partnerName} decides`}</StatusText>
+                ? <StatusText pulse>{td.choice === "truth" ? `Say it or write it · ${partnerName} decides` : `Do it, add a photo · ${partnerName} decides`}</StatusText>
                 : <StatusText>{`Did ${partnerName} do it?`}</StatusText>}
         </StatusRow>
       </Footer>
     </>
+  );
+};
+
+// Under a truth or dare: the player answers in writing or adds a photo of the dare; the partner reads it before deciding.
+// Both are optional, so it still works as a spoken game.
+const ProofPanel = ({ td, myTurn, partnerName, locked, onAnswer, onProof }: {
+  td: NonNullable<CoupleGame["td"]>[string];
+  myTurn: boolean;
+  partnerName: string;
+  locked: boolean;
+  onAnswer: (text: string) => Promise<unknown>;
+  onProof: (proof: { mime: string; data: string; w: number; h: number } | null) => Promise<unknown>;
+}) => {
+  const [draft, setDraft] = useState(td.answer ?? "");
+  const [working, setWorking] = useState(false);
+  const [error, setError] = useState("");
+  const picker = useRef<HTMLInputElement>(null);
+  const isTruth = td.choice === "truth";
+  const saved = (td.answer ?? "") === draft.trim();
+
+  const guard = async (action: () => Promise<unknown>) => {
+    setWorking(true);
+    setError("");
+    try { await action(); }
+    catch (err) {
+      console.error(err);
+      setError(err instanceof ChatMediaError ? err.message : "That didn't go through. Try again.");
+    } finally { setWorking(false); }
+  };
+
+  const proof = td.proof;
+  const photo = proof && (
+    // eslint-disable-next-line @next/next/no-img-element
+    <img src={`data:${proof.mime};base64,${proof.data}`} alt={myTurn ? "Your photo" : `Photo from ${partnerName}`} className="w-full max-h-36 object-cover rounded-2xl border border-white/20" />
+  );
+  const quote = td.answer && (
+    <p className="rounded-2xl bg-black/25 border border-white/15 px-4 py-3 font-outfit text-sm leading-relaxed text-white whitespace-pre-wrap break-words">{td.answer}</p>
+  );
+
+  // The partner just reads
+  if (!myTurn) {
+    if (!td.answer && !proof) return <p className="font-outfit text-xs text-white/70">{`Nothing written or shown yet. ${partnerName} can still do it out loud.`}</p>;
+    return <div className="space-y-3">{quote}{photo}</div>;
+  }
+
+  // The player is finished once their partner has decided
+  if (locked) return <div className="space-y-3">{quote}{photo}</div>;
+
+  if (isTruth) {
+    return (
+      <div className="space-y-2">
+        <textarea
+          value={draft}
+          onChange={(e) => setDraft(e.target.value)}
+          rows={2}
+          maxLength={500}
+          placeholder="Write your truth (or just say it out loud)"
+          aria-label="Your truth"
+          className="w-full resize-none rounded-2xl bg-black/25 border border-white/20 px-4 py-3 text-[16px] sm:text-sm font-outfit text-white placeholder:text-white/50 focus:outline-none focus:border-white/50"
+        />
+        <button
+          type="button"
+          disabled={working || saved || !draft.trim()}
+          onClick={() => guard(() => onAnswer(draft))}
+          className="w-full h-10 rounded-xl bg-white text-black font-bebas tracking-widest uppercase text-sm active:scale-95 disabled:opacity-40 transition-all"
+        >
+          {saved && td.answer ? `Sent to ${partnerName}` : td.answer ? "Update answer" : "Send answer"}
+        </button>
+        {error && <p role="alert" className="font-outfit text-xs text-rose-200">{error}</p>}
+      </div>
+    );
+  }
+
+  return (
+    <div className="space-y-2">
+      <input
+        ref={picker}
+        type="file"
+        accept="image/*"
+        className="hidden"
+        aria-hidden="true"
+        tabIndex={-1}
+        onChange={(e) => {
+          const file = e.target.files?.[0];
+          e.target.value = "";
+          if (file) guard(async () => onProof(await prepareProofImage(file)));
+        }}
+      />
+      {photo}
+      <div className="flex gap-2">
+        <button
+          type="button"
+          disabled={working}
+          onClick={() => picker.current?.click()}
+          className="flex-1 h-10 rounded-xl bg-white text-black font-bebas tracking-widest uppercase text-sm flex items-center justify-center gap-2 active:scale-95 disabled:opacity-40 transition-all"
+        >
+          <Camera className="w-4 h-4" /> {proof ? "Change photo" : "Add a photo as proof"}
+        </button>
+        {proof && (
+          <button
+            type="button"
+            disabled={working}
+            onClick={() => guard(() => onProof(null))}
+            className="h-10 px-4 rounded-xl bg-black/25 border border-white/20 font-bebas tracking-widest uppercase text-sm text-white active:scale-95 disabled:opacity-40 transition-all"
+          >
+            Remove
+          </button>
+        )}
+      </div>
+      {error && <p role="alert" className="font-outfit text-xs text-rose-200">{error}</p>}
+    </div>
   );
 };
 
