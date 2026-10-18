@@ -125,7 +125,7 @@ export const MessageContent = ({ message, tone, partnerName, onOpenImage }: {
     if (!isStickerId(message.sticker)) return <p className="font-outfit text-sm opacity-70 px-4 py-2.5">Sticker</p>;
     return (
       // eslint-disable-next-line @next/next/no-img-element
-      <img src={stickerUrl(message.sticker)} alt="Sticker" width={144} height={144} decoding="async" draggable={false} className="block w-36 h-36 object-cover rounded-[inherit]" />
+      <img src={stickerUrl(message.sticker)} alt="Sticker" width={176} height={176} decoding="async" draggable={false} className="block w-44 h-44 object-cover rounded-[inherit] bg-white/5" />
     );
   }
   if (message.kind === "voice") return <VoiceNote message={message} tone={tone} />;

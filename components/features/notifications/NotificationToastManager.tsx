@@ -1,19 +1,66 @@
 "use client";
 
-import React, { useState, useEffect, useRef } from "react";
+import React, { useState, useEffect, useRef, useCallback } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { useMailbox } from "@/context/MailboxContext";
 import { AppNotification } from "@/lib/types";
 import { Bell, Heart, MessageCircle, Sparkles, X } from "lucide-react";
 import { useSensoryFeedback } from "@/hooks/useSensoryFeedback";
 import { openAnyGame } from "@/components/features/games/deckIcons";
+import { DECK_BY_ID } from "@/lib/games/decks";
+import { presence } from "@/lib/presence";
+import { partnerLabel } from "@/lib/utils";
 
 const RECENT_MS = 2 * 60 * 1000;
 
 export const NotificationToastManager = () => {
-    const { notifications, notificationsEnabled, liveGames, questionGames, markNotiRead } = useMailbox();
+    const { notifications, notificationsEnabled, liveGames, questionGames, markNotiRead, couple, user, partner } = useMailbox();
     const [activeToast, setActiveToast] = useState<AppNotification | null>(null);
     const { playChime } = useSensoryFeedback();
+    const uid = user?.uid ?? "";
+    const partnerUid = partner?.uid ?? "";
+    const partnerName = partnerLabel(user, partner, "Your partner");
+
+    const show = useCallback((toast: AppNotification) => {
+        playChime();
+        setActiveToast(toast);
+    }, [playChime]);
+
+    // A new message from the partner, unless the chat is already open. Only a toast: the bell never lists chat.
+    const chatAt = couple?.chatLastAt;
+    const chatBy = couple?.chatLastBy;
+    const chatKind = couple?.chatLastKind;
+    const lastChatAt = useRef<string | null | undefined>(undefined);
+    useEffect(() => {
+        if (!couple) return;
+        if (lastChatAt.current === undefined) { lastChatAt.current = chatAt ?? null; return; }
+        if (!chatAt || chatAt === lastChatAt.current) return;
+        lastChatAt.current = chatAt;
+        if (!notificationsEnabled || !uid || chatBy === uid || presence.chatOpen) return;
+        const what = chatKind === "image" ? "Sent you a photo" : chatKind === "voice" ? "Sent you a voice note" : chatKind === "sticker" ? "Sent you a sticker" : "Sent you a message";
+        show({ id: `chat_${chatAt}`, uid, type: "CHAT", title: partnerName, body: what, read: true, createdAt: chatAt });
+    }, [couple, chatAt, chatBy, chatKind, notificationsEnabled, uid, partnerName, show]);
+
+    // Someone joining a game, and your turn in a board game, unless you are already in that room
+    const seenGames = useRef(new Map<string, { joined: boolean; myTurn: boolean }>());
+    useEffect(() => {
+        if (!uid || !partnerUid) return;
+        for (const g of [...liveGames, ...questionGames]) {
+            const joined = !!g.joined?.[partnerUid];
+            const myTurn = !!g.board && !g.winner && g.turn === uid;
+            const prev = seenGames.current.get(g.id);
+            seenGames.current.set(g.id, { joined, myTurn });
+            // The first look at a game is just remembering where it stands
+            if (!prev || !notificationsEnabled || presence.gameId === g.id) continue;
+            const title = DECK_BY_ID[g.deck]?.title ?? "your game";
+            const base = { uid, type: "GAME" as const, gameId: g.id, read: true, createdAt: new Date().toISOString() };
+            if (joined && !prev.joined) {
+                show({ ...base, id: `join_${g.id}_${Date.now()}`, title: `${partnerName} joined`, body: `${partnerName} is in ${title}. Tap to jump in.` });
+            } else if (myTurn && !prev.myTurn) {
+                show({ ...base, id: `turn_${g.id}_${Date.now()}`, title: "Your turn", body: `${partnerName} played in ${title}. Tap to play.` });
+            }
+        }
+    }, [liveGames, questionGames, uid, partnerUid, partnerName, notificationsEnabled, show]);
 
     const latestId = notifications[0]?.id;
     const latestRef = useRef(notifications[0]);
@@ -30,6 +77,9 @@ export const NotificationToastManager = () => {
         if (!latestId || latestId === lastNotiId.current) return;
         lastNotiId.current = latestId;
         if (!notificationsEnabled || !latestRef.current || latestRef.current.read) return;
+        // Standing in that room already
+        if (latestRef.current.type === "GAME" && latestRef.current.gameId && latestRef.current.gameId === presence.gameId) return;
+        if (latestRef.current.type === "CHAT" && presence.chatOpen) return;
         // The first load also looks like "new"; a generous age limit tells the two apart
         if (Date.now() - new Date(latestRef.current.createdAt).getTime() > RECENT_MS) return;
         playChime();
@@ -50,10 +100,15 @@ export const NotificationToastManager = () => {
         : undefined;
     const openGameFromToast = () => {
         if (!game || !activeToast) return;
-        markNotiRead(activeToast.id).catch(console.error);
+        if (notifications.some(n => n.id === activeToast.id)) markNotiRead(activeToast.id).catch(console.error);
         setActiveToast(null);
         openAnyGame(game);
     };
+    const openChatFromToast = () => {
+        setActiveToast(null);
+        window.dispatchEvent(new CustomEvent("openChat"));
+    };
+    const tap = game ? openGameFromToast : activeToast?.type === "CHAT" ? openChatFromToast : undefined;
 
     return (
         <AnimatePresence>
@@ -65,12 +120,12 @@ export const NotificationToastManager = () => {
                     className="fixed top-24 left-1/2 -translate-x-1/2 z-[200] w-[90%] max-w-sm"
                 >
                     <div
-                        onClick={game ? openGameFromToast : undefined}
-                        onKeyDown={game ? (e) => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); openGameFromToast(); } } : undefined}
-                        role={game ? "button" : undefined}
-                        tabIndex={game ? 0 : undefined}
-                        aria-label={game ? `${activeToast.title}. ${activeToast.body}` : undefined}
-                        className={`bg-[#1a1a1a] border border-white/10 rounded-3xl p-4 shadow-2xl flex items-center gap-4 relative overflow-hidden group ${game ? "cursor-pointer hover:bg-neutral-900/90 active:scale-[0.98] transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/50" : ""}`}
+                        onClick={tap}
+                        onKeyDown={tap ? (e) => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); tap(); } } : undefined}
+                        role={tap ? "button" : undefined}
+                        tabIndex={tap ? 0 : undefined}
+                        aria-label={tap ? `${activeToast.title}. ${activeToast.body}` : undefined}
+                        className={`bg-[#1a1a1a] border border-white/10 rounded-3xl p-4 shadow-2xl flex items-center gap-4 relative overflow-hidden group ${tap ? "cursor-pointer hover:bg-neutral-900/90 active:scale-[0.98] transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/50" : ""}`}
                     >
                         {/* Progress bar */}
                         <motion.div 

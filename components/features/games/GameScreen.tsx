@@ -11,8 +11,9 @@ import {
 import { DECK_BY_ID, type DeckInfo } from "@/lib/games/decks";
 import { getCard, isRoundComplete, roundKey, totalScores, truthDarePlayer, type GameCard } from "@/lib/games/engine";
 import type { CoupleGame } from "@/lib/types";
+import { presence } from "@/lib/presence";
 import { useSensoryFeedback } from "@/hooks/useSensoryFeedback";
-import { cn } from "@/lib/utils";
+import { cn, partnerLabel } from "@/lib/utils";
 import { DECK_ICONS, openGame, titleFont } from "./deckIcons";
 import { BoardGame } from "./BoardGame";
 import { Scribble } from "./Scribble";
@@ -32,11 +33,13 @@ export const GameScreen = ({ gameId, onLeave }: { gameId: string; onLeave: () =>
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState("");
   const { playPop, playChime, playTick } = useSensoryFeedback();
+  // Standing in the room: no toast for what happens in it
+  useEffect(() => { presence.gameId = gameId; return () => { if (presence.gameId === gameId) presence.gameId = null; }; }, [gameId]);
 
   const uid = user?.uid || "";
   const partnerUid = partner?.uid || "";
   const coupleId = user?.coupleId || "";
-  const partnerName = partner?.displayName?.split(" ")[0] || "Your partner";
+  const partnerName = partnerLabel(user, partner, "Your partner");
 
   useScrollLock();
 

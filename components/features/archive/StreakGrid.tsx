@@ -3,7 +3,7 @@
 import React, { useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { DailyCheckIn, CoupleEvent } from "@/lib/types";
-import { cn } from "@/lib/utils";
+import { cn, partnerLabel } from "@/lib/utils";
 import { 
     X, Heart, Star, CloudRain, Sun, 
     ChevronLeft, ChevronRight, 
@@ -75,7 +75,7 @@ export const StreakGrid: React.FC<StreakGridProps> = ({ history }) => {
     return new Date(y, m - 1, d);
   };
 
-  const nameFor = (uid: string) => uid === user?.uid ? "You" : (partner?.displayName?.split(" ")[0] || "Partner");
+  const nameFor = (uid: string) => uid === user?.uid ? "You" : (partnerLabel(user, partner, "Partner"));
 
   const getDaySyncInfo = (dateId: string) => {
     // One entry per person (history is newest first)

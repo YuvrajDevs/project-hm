@@ -1,8 +1,9 @@
 import type { Metadata } from "next";
-import { Bebas_Neue, Outfit, Inter } from "next/font/google";
+import { Bebas_Neue, Outfit, Inter, Playfair_Display } from "next/font/google";
 import { SITE_URL, SITE_NAME } from "@/lib/seo";
 import "./globals.css";
 import "./theme.css";
+import { ImagePreloader } from "@/components/ui/ImagePreloader";
 
 const bebasNeue = Bebas_Neue({
   weight: "400",
@@ -13,6 +14,15 @@ const bebasNeue = Bebas_Neue({
 const outfit = Outfit({
   variable: "--font-outfit",
   subsets: ["latin"],
+});
+
+// Used for one accent phrase on the landing page ("two hearts"), so only the italic bold cut is loaded
+const playfair = Playfair_Display({
+  variable: "--font-playfair-display",
+  subsets: ["latin"],
+  style: ["italic"],
+  weight: ["700"],
+  display: "swap",
 });
 
 const inter = Inter({
@@ -72,11 +82,11 @@ export default function RootLayout({
     <html
       lang="en"
       suppressHydrationWarning
-      className={`${bebasNeue.variable} ${outfit.variable} ${inter.variable} antialiased dark scroll-smooth`}
+      className={`${bebasNeue.variable} ${outfit.variable} ${inter.variable} ${playfair.variable} antialiased dark scroll-smooth`}
     >
       <head>
-        {/* Apply the saved light/dark choice before the page paints, so it never flashes the wrong colour */}
-        <script dangerouslySetInnerHTML={{ __html: 'try{if(localStorage.getItem("hm_theme")==="light")document.documentElement.setAttribute("data-theme","light")}catch(e){}' }} />
+        {/* Apply the saved light/dark choice before the page paints, so it never flashes the wrong colour. Light is the default. */}
+        <script dangerouslySetInnerHTML={{ __html: 'try{if(localStorage.getItem("hm_theme")!=="dark")document.documentElement.setAttribute("data-theme","light")}catch(e){document.documentElement.setAttribute("data-theme","light")}' }} />
       </head>
       <body suppressHydrationWarning className={`${outfit.className} min-h-screen bg-[var(--page)] text-neutral-50 overflow-x-hidden flex flex-col`}>
         <JsonLd
@@ -95,6 +105,7 @@ export default function RootLayout({
             url: SITE_URL,
           }}
         />
+        <ImagePreloader />
         {children}
       </body>
     </html>

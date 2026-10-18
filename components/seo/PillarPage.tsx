@@ -12,7 +12,7 @@ export function PillarPage({ page }: { page: PillarEntry }) {
     .filter((p): p is NonNullable<typeof p> => !!p);
 
   return (
-    <article className="max-w-3xl mx-auto px-6 py-16 space-y-12">
+    <article className="max-w-3xl mx-auto px-6 pt-4 pb-16 space-y-10">
       <Breadcrumbs items={[{ label: "Home", href: "/" }, { label: page.h1, href: page.path }]} />
 
       <header className="space-y-4">

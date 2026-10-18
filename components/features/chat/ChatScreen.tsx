@@ -1,6 +1,7 @@
 "use client";
 
 import React, { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
+import { presence } from "@/lib/presence";
 import { AnimatePresence, motion } from "framer-motion";
 import { ArrowDown, ArrowLeft, Bookmark, MessageCircleHeart } from "lucide-react";
 import { useMailbox } from "@/context/MailboxContext";
@@ -13,7 +14,7 @@ import { ChatMediaError, prepareImage, type VoiceClip } from "@/lib/chatMedia";
 import type { ChatMessage } from "@/lib/types";
 import { useSensoryFeedback } from "@/hooks/useSensoryFeedback";
 import { useScrollLock } from "@/hooks/useScrollLock";
-import { cn } from "@/lib/utils";
+import { cn, partnerLabel } from "@/lib/utils";
 import { ChatBubble } from "./ChatBubble";
 import { Composer } from "./Composer";
 import { ImageViewer } from "./ImageViewer";
@@ -21,7 +22,6 @@ import { SavedMessages } from "./SavedMessages";
 
 const PAGE = 40;
 const RUN_GAP_MS = 5 * 60 * 1000;      // messages this close together read as one run
-const NOTIFY_GAP_MS = 10 * 60 * 1000;  // the partner is told once per burst, not for every line
 const NEAR_BOTTOM = 96;
 
 const dayKey = (iso: string) => new Date(iso).toDateString();
@@ -56,9 +56,11 @@ const useVisualViewport = () => {
 // The chat, full screen. Back goes home; Saved swaps the conversation for what you have saved from it.
 export const ChatScreen = ({ onClose }: { onClose: () => void }) => {
   const { user, partner, couple } = useMailbox();
+  // While the chat is open, new messages show right here, so no toast for them
+  useEffect(() => { presence.chatOpen = true; return () => { presence.chatOpen = false; }; }, []);
   const coupleId = user?.coupleId;
   const uid = user?.uid;
-  const partnerName = partner?.displayName?.split(" ")[0] || "your partner";
+  const partnerName = partnerLabel(user, partner, "your partner");
 
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [loaded, setLoaded] = useState(false);
@@ -190,13 +192,8 @@ export const ChatScreen = ({ onClose }: { onClose: () => void }) => {
 
   const send = async (draft: ChatDraft) => {
     setError("");
-    const startsBurst = couple?.chatLastBy !== uid || !couple?.chatLastAt || Date.now() - Date.parse(couple.chatLastAt) > NOTIFY_GAP_MS;
     playPop();
-    await sendChatMessage(coupleId, uid, draft, {
-      partnerUid: partner?.uid,
-      name: user.displayName?.split(" ")[0],
-      notify: startsBurst,
-    });
+    await sendChatMessage(coupleId, uid, draft);
   };
 
   const sendText = (text: string) => {
@@ -244,7 +241,7 @@ export const ChatScreen = ({ onClose }: { onClose: () => void }) => {
     deleteChatMessage(coupleId, m.id).catch(() => setError("Couldn't unsend that. Try again."));
   };
 
-  const partnerTitle = partner?.partnerNickname || partner?.displayName || "Your person";
+  const partnerTitle = user?.partnerNickname?.trim() || partner?.displayName || "Your person";
   const saved = view === "saved";
   const roundButton =
     "w-10 h-10 shrink-0 rounded-full bg-[#1c1c1c] border border-[#232323] flex items-center justify-center text-neutral-400 hover:text-white hover:bg-[#242424] active:scale-90 transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/50";

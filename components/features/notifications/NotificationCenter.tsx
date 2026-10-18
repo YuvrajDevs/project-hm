@@ -10,7 +10,7 @@ import { openAnyGame } from "@/components/features/games/deckIcons";
 import { slotFor } from "@/lib/games/decks";
 
 export const NotificationCenter = ({ isOpen, onClose }: { isOpen: boolean, onClose: () => void }) => {
-    const { notifications, markNotiRead, clearAllNotis, unreadNotificationsCount, liveGames, questionGames } = useMailbox();
+    const { bellNotifications: notifications, markNotiRead, clearAllNotis, unreadNotificationsCount, liveGames, questionGames } = useMailbox();
     const gameFor = (noti: { type: string; gameId?: string }) =>
         noti.type === "GAME" && noti.gameId ? [...liveGames, ...questionGames].find(g => g.id === noti.gameId) : undefined;
 

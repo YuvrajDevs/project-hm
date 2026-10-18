@@ -19,6 +19,7 @@ import { PENDING_INVITE_KEY } from "@/lib/constants";
 import dynamic from "next/dynamic";
 import { useScrollLock } from "@/hooks/useScrollLock";
 import { hasUnreadChat } from "@/lib/chat";
+import { partnerLabel } from "@/lib/utils";
 
 // Screens and dialogs that are not on the first screen load on demand, so opening the app
 // downloads and runs only what the home screen needs.
@@ -203,6 +204,8 @@ export function HomeClient() {
     const handleOpenSafeSpace = () => setSafeSpaceOpen(true);
     const handleOpenGame = (e: Event) => setOpenGameId((e as CustomEvent<{ id: string }>).detail.id);
     const handleOpenQuestions = (e: Event) => setOpenQuestionsId((e as CustomEvent<{ id: string }>).detail.id);
+    const handleOpenChat = () => setChatOpen(true);
+    window.addEventListener('openChat', handleOpenChat);
     window.addEventListener('openGame', handleOpenGame);
     window.addEventListener('openQuestions', handleOpenQuestions);
 
@@ -211,6 +214,7 @@ export function HomeClient() {
     window.addEventListener('openSafeSpace', handleOpenSafeSpace);
 
     return () => {
+        window.removeEventListener('openChat', handleOpenChat);
         window.removeEventListener('popupStateChange', handlePopup);
         window.removeEventListener('openSignalSelector', handleOpenSelector);
         window.removeEventListener('openSafeSpace', handleOpenSafeSpace);
@@ -339,7 +343,7 @@ export function HomeClient() {
   // If not paired, show the Single Hub
   if (!isPaired) {
     return (
-        <div className={`${COVER} bg-[var(--page)]`}>
+        <div className="fixed inset-0 z-[90] overflow-hidden bg-[var(--page)]">
             <SingleHub />
             <AnimatePresence>
                 {(user?.leftByPartner && !overlayDismissed) ? (
@@ -502,7 +506,7 @@ export function HomeClient() {
                     <div className="space-y-2">
                         <h3 className="text-3xl font-bebas tracking-widest uppercase leading-none">Safe Space Closed</h3>
                         <p className="text-neutral-400 font-outfit text-sm leading-relaxed">
-                            Want to send {partner?.displayName?.split(" ")[0] || "your partner"}{" "}a thought about it? A line on what you understood, what you agreed, or simply that you&apos;re there. It goes in your mailbox, so you both keep it.
+                            Want to send {partnerLabel(user, partner, "your partner")}{" "}a thought about it? A line on what you understood, what you agreed, or simply that you&apos;re there. It goes in your mailbox, so you both keep it.
                         </p>
                     </div>
                     <div className="flex flex-col gap-3">

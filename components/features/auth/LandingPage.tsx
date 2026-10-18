@@ -1,44 +1,305 @@
 "use client";
 
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useRef, useCallback } from "react";
 import { auth, googleProvider } from "@/lib/firebase";
 import { signInWithPopup, signInWithRedirect, getRedirectResult } from "firebase/auth";
 import { ensureUserDoc } from "@/lib/firestore-helpers";
-import { motion, useScroll, useTransform } from "framer-motion";
+import { motion } from "framer-motion";
 import Image from "next/image";
 import Link from "next/link";
-import { Heart, Sparkles, MessageCircle, Zap, Shield, ArrowDown } from "lucide-react";
-import { AmbientBackground } from "@/components/ui/AmbientBackground";
-import { childrenOf } from "@/lib/seo/pages";
-import { RelatedLinks } from "@/components/seo/RelatedLinks";
+import { ArrowRight, Check, Flame } from "lucide-react";
+import { DECKS, slotFor } from "@/lib/games/decks";
+import { SiteHeader } from "@/components/layout/SiteHeader";
+import { SiteFooter } from "@/components/layout/SiteFooter";
 
-const FEATURE_CARDS = [
+const GAME_COUNT = 9; // the nine games described on /games
+const DECK_COUNT = DECKS.filter((d) => slotFor(d.id) === "questions").length;
+
+// What each part of the app gives a couple. The mockups are drawn from real pieces of the app.
+const ASPECTS = [
   {
-    icon: <MessageCircle className="w-6 h-6 text-blue-400" />,
-    title: "Say What You Need",
-    description: "Share how you feel and tell your partner what would help: just listen, reassure me, or give me advice.",
-    color: "from-blue-500/10 to-transparent"
+    aspect: "Connection",
+    blurb: "Check in with each other every day, in 30 seconds, before the day gets loud.",
+    href: "/features/daily-check-in-for-couples",
+    card: "bg-[#161616] border-[#2a2a2a]",
+    panel: "tone-blue",
+    mock: "sync",
   },
   {
-    icon: <Zap className="w-6 h-6 text-yellow-400" />,
-    title: "Daily Heart-Sync",
-    description: "Start each day with a 30-second alignment check. See each other's headspace before life's noise takes over.",
-    color: "from-yellow-500/10 to-transparent"
+    aspect: "Communication",
+    blurb: "Say what you need, and have a quiet room for when it gets hard.",
+    href: "/conflict-resolution",
+    card: "tone-blue border-[#5a4fd8]",
+    panel: "tone-amber",
+    mock: "chat",
   },
   {
-    icon: <Shield className="w-6 h-6 text-pink-400" />,
-    title: "Safe Space",
-    description: "A private digital oasis for resolving tension. Slow down, breathe, and find your way back to each other, together.",
-    color: "from-pink-500/10 to-transparent"
-  }
+    aspect: "Play",
+    blurb: "Games and questions that get you laughing and talking again.",
+    href: "/games",
+    card: "bg-[#161616] border-[#2a2a2a]",
+    panel: "tone-rose",
+    mock: "games",
+  },
+] as const;
+
+// PLACEHOLDER COPY: replace with real words from real couples before launch.
+const TESTIMONIALS = [
+  { quote: "We stopped saving the hard talks for a fight. Now one of us just drops a note.", who: "Together 3 years" },
+  { quote: "The daily check-in takes less time than scrolling, and we actually know how the other is doing.", who: "Long-distance, 2 years" },
+  { quote: "The safe space made it okay to slow down in the middle of an argument.", who: "Together 5 years" },
+  { quote: "Silly games on a Tuesday night. We forgot how much we like each other's answers.", who: "Newly engaged" },
+  { quote: "It feels like a small private room that is just ours.", who: "Together 1 year" },
+  { quote: "I can say it in writing first, and that changed everything for me.", who: "Together 7 years" },
+  { quote: "The white flag button ended a fight in about a minute. Genuinely.", who: "Together 4 years" },
+  { quote: "Our streak is a running joke, and a quiet reminder to check in.", who: "Married 2 years" },
 ];
+
+// The small-text style used across the app (e.g. "Honest thoughts, safely landed.")
+const SMALL = "font-outfit text-[11px] uppercase tracking-[0.35em]";
+
+// Pixel envelopes from the app's own icon set, used as small floating decoration
+const FLOATERS = [
+  { icon: "signal_love", pos: "left-0 top-6 sm:left-[6%] sm:top-12", size: "w-9 sm:w-14", motion: { d: "7s", delay: "0s", dx: "10px", dy: "-16px", r0: "-10deg", r1: "6deg" } },
+  { icon: "signal_peace", pos: "right-0 top-2 sm:right-[7%] sm:top-8", size: "w-11 sm:w-16", motion: { d: "9s", delay: "-2s", dx: "-12px", dy: "-12px", r0: "8deg", r1: "-6deg" } },
+  { icon: "signal_brighter", pos: "left-1 top-[47%] sm:left-[3%] sm:top-[52%]", size: "w-8 sm:w-12", motion: { d: "8s", delay: "-4s", dx: "8px", dy: "14px", r0: "6deg", r1: "-10deg" } },
+  { icon: "signal_closeness", pos: "right-1 top-[52%] sm:right-[3%] sm:top-[46%]", size: "w-10 sm:w-14", motion: { d: "10s", delay: "-1s", dx: "-10px", dy: "16px", r0: "-8deg", r1: "8deg" } },
+  { icon: "signal_appreciative", pos: "hidden sm:block right-[30%] top-0", size: "w-7 sm:w-9", motion: { d: "6.5s", delay: "-3s", dx: "6px", dy: "-10px", r0: "4deg", r1: "-8deg" } },
+] as const;
+
+const FloatingMail = ({ icon, className }: { icon: string; className: string }) => (
+  // eslint-disable-next-line @next/next/no-img-element
+  <img src={`/icons/${icon}.png`} alt="" aria-hidden="true" draggable={false} className={`object-contain pointer-events-none select-none ${className}`} />
+);
+
+// ─── Mockups: small, static pictures of the real app ────────────────────────
+// Everything inside is sized in container units (cqw), so a mockup always fits its card whatever the card's width.
+const cq = (n: number) => `${n}cqw`;
+const box = { containerType: "inline-size" } as const;
+
+/* eslint-disable @next/next/no-img-element */
+const SyncMock = () => (
+  <div className="h-full flex flex-col justify-center" style={{ padding: cq(6), gap: cq(5) }} aria-hidden="true">
+    <div className="grid grid-cols-3" style={{ gap: cq(3) }}>
+      {["signal_love", "signal_peace", "signal_brighter"].map((n, i) => (
+        <div key={n} className={`aspect-square flex items-center justify-center ${i === 0 ? "bg-white" : "bg-black/25"}`} style={{ borderRadius: cq(4) }}>
+          <img src={`/icons/${n}.png`} alt="" className="w-3/4 h-3/4 object-contain" />
+        </div>
+      ))}
+    </div>
+    <div className="relative rounded-full bg-white/25" style={{ height: cq(2.5) }}><span className="absolute left-0 top-0 h-full w-3/5 rounded-full bg-white" /></div>
+    <div className="flex justify-between font-bebas tracking-[0.3em] text-white/80" style={{ fontSize: cq(4) }}><span>MELLOW</span><span>RADIANT</span></div>
+  </div>
+);
+
+const ChatMock = () => (
+  <div className="h-full flex flex-col justify-center font-outfit" style={{ padding: cq(6), gap: cq(3), fontSize: cq(4.8) }} aria-hidden="true">
+    <span className="self-start bg-black/15 leading-tight" style={{ maxWidth: "78%", padding: `${cq(2.5)} ${cq(4)}`, borderRadius: `${cq(5)} ${cq(5)} ${cq(5)} ${cq(1.5)}` }}>Rough day. Can I vent?</span>
+    <span className="self-end bg-[#17140a] leading-tight" style={{ maxWidth: "78%", color: "#fff", padding: `${cq(2.5)} ${cq(4)}`, borderRadius: `${cq(5)} ${cq(5)} ${cq(1.5)} ${cq(5)}` }}>Always. I&apos;m listening.</span>
+    <img src="/stickers/s03.webp" alt="" className="self-start object-cover" style={{ width: cq(20), height: cq(20), borderRadius: cq(4) }} />
+  </div>
+);
+
+const GamesMock = () => (
+  <div className="h-full flex flex-col items-center justify-center" style={{ padding: cq(6), gap: cq(4) }} aria-hidden="true">
+    <div className="grid grid-cols-3" style={{ gap: cq(2), width: cq(42) }}>
+      {["X", "", "O", "", "X", "", "O", "", "X"].map((m, i) => (
+        <span key={i} className="aspect-square bg-black/25 flex items-center justify-center font-bebas leading-none" style={{ borderRadius: cq(2.5), fontSize: cq(8) }}>{m}</span>
+      ))}
+    </div>
+    <span className="font-bebas tracking-[0.3em]" style={{ fontSize: cq(4.5) }}>YOUR MOVE</span>
+  </div>
+);
+
+const MOCKS = { sync: SyncMock, chat: ChatMock, games: GamesMock };
+
+// ─── The strip of five tall cards under the hero: each one a different piece of the app ───
+const StreakCard = () => (
+  <div className="h-full flex flex-col items-center justify-center text-center" style={{ padding: cq(8), gap: cq(4) }}>
+    <Flame style={{ width: cq(22), height: cq(22) }} />
+    <span className="font-bebas leading-none" style={{ fontSize: cq(46) }}>12</span>
+    <span className="font-bebas tracking-[0.3em]" style={{ fontSize: cq(9) }}>DAY STREAK</span>
+  </div>
+);
+
+const MoodCard = () => (
+  <div className="h-full flex flex-col items-center justify-center text-center" style={{ padding: cq(8), gap: cq(5) }}>
+    <span className="font-bebas tracking-[0.3em] text-neutral-400" style={{ fontSize: cq(7) }}>YOU ARE FEELING</span>
+    <img src="/icons/signal_peace.png" alt="" className="object-contain" style={{ width: cq(55), height: cq(55) }} />
+    <span className="font-bebas tracking-widest" style={{ fontSize: cq(15) }}>PEACE</span>
+    <div className="relative rounded-full bg-white/15 w-full" style={{ height: cq(3) }}><span className="absolute left-0 top-0 h-full w-2/3 rounded-full bg-white" /></div>
+  </div>
+);
+
+const ChatCard = () => (
+  <div className="h-full flex flex-col justify-center font-outfit" style={{ padding: cq(8), gap: cq(4), fontSize: cq(8) }}>
+    <span className="self-start bg-black/20 leading-tight" style={{ padding: `${cq(4)} ${cq(6)}`, borderRadius: `${cq(8)} ${cq(8)} ${cq(8)} ${cq(2)}` }}>Thinking of you</span>
+    <span className="self-end bg-white leading-tight" style={{ color: "#000", padding: `${cq(4)} ${cq(6)}`, borderRadius: `${cq(8)} ${cq(8)} ${cq(2)} ${cq(8)}` }}>Same. Call me?</span>
+    <img src="/stickers/s05.webp" alt="" className="self-start object-cover" style={{ width: cq(38), height: cq(38), borderRadius: cq(7) }} />
+    <span className="self-center font-bebas tracking-[0.3em] text-white/80" style={{ fontSize: cq(7), marginTop: cq(9) }}>SEEN</span>
+  </div>
+);
+
+const BucketCard = () => (
+  <div className="h-full flex flex-col justify-center" style={{ padding: cq(8), gap: cq(4) }}>
+    <span className="font-bebas tracking-widest" style={{ fontSize: cq(13) }}>BUCKET LIST</span>
+    {[["Sunrise in Goa", true], ["Cook dinner together", false], ["Road trip, no plan", false]].map(([t, done]) => (
+      <div key={String(t)} className={`flex items-center font-outfit ${done ? "tone-emerald" : "bg-[#1c1c1c]"}`} style={{ gap: cq(4), padding: cq(5), borderRadius: cq(7), fontSize: cq(8) }}>
+        <span className={`shrink-0 rounded-full border-2 flex items-center justify-center ${done ? "bg-white border-white" : "border-white/30"}`} style={{ width: cq(11), height: cq(11) }}>
+          {done && <Check style={{ width: cq(7), height: cq(7), color: "#107238" }} />}
+        </span>
+        <span className={`leading-tight ${done ? "line-through text-white/70" : ""}`}>{t}</span>
+      </div>
+    ))}
+  </div>
+);
+
+const FlagCard = () => (
+  <div className="h-full flex flex-col items-center justify-center text-center" style={{ padding: cq(8), gap: cq(6) }}>
+    <img src="/icons/white_flag.png" alt="" className="object-contain" style={{ width: cq(52), height: cq(52) }} />
+    <span className="font-bebas tracking-widest leading-none" style={{ fontSize: cq(17) }}>WHITE FLAG</span>
+    <span className="font-outfit leading-snug text-white/85" style={{ fontSize: cq(8) }}>A pause button for arguments</span>
+  </div>
+);
+/* eslint-enable @next/next/no-img-element */
+
+const STRIP = [
+  { Card: StreakCard, tone: "tone-amber", size: "hidden sm:block w-[16%] aspect-[3/4.4]" },
+  { Card: MoodCard, tone: "bg-[#161616] border border-[#2a2a2a]", size: "w-[27%] sm:w-[19%] aspect-[5/8.6]" },
+  { Card: ChatCard, tone: "tone-blue", size: "w-[34%] sm:w-[22%] aspect-[10/17]" },
+  { Card: BucketCard, tone: "bg-[#161616] border border-[#2a2a2a]", size: "w-[27%] sm:w-[19%] aspect-[5/8.6]" },
+  { Card: FlagCard, tone: "tone-rose", size: "hidden sm:block w-[16%] aspect-[3/4.4]" },
+] as const;
+
+
+// "What we work on": three cards side by side on wide screens; on phones and tablets a carousel with the
+// active card centred, arrows, dots and a gentle auto-advance that stops as soon as someone touches it.
+const AspectCarousel = () => {
+  const scroller = useRef<HTMLDivElement>(null);
+  const [active, setActive] = useState(0);
+  const paused = useRef(false);
+  const resumeTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  const goTo = useCallback((index: number) => {
+    const el = scroller.current;
+    const card = el?.children[index] as HTMLElement | undefined;
+    if (!el || !card) return;
+    el.scrollTo({ left: card.offsetLeft - (el.clientWidth - card.clientWidth) / 2, behavior: "smooth" });
+  }, []);
+
+  const onScroll = () => {
+    const el = scroller.current;
+    if (!el) return;
+    const mid = el.scrollLeft + el.clientWidth / 2;
+    let best = 0;
+    let bestDist = Infinity;
+    Array.from(el.children).forEach((c, i) => {
+      const card = c as HTMLElement;
+      const d = Math.abs(card.offsetLeft + card.clientWidth / 2 - mid);
+      if (d < bestDist) { bestDist = d; best = i; }
+    });
+    setActive(best);
+  };
+
+  const touch = () => {
+    paused.current = true;
+    if (resumeTimer.current) clearTimeout(resumeTimer.current);
+    resumeTimer.current = setTimeout(() => { paused.current = false; }, 10000);
+  };
+
+  // Auto-advance, only while the carousel is on screen, on a narrow screen, and nobody is using it
+  const [visible, setVisible] = useState(false);
+  useEffect(() => {
+    const el = scroller.current;
+    if (!el) return;
+    const io = new IntersectionObserver(([e]) => setVisible(e.isIntersecting), { threshold: 0.5 });
+    io.observe(el);
+    return () => io.disconnect();
+  }, []);
+  useEffect(() => {
+    if (!visible || window.matchMedia("(prefers-reduced-motion: reduce)").matches) return;
+    const timer = setInterval(() => {
+      if (paused.current || window.matchMedia("(min-width: 768px)").matches) return;
+      goTo((active + 1) % ASPECTS.length);
+    }, 5000);
+    return () => clearInterval(timer);
+  }, [visible, active, goTo]);
+  useEffect(() => () => { if (resumeTimer.current) clearTimeout(resumeTimer.current); }, []);
+
+  const arrow = "w-10 h-10 rounded-full border border-white/25 flex items-center justify-center text-white hover:bg-white/10 active:scale-90 transition-all";
+
+  return (
+    <>
+      <div
+        ref={scroller}
+        onScroll={onScroll}
+        onPointerDown={touch}
+        onWheel={touch}
+        onMouseEnter={touch}
+        className="mt-8 -mx-5 sm:-mx-6 md:mx-0 px-[calc(50%-min(calc(50vw-4.25rem),10.75rem))] md:px-0 flex md:grid md:grid-cols-3 gap-4 overflow-x-auto md:overflow-visible snap-x snap-mandatory md:snap-none no-scrollbar items-stretch overflow-y-hidden md:overflow-y-visible"
+      >
+        {ASPECTS.map((a, i) => {
+          const Mock = MOCKS[a.mock];
+          const filled = a.card.includes("tone-blue");
+          return (
+            <article
+              key={a.aspect}
+              aria-roledescription="slide"
+              aria-label={`${i + 1} of ${ASPECTS.length}`}
+              // The card is its own size container: type, padding, button and mockup all scale to fit inside it
+              style={{ ...box, padding: "clamp(1rem, 6cqw, 1.5rem)" }}
+              className={`snap-center shrink-0 w-[min(calc(100vw-8.5rem),21.5rem)] md:w-auto min-w-0 rounded-[1.5rem] border-2 flex flex-col gap-4 transition-opacity duration-500 ${a.card} ${i === active ? "" : "max-md:opacity-50"}`}
+            >
+              <div className="flex items-center justify-between gap-2">
+                <h3 className="font-bebas tracking-wide uppercase leading-none min-w-0" style={{ fontSize: "min(10.5cqw, 1.9rem)" }}>{a.aspect}</h3>
+                <Link
+                  href={a.href}
+                  aria-label={`More about ${a.aspect.toLowerCase()}`}
+                  className={`group rounded-full flex items-center justify-center shrink-0 active:scale-90 transition-transform ${filled ? "bg-[#ffd91a] text-[#17140a]" : "bg-[#4034c4] text-white"}`}
+                  style={{ width: "clamp(2rem, 11cqw, 2.5rem)", height: "clamp(2rem, 11cqw, 2.5rem)" }}
+                >
+                  <ArrowRight className="w-[55%] h-[55%] transition-transform duration-200 group-hover:-rotate-45" />
+                </Link>
+              </div>
+              <div className={`h-px ${filled ? "bg-white/60" : "bg-[#5a4fd8]"}`} />
+              <p className="font-outfit leading-relaxed text-neutral-300" style={{ fontSize: "clamp(0.75rem, 4.4cqw, 0.9rem)" }}>{a.blurb}</p>
+              <div className={`${a.panel} rounded-[1.25rem] aspect-[4/3] overflow-hidden mt-auto`} style={box}>
+                <Mock />
+              </div>
+            </article>
+          );
+        })}
+      </div>
+
+      {/* Arrows and dots: narrow screens only */}
+      <div className="md:hidden mt-6 flex items-center justify-between">
+        <button type="button" aria-label="Previous" onClick={() => { touch(); goTo((active + ASPECTS.length - 1) % ASPECTS.length); }} className={arrow}>
+          <ArrowRight className="w-4 h-4 rotate-180" />
+        </button>
+        <div className="flex items-center gap-2" role="tablist" aria-label="Choose a card">
+          {ASPECTS.map((a, i) => (
+            <button
+              key={a.aspect}
+              type="button"
+              role="tab"
+              aria-selected={i === active}
+              aria-label={a.aspect}
+              onClick={() => { touch(); goTo(i); }}
+              className={`h-2 rounded-full transition-all duration-300 ${i === active ? "w-6 bg-white" : "w-2 bg-white/30"}`}
+            />
+          ))}
+        </div>
+        <button type="button" aria-label="Next" onClick={() => { touch(); goTo((active + 1) % ASPECTS.length); }} className={arrow}>
+          <ArrowRight className="w-4 h-4" />
+        </button>
+      </div>
+    </>
+  );
+};
 
 export const LandingPage = () => {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
-  const { scrollYProgress } = useScroll();
-  const opacity = useTransform(scrollYProgress, [0, 0.2], [1, 0]);
-  const scale = useTransform(scrollYProgress, [0, 0.2], [1, 0.95]);
 
   // Apps like Instagram, Facebook and TikTok open links in their own mini browser, where Google refuses to sign in
   const [inAppBrowser, setInAppBrowser] = useState(false);
@@ -94,193 +355,138 @@ export const LandingPage = () => {
     }
   };
 
+  const cta = (
+    <button
+      onClick={handleGoogle}
+      disabled={loading}
+      className="group inline-flex items-center gap-3 rounded-full bg-[#2f6bff] hover:bg-[#4a7dff] pl-5 sm:pl-6 pr-1.5 h-11 sm:h-12 font-bebas tracking-widest text-base sm:text-lg uppercase text-white active:scale-95 transition-all disabled:opacity-50"
+    >
+      {loading ? "Signing in..." : "Get started"}
+      <span className="w-8 h-8 sm:w-9 sm:h-9 rounded-full bg-white text-[#2f6bff] flex items-center justify-center">
+        {loading ? <span className="w-4 h-4 border-2 border-[#2f6bff]/30 border-t-[#2f6bff] rounded-full animate-spin" /> : <ArrowRight className="w-5 h-5 transition-transform duration-200 group-hover:-rotate-45" />}
+      </span>
+    </button>
+  );
+
   return (
-    <main className="min-h-screen bg-[var(--page)] text-white">
-      <AmbientBackground />
+    // Follows the light/dark switch in the top bar: black page in dark mode, cream in light mode
+    <main className="min-h-screen bg-[var(--page)] text-white overflow-x-clip">
+      <SiteHeader showCta={false} />
+      <div className="max-w-6xl mx-auto px-6">
 
-      {/* Hero Section */}
-      <section className="h-screen flex flex-col items-center justify-center relative px-6 overflow-hidden">
-        <motion.div style={{ opacity, scale }} className="flex flex-col items-center gap-10 z-10 w-full max-w-sm">
-          {/* Branding */}
-          <motion.div
-            initial={{ opacity: 0, y: -10 }}
+
+        {/* Hero */}
+        <section id="top" className="relative pt-8 sm:pt-16 text-center">
+          <div aria-hidden="true" className="absolute inset-0 pointer-events-none">
+            {FLOATERS.map((f) => (
+              <span
+                key={f.icon}
+                className={`absolute ${f.pos}`}
+              >
+                <span
+                  className="floaty block"
+                  style={{ "--d": f.motion.d, "--delay": f.motion.delay, "--dx": f.motion.dx, "--dy": f.motion.dy, "--r0": f.motion.r0, "--r1": f.motion.r1 } as React.CSSProperties}
+                >
+                  <FloatingMail icon={f.icon} className={f.size} />
+                </span>
+              </span>
+            ))}
+          </div>
+          <motion.h1
+            initial={{ opacity: 0, y: 16 }}
             animate={{ opacity: 1, y: 0 }}
-            className="flex items-center gap-2 mb-4"
+            transition={{ duration: 0.6, ease: [0.16, 1, 0.3, 1] }}
+            className="relative font-bebas uppercase text-[3.6rem] leading-[0.95] sm:text-8xl md:text-9xl tracking-wide"
           >
-            <Image src="/logo.png" alt="HM Logo" width={256} height={256} className="w-4 h-auto" />
-            <span className="font-bebas text-sm tracking-[0.4em] text-neutral-500 uppercase">Honest Mailbox</span>
-          </motion.div>
+            Your safe{" "}<br />
+            space{" "}<Image src="/logo.png" alt="" width={256} height={256} priority className="inline-block align-middle h-[1.25em] w-[1.25em] object-contain -my-[0.15em] drop-shadow-[0_8px_16px_rgba(0,0,0,0.35)]" />{" "}for{" "}<br />
+            <span className="font-playfair italic font-bold normal-case tracking-normal text-[0.92em] leading-none">Two Hearts</span>
+          </motion.h1>
+          <p className="sr-only">A private mailbox for two hearts</p>
 
-          {/* Hero Content */}
-          <motion.div
-            initial={{ opacity: 0, scale: 0.9 }}
-            animate={{ opacity: 1, scale: 1 }}
-            transition={{ duration: 0.7, ease: [0.16, 1, 0.3, 1] }}
-            className="flex flex-col items-center gap-6 text-center"
-          >
-            <motion.div
-              whileHover={{ scale: 1.05, rotate: 2 }}
-              className="flex items-center justify-center mb-4"
-            >
-              <Image src="/logo.png" alt="Honest Mailbox logo" width={256} height={256} priority className="w-20 h-auto object-contain drop-shadow-2xl" />
-            </motion.div>
-
-            <div>
-              <h1 className="text-6xl font-bebas tracking-[0.15em] text-white leading-none">
-                YOUR<br /><span className="text-transparent bg-clip-text bg-gradient-to-r from-pink-400 to-blue-400">SAFE SPACE</span>
-              </h1>
-              <p className="text-neutral-500 font-outfit text-xs mt-4 tracking-[0.3em] uppercase leading-relaxed">
-                A private mailbox<br />for two hearts
-              </p>
-              <p className="text-neutral-400 font-outfit text-sm mt-3 max-w-xs leading-relaxed">
-                Games, daily check-ins and a safe space to talk things through, made for the two of you.
+          <div className="mt-12 flex items-end justify-between gap-5 text-left">
+            <div className="font-outfit min-w-0">
+              <p className="text-xs sm:text-sm text-neutral-400 leading-relaxed max-w-[15rem] sm:max-w-none">Games, daily check-ins and a safe space, made for the two of you. Inside:</p>
+              <p className="mt-3 font-bebas text-lg sm:text-2xl tracking-widest uppercase leading-snug">
+                {GAME_COUNT} games<br />{DECK_COUNT} question decks
               </p>
             </div>
-          </motion.div>
-
-          {/* Google Button - Smaller & Elegant */}
-          <motion.div
-            initial={{ opacity: 0, y: 10 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ delay: 0.3, duration: 0.6 }}
-            className="w-[260px]"
-          >
-            <button
-              onClick={handleGoogle}
-              disabled={loading}
-              className="w-full h-14 flex items-center justify-center gap-3 bg-white text-black font-outfit font-semibold text-xs py-2 px-6 rounded-2xl hover:bg-neutral-100 active:scale-95 transition-all disabled:opacity-50 shadow-xl group"
-            >
-              {loading ? (
-                <div className="w-4 h-4 border-2 border-black/20 border-t-black rounded-full animate-spin" />
-              ) : (
-                <svg width="16" height="16" viewBox="0 0 24 24" className="group-hover:scale-110 transition-transform">
-                  <path d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z" fill="#4285F4"/>
-                  <path d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z" fill="#34A853"/>
-                  <path d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z" fill="#FBBC05"/>
-                  <path d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z" fill="#EA4335"/>
-                </svg>
-              )}
-              {loading ? "Authenticating..." : "Get Started"}
-            </button>
-
-            {error && (
-              <p className="text-rose-500 text-xs font-outfit text-center mt-4 leading-relaxed">
-                {error}
+            <div className="shrink-0">{cta}</div>
+          </div>
+          {error && <p className="text-rose-400 text-xs font-outfit mt-4 leading-relaxed text-left">{error}</p>}
+          {inAppBrowser && (
+            <div className="mt-4 bg-[#161616] border border-[#2a2a2a] rounded-2xl p-4 text-center space-y-3">
+              <p className="text-xs text-neutral-300 font-outfit leading-relaxed">
+                Google sign-in doesn&apos;t work inside this app&apos;s browser. Open this page in Safari or Chrome: tap the menu (⋯) and choose “Open in browser”, or copy the link.
               </p>
-            )}
+              <button onClick={copyLink} className="text-[#ffd91a] font-bebas text-sm tracking-widest uppercase hover:text-white transition-colors">
+                {linkCopied ? "Link Copied" : "Copy Link"}
+              </button>
+            </div>
+          )}
+        </section>
 
-            {inAppBrowser && (
-              <div className="mt-4 bg-[#161616] border border-[#2a2a2a] rounded-2xl p-4 text-center space-y-3">
-                <p className="text-xs text-neutral-300 font-outfit leading-relaxed">
-                  Google sign-in doesn&apos;t work inside this app&apos;s browser. Open this page in Safari or Chrome: tap the menu (⋯) and choose “Open in browser”, or copy the link.
-                </p>
-                <button
-                  onClick={copyLink}
-                  className="text-pink-400 font-bebas text-sm tracking-widest uppercase hover:text-pink-300 transition-colors"
-                >
-                  {linkCopied ? "Link Copied" : "Copy Link"}
-                </button>
-              </div>
-            )}
-          </motion.div>
-        </motion.div>
+        {/* Card strip: five tall cards, each a different piece of the app */}
+        <section aria-hidden="true" className="mt-16 flex items-center justify-center gap-2 sm:gap-4">
+          {STRIP.map(({ Card, tone, size }, i) => (
+            <div key={i} className={`${size} ${tone} rounded-[1.5rem] overflow-hidden`} style={box}>
+              <Card />
+            </div>
+          ))}
+        </section>
 
-        {/* Scroll Indicator */}
-        <motion.div 
-          animate={{ y: [0, 8, 0] }}
-          transition={{ repeat: Infinity, duration: 2 }}
-          className="absolute bottom-10 flex flex-col items-center gap-2 text-neutral-600"
-        >
-          <span className="text-[9px] font-bebas tracking-[0.3em] uppercase">Learn More</span>
-          <ArrowDown className="w-3 h-3" />
-        </motion.div>
-      </section>
-
-      {/* Info Section */}
-      <section className="py-24 px-8 relative overflow-hidden">
-        <div className="max-w-4xl mx-auto space-y-24">
-          <div className="space-y-4 text-center">
-            <h2 className="text-4xl md:text-5xl font-bebas tracking-widest text-white uppercase">A Digital Oasis for Love</h2>
-            <p className="text-neutral-400 font-outfit text-sm md:text-base leading-relaxed max-w-lg mx-auto italic">
-              A quiet, judgment-free space for the things left unsaid. Only the two of you can see what you share here.
+        {/* What we work on */}
+        <section id="help" className="rounded-[1.5rem] border border-white/15 p-5 sm:p-6 md:p-10 mt-24">
+          <div className="flex flex-col md:flex-row md:items-end justify-between gap-2 md:gap-4">
+            <h2 className="font-bebas text-4xl sm:text-5xl md:text-6xl tracking-wide uppercase leading-none">What we work on</h2>
+            <p className="font-outfit text-sm text-neutral-400 md:max-w-xs md:text-right leading-relaxed">
+              Three things most couples want more of, and the part of the app that gives you each one.
             </p>
           </div>
 
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
-            {FEATURE_CARDS.map((card, i) => (
-              <motion.div
-                key={i}
-                initial={{ opacity: 0, y: 20 }}
-                whileInView={{ opacity: 1, y: 0 }}
-                viewport={{ once: true }}
-                transition={{ delay: i * 0.1 }}
-                className={`p-8 rounded-[1.5rem] border border-white/5 bg-gradient-to-b ${card.color} space-y-6 relative group hover:border-white/10 transition-colors`}
-              >
-                <div className="w-12 h-12 rounded-2xl bg-[#161616] flex items-center justify-center group-hover:scale-110 transition-transform">
-                  {card.icon}
-                </div>
-                <div className="space-y-2">
-                  <h3 className="text-2xl font-bebas tracking-wider text-white uppercase">{card.title}</h3>
-                  <p className="text-neutral-500 font-outfit text-xs leading-relaxed">{card.description}</p>
-                </div>
-              </motion.div>
-            ))}
-          </div>
+          <AspectCarousel />
+        </section>
+      </div>
 
-          <div className="pt-12 text-center">
-            <motion.div
-              whileInView={{ scale: [0.95, 1], opacity: [0, 1] }}
-              viewport={{ once: true }}
-              className="p-12 rounded-[1.5rem] bg-white/[0.02] border border-white/5 space-y-6"
-            >
-              <Heart className="w-8 h-8 text-rose-500 mx-auto animate-pulse" />
-              <div className="space-y-2">
-                <h3 className="text-3xl font-bebas tracking-widest text-white uppercase">Reclaim Your Connection</h3>
-                <p className="text-neutral-500 font-outfit text-xs max-w-sm mx-auto leading-relaxed uppercase tracking-widest">
-                  Ready to start your honest journey? Partner up and synchronize.
-                </p>
+      {/* Scrolling testimonials */}
+      <section aria-label="What couples say" className="mt-24">
+        <div className="max-w-6xl mx-auto px-6 mb-10 flex items-center gap-3">
+          <FloatingMail icon="signal_love" className="w-8 h-8" />
+          <h2 className="font-bebas text-4xl sm:text-5xl tracking-wide uppercase leading-none">Kind words</h2>
+        </div>
+        {[0, 1].map((row) => {
+          const list = row === 0 ? TESTIMONIALS.slice(0, 4) : TESTIMONIALS.slice(4);
+          return (
+            <div key={row} className={`marquee ${row === 1 ? "mt-4" : ""}`}>
+              <div className={`marquee-track ${row === 1 ? "marquee-reverse" : ""}`}>
+                {[0, 1].map((copy) => (
+                  <ul key={copy} aria-hidden={copy === 1} className="flex shrink-0 gap-4 pr-4">
+                    {list.map((t) => (
+                      <li key={t.quote} className="w-72 sm:w-96 min-h-[11rem] shrink-0 rounded-[1.5rem] bg-[#161616] border border-[#2a2a2a] p-6 flex flex-col justify-between gap-6">
+                        <p className="font-outfit text-sm sm:text-base leading-relaxed text-neutral-200">&ldquo;{t.quote}&rdquo;</p>
+                        <p className={`${SMALL} text-[#ffd91a]`}>{t.who}</p>
+                      </li>
+                    ))}
+                  </ul>
+                ))}
               </div>
-              <button 
-                onClick={() => window.scrollTo({ top: 0, behavior: 'smooth' })}
-                className="font-bebas text-pink-400 text-sm tracking-widest uppercase hover:text-pink-300 transition-colors"
-              >
-                Sign In Now
-              </button>
-            </motion.div>
-          </div>
+            </div>
+          );
+        })}
+      </section>
+
+      {/* Closing quote */}
+      <section aria-label="Closing" className="px-6 mt-24">
+        <div className="max-w-3xl mx-auto text-center space-y-8">
+          <FloatingMail icon="signal_peace" className="w-10 h-10 mx-auto" />
+          <blockquote className="font-bebas uppercase text-4xl sm:text-6xl leading-[1.05] tracking-wide">
+            The strongest couples aren&apos;t the ones who never struggle. They&apos;re the ones who keep talking.
+          </blockquote>
+          <div className="flex justify-center">{cta}</div>
         </div>
       </section>
 
-      {/* Games — every game page, so a visitor (and a crawler) can reach each one within a couple of clicks */}
-      <section className="py-16 px-8 border-t border-white/5">
-        <div className="max-w-4xl mx-auto">
-          <RelatedLinks paths={childrenOf("games").map((c) => c.path)} heading="Games" />
-        </div>
-      </section>
-
-      {/* Footer */}
-      <footer className="py-20 px-6 border-t border-white/5 bg-[var(--page)]">
-        <div className="max-w-4xl mx-auto flex flex-col items-center gap-12">
-          <div className="flex items-center gap-3 grayscale opacity-30">
-            <Image src="/logo.png" alt="HM Logo" width={256} height={256} className="w-5 h-auto" />
-            <span className="font-bebas text-lg tracking-widest">Honest Mailbox</span>
-          </div>
-
-          <nav className="flex flex-wrap justify-center gap-x-10 gap-y-4 text-[10px] font-bebas tracking-[0.3em] text-neutral-500 uppercase">
-            <Link href="/games" className="hover:text-white transition-colors">Games</Link>
-            <Link href="/questions" className="hover:text-white transition-colors">Questions</Link>
-            <Link href="/conflict-resolution" className="hover:text-white transition-colors">Conflict Resolution</Link>
-            <Link href="/terms-of-service" className="hover:text-white transition-colors">Terms</Link>
-            <Link href="/privacy-policy" className="hover:text-white transition-colors">Privacy</Link>
-            <Link href="/cookie-policy" className="hover:text-white transition-colors">Cookies</Link>
-            <Link href="/contact" className="hover:text-white transition-colors">Contact</Link>
-          </nav>
-
-          <p className="text-[9px] font-outfit text-neutral-700 uppercase tracking-widest">
-            &copy; {new Date().getFullYear()} Honest Mailbox. All rights reserved.
-          </p>
-        </div>
-      </footer>
+      <div className="mt-24"><SiteFooter /></div>
     </main>
   );
 };

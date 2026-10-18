@@ -9,7 +9,7 @@ import Link from "next/link";
 import { AmbientBackground } from "@/components/ui/AmbientBackground";
 import { useAuthGuard } from "@/hooks/useAuthGuard";
 import { useTheme } from "@/hooks/useTheme";
-import { cn } from "@/lib/utils";
+import { cn, partnerLabel } from "@/lib/utils";
 import { LeavePartnerModal } from "@/components/features/profile/LeavePartnerModal";
 
 export default function SettingsPage() {
@@ -44,7 +44,7 @@ export default function SettingsPage() {
     router.push("/");
   };
 
-  const partnerName = partner?.displayName?.split(" ")[0] || "your partner";
+  const partnerName = partnerLabel(user, partner, "your partner");
 
   const handleResetHistory = async () => {
     setIsProcessing(true);

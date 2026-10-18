@@ -14,7 +14,7 @@ import {
 } from "@/lib/firestore-helpers";
 import type { PartnerNote } from "@/lib/types";
 import { useSensoryFeedback } from "@/hooks/useSensoryFeedback";
-import { cn } from "@/lib/utils";
+import { cn, partnerLabel } from "@/lib/utils";
 import { useScrollLock } from "@/hooks/useScrollLock";
 
 const PREVIEW = 4;
@@ -57,7 +57,7 @@ export const PartnerNotes = () => {
   }, [partnerUid]);
 
   if (!user) return null;
-  const partnerName = partner?.displayName?.split(" ")[0] || "your partner";
+  const partnerName = partnerLabel(user, partner, "your partner");
 
   // Without a partner there are no shared notes to show, whatever was loaded before
   const fromPartner = partnerUid ? theirs : [];
