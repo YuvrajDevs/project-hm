@@ -29,7 +29,7 @@ The page itself never carries colour. Colour lives in cards (see Surfaces). `<Am
 
 ## Light mode
 
-- Settings has an **Appearance** switch (Dark or Light). The choice is saved on the device and applied before the page paints, through `data-theme="light"` on `<html>` (`hooks/useTheme.ts`).
+- **Light is the default** for anyone who has not chosen. Every public page has the same top bar (`components/layout/SiteHeader.tsx`: logo and name, Games / Questions / Conflict Resolution, a light/dark switch, Get started) with every other link (Contact, Privacy Policy, Terms & Conditions, Cookie Policy) in its menu. The footer (`SiteFooter.tsx`) is only the copyright line. A breadcrumb sits under the bar. Settings has an **Appearance** switch (Dark or Light). The choice is saved on the device and applied before the page paints, through `data-theme="light"` on `<html>` (`hooks/useTheme.ts`).
 - Light mode changes only the page and whatever sits straight on it: the page becomes cream (`--page`, `#f4efe6`) and text on it becomes near-black. Coloured cards, neutral dark cards, dialogs and the dock keep their own colours and white text.
 - Write screens with the normal classes (`text-white`, `text-neutral-500`, `bg-white/5`, `border-white/10`) and the page colour variable (`bg-[var(--page)]`, never a hard-coded `#0e0e0e`). The rules at the end of the light-mode block in `app/globals.css` flip those on the page and put the dark-mode values back inside any card. A "card" is anything with a `.tone-*` class, `.overlay-panel`, a hex background (`bg-[#161616]`) or a gradient.
 - A new opacity variant of white or black (for example `text-white/45`) needs its two rules added to that block, because Tailwind bakes opacity colours in as fixed values.

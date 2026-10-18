@@ -14,7 +14,7 @@ export const contentSecurityPolicy = [
   "font-src 'self' data:",
   "media-src 'self' blob: data:",
   `connect-src 'self' https://*.googleapis.com https://*.firebaseio.com wss://*.firebaseio.com https://www.google.com${emulators ? " http://127.0.0.1:8080 http://127.0.0.1:9099 ws://127.0.0.1:8080" : ""}${preview ? " https://vercel.live wss://ws-us3.pusher.com" : ""}`,
-  `frame-src 'self' https://*.firebaseapp.com https://accounts.google.com https://www.google.com${preview ? " https://vercel.live" : ""}`,
+  `frame-src 'self' https://*.firebaseapp.com https://accounts.google.com https://www.google.com${emulators ? " http://127.0.0.1:9099" : ""}${preview ? " https://vercel.live" : ""}`,
   "worker-src 'self' blob:",
   "manifest-src 'self'",
   "object-src 'none'",
