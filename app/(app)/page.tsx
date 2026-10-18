@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import { LandingPage } from "@/components/features/auth/LandingPage";
+import { LandingGate } from "@/components/features/auth/LandingGate";
 import { HomeClient } from "@/components/features/home/HomeClient";
 import { JsonLd } from "@/components/seo/JsonLd";
 import { SITE_NAME, SITE_URL, buildMetadata } from "@/lib/seo";
@@ -28,7 +29,9 @@ export default function Page() {
           operatingSystem: "Web",
         }}
       />
-      <LandingPage />
+      <LandingGate>
+        <LandingPage />
+      </LandingGate>
       <HomeClient />
     </>
   );

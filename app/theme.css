@@ -270,3 +270,6 @@
 :root[data-theme="light"] .policy-content :where(h1, h2, h3, h4, h5, h6, b, strong) { color: #121212 !important; }
 :root[data-theme="light"] .policy-content a { color: #be185d !important; }
 :root[data-theme="light"] .policy-content :where(table, td, th) { border-color: rgb(18 18 18 / 0.2) !important; }
+
+/* Gradient text stays gradient in light mode (the card rules above would otherwise paint it solid white) */
+.bg-clip-text { -webkit-text-fill-color: transparent; }

@@ -342,7 +342,7 @@ export function HomeClient() {
   // If not paired, show the Single Hub
   if (!isPaired) {
     return (
-        <div className={`${COVER} bg-[var(--page)]`}>
+        <div className="fixed inset-0 z-[90] overflow-hidden bg-[var(--page)]">
             <SingleHub />
             <AnimatePresence>
                 {(user?.leftByPartner && !overlayDismissed) ? (
