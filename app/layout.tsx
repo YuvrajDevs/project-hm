@@ -3,6 +3,7 @@ import { Bebas_Neue, Outfit, Inter, Playfair_Display } from "next/font/google";
 import { SITE_URL, SITE_NAME } from "@/lib/seo";
 import "./globals.css";
 import "./theme.css";
+import { ThemeGuard } from "@/components/ThemeGuard";
 import { ImagePreloader } from "@/components/ui/ImagePreloader";
 
 const bebasNeue = Bebas_Neue({
@@ -89,6 +90,7 @@ export default function RootLayout({
         <script dangerouslySetInnerHTML={{ __html: 'try{if(localStorage.getItem("hm_theme")!=="dark")document.documentElement.setAttribute("data-theme","light")}catch(e){document.documentElement.setAttribute("data-theme","light")}' }} />
       </head>
       <body suppressHydrationWarning className={`${outfit.className} min-h-screen bg-[var(--page)] text-neutral-50 overflow-x-hidden flex flex-col`}>
+        <ThemeGuard />
         <JsonLd
           data={{
             "@context": "https://schema.org",
