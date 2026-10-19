@@ -13,7 +13,7 @@ import {
 import { formatDateId, eventFallsOn } from "@/lib/utils";
 import { useMailbox } from "@/context/MailboxContext";
 import { useScrollLock } from "@/hooks/useScrollLock";
-import { finalOf, combinedScore, scoreColor } from "@/lib/checkin";
+import { finalOf, combinedScore, scoreColor, scoreInk } from "@/lib/checkin";
 import { MOOD_TYPES } from "@/components/features/checkin/MoodSelector";
 import { REACTION_ICONS } from "@/lib/constants";
 
@@ -189,7 +189,8 @@ export const StreakGrid: React.FC<StreakGridProps> = ({ history }) => {
                         )}
                     >
                         <span
-                            className={cn("font-bebas text-sm md:text-lg leading-none", info ? "text-black/80" : "text-neutral-500")}
+                            style={info ? { color: scoreInk(info.dayScore) } : undefined}
+                            className={cn("font-bebas text-sm md:text-lg leading-none", !info && "text-neutral-500")}
                         >
                             {d.getDate()}
                         </span>
@@ -201,7 +202,7 @@ export const StreakGrid: React.FC<StreakGridProps> = ({ history }) => {
 
         <div className="pt-3 border-t border-white/5 space-y-3">
           <div className="space-y-1.5">
-            <div className="h-2 rounded-full" style={{ background: `linear-gradient(90deg, ${scoreColor(-1)}, ${scoreColor(-0.5)}, ${scoreColor(0)}, ${scoreColor(0.5)}, ${scoreColor(1)})` }} />
+            <div className="h-2 rounded-full" style={{ background: `linear-gradient(90deg, ${scoreColor(-1)}, ${scoreColor(1)})` }} />
             <div className="flex justify-between font-bebas text-[10px] tracking-widest uppercase text-neutral-500"><span>Hard day</span><span>Warm day</span></div>
           </div>
           <div className="flex items-center gap-3 font-outfit text-[11px] text-neutral-500">
@@ -329,56 +330,6 @@ export const StreakGrid: React.FC<StreakGridProps> = ({ history }) => {
                         ) : (
                             /* Planner View */
                             <div className="space-y-8">
-                                {/* Grouped Sync Section (Calculated Cards) */}
-                                {selectedData && (
-                                    <div className="bg-[#161616] border border-[#2a2a2a] rounded-[1.5rem] overflow-hidden">
-                                        {/* Sync Score Row */}
-                                        <div className="flex justify-between items-center bg-[#1c1c1c] p-6 border-b border-[#232323]">
-                                            <div className="space-y-1">
-                                                <span className="font-bebas text-[10px] tracking-widest text-neutral-500 uppercase">{selectedData.count >= 2 ? "Connection (average)" : "Connection (one check-in)"}</span>
-                                                <div className="text-5xl font-bebas text-white">{selectedData.syncScore.toFixed(1)}/10</div>
-                                            </div>
-                                            <div className="w-12 h-12 rounded-full flex items-center justify-center bg-[#1c1c1c]">
-                                                {selectedData.syncScore >= 7 ? <Star className="w-6 h-6 text-yellow-400 fill-current" /> : 
-                                                selectedData.syncScore >= 4 ? <Sun className="w-6 h-6 text-orange-400" /> : 
-                                                <CloudRain className="w-6 h-6 text-red-400" />}
-                                            </div>
-                                        </div>
-
-                                        {/* Check-ins Detail Row */}
-                                        <div className="p-6 space-y-4 bg-black/20">
-                                            <span className="font-bebas text-[10px] tracking-widest text-neutral-600 uppercase">Check-in Details</span>
-                                            {selectedData.checkins.map((checkin, i) => (
-                                                <div key={checkin.id} className="space-y-3 pb-4 last:pb-0 border-b border-white/5 last:border-0">
-                                                    <div className="flex justify-between items-center">
-                                                        <div className="flex items-center gap-2">
-                                                            <div className="w-6 h-6 rounded-full bg-white/10 flex items-center justify-center text-[10px] font-bebas">
-                                                                {nameFor(checkin.userUid)[0]}
-                                                            </div>
-                                                            <span className="font-bebas text-[10px] tracking-widest text-neutral-400 uppercase">{nameFor(checkin.userUid)}</span>
-                                                        </div>
-                                                        <div className="flex gap-4">
-                                                            <div className="flex flex-col items-end">
-                                                                <span className="text-[8px] uppercase tracking-widest text-neutral-600 font-bebas">Mood</span>
-                                                                <span className="text-xs font-bebas text-white">{finalOf(checkin).mood}/10</span>
-                                                            </div>
-                                                            <div className="flex flex-col items-end">
-                                                                <span className="text-[8px] uppercase tracking-widest text-neutral-600 font-bebas">Status</span>
-                                                                <span className="text-xs font-bebas" style={{ color: moodColor(finalOf(checkin).moodStatus) }}>{finalOf(checkin).moodStatus}{checkin.night ? " · final" : ""}</span>
-                                                            </div>
-                                                        </div>
-                                                    </div>
-                                                    {(finalOf(checkin).reason || finalOf(checkin).joyReason) && (
-                                                        <p className="text-xs font-outfit text-white leading-relaxed italic opacity-80 pl-8">
-                                                            &quot;{finalOf(checkin).reason || finalOf(checkin).joyReason}&quot;
-                                                        </p>
-                                                    )}
-                                                </div>
-                                            ))}
-                                        </div>
-                                    </div>
-                                )}
-
                                 {/* Special Days Section */}
                                 <div className="space-y-4">
                                     <h3 className="font-bebas text-xs tracking-widest text-neutral-600 uppercase ml-1">Special Days</h3>
@@ -429,6 +380,58 @@ export const StreakGrid: React.FC<StreakGridProps> = ({ history }) => {
                                         </button>
                                     </div>
                                 </div>
+
+                                {/* Grouped Sync Section (Calculated Cards) */}
+                                {selectedData && (
+                                    <div className="bg-[#161616] border border-[#2a2a2a] rounded-[1.5rem] overflow-hidden">
+                                        {/* Sync Score Row */}
+                                        <div className="flex justify-between items-center bg-[#1c1c1c] p-6 border-b border-[#232323]">
+                                            <div className="space-y-1">
+                                                <span className="font-bebas text-[10px] tracking-widest text-neutral-500 uppercase">{selectedData.count >= 2 ? "Connection (average, final)" : "Connection (final)"}</span>
+                                                <div className="text-5xl font-bebas text-white">{selectedData.syncScore.toFixed(1)}/10</div>
+                                            </div>
+                                            <div className="w-12 h-12 rounded-full flex items-center justify-center bg-[#1c1c1c]">
+                                                {selectedData.syncScore >= 7 ? <Star className="w-6 h-6 text-yellow-400 fill-current" /> : 
+                                                selectedData.syncScore >= 4 ? <Sun className="w-6 h-6 text-orange-400" /> : 
+                                                <CloudRain className="w-6 h-6 text-red-400" />}
+                                            </div>
+                                        </div>
+
+                                        {/* Both check-ins, for each of you: the day one and the final one */}
+                                        <div className="p-6 space-y-5 bg-black/20">
+                                            <span className="font-bebas text-[10px] tracking-widest text-neutral-600 uppercase">Check-ins</span>
+                                            {selectedData.checkins.map((checkin) => {
+                                                const rows = [
+                                                    { label: "Day", data: { mood: checkin.mood, moodStatus: checkin.moodStatus, reason: checkin.reason, joyReason: checkin.joyReason } },
+                                                    ...(checkin.night ? [{ label: "Final", data: checkin.night }] : []),
+                                                ];
+                                                return (
+                                                    <div key={checkin.id} className="space-y-3 pb-5 last:pb-0 border-b border-white/5 last:border-0">
+                                                        <div className="flex items-center gap-2">
+                                                            <div className="w-6 h-6 rounded-full bg-white/10 flex items-center justify-center text-[10px] font-bebas">{nameFor(checkin.userUid)[0]}</div>
+                                                            <span className="font-bebas text-[10px] tracking-widest text-neutral-400 uppercase">{nameFor(checkin.userUid)}</span>
+                                                        </div>
+                                                        {rows.map((row) => (
+                                                            <div key={row.label} className="pl-8 space-y-1">
+                                                                <div className="flex items-center justify-between gap-3">
+                                                                    <span className="font-bebas text-[10px] tracking-widest text-neutral-500 uppercase">{row.label}</span>
+                                                                    <span className="flex items-center gap-3 text-xs font-bebas">
+                                                                        <span className="text-white">{row.data.mood}/10</span>
+                                                                        <span style={{ color: moodColor(row.data.moodStatus) }}>{row.data.moodStatus}</span>
+                                                                    </span>
+                                                                </div>
+                                                                {(row.data.reason || row.data.joyReason) && (
+                                                                    <p className="text-xs font-outfit text-white leading-relaxed italic opacity-80">&quot;{row.data.reason || row.data.joyReason}&quot;</p>
+                                                                )}
+                                                            </div>
+                                                        ))}
+                                                        {!checkin.night && <p className="pl-8 font-outfit text-[11px] text-neutral-600">No final check-in yet.</p>}
+                                                    </div>
+                                                );
+                                            })}
+                                        </div>
+                                    </div>
+                                )}
                             </div>
                         )}
                     </div>

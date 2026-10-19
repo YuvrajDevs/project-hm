@@ -4,7 +4,7 @@ import React, { useState, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { useMailbox } from "@/context/MailboxContext";
 import { ArrowRight, Check, X, Zap, Send, Heart, Smile, Link2 } from "lucide-react";
-import { MoodSelector, MoodIcon, MOOD_TYPES } from "./MoodSelector";
+import { MoodSelector, MOOD_TYPES } from "./MoodSelector";
 import { ReactionType } from "@/lib/types";
 import { useSensoryFeedback } from "@/hooks/useSensoryFeedback";
 import { partnerLabel } from "@/lib/utils";
@@ -219,16 +219,6 @@ export const DailyCheckInPopup: React.FC<DailyCheckInPopupProps> = ({ onClose })
                       <div className="font-bebas text-7xl leading-none tabular-nums">{score}%</div>
                     </div>
                     <span className="font-bebas text-xl tracking-widest uppercase pb-1">{score >= 75 ? "Deep sync" : score >= 55 ? "In tune" : score >= 35 ? "Adapting" : "Far apart"}</span>
-                  </div>
-                  <div className="grid grid-cols-2 gap-3">
-                    <div className="tone-pink rounded-[1.5rem] p-5 flex flex-col justify-between gap-3 min-h-[7rem]">
-                      <span className="font-bebas text-[10px] tracking-[0.3em] uppercase leading-none opacity-70 block truncate">You</span>
-                      <p className="font-bebas text-2xl leading-none tracking-wide uppercase truncate flex items-center gap-2"><MoodIcon mood={user?.currentMood} className="w-7 h-7 shrink-0 object-contain" />{user?.currentMood || "Synced"}</p>
-                    </div>
-                    <div className="tone-blue rounded-[1.5rem] p-5 flex flex-col justify-between gap-3 min-h-[7rem]">
-                      <span className="font-bebas text-[10px] tracking-[0.3em] uppercase leading-none opacity-70 truncate block">{partnerName}</span>
-                      <p className="font-bebas text-2xl leading-none tracking-wide uppercase truncate flex items-center gap-2"><MoodIcon mood={partner?.currentMood} className="w-7 h-7 shrink-0 object-contain" />{partner?.currentMood || "Connected"}</p>
-                    </div>
                   </div>
                   <p className="font-outfit text-sm text-neutral-400 leading-relaxed px-1">{getSuggestion(score)}</p>
                   <button onClick={onClose} className={primary}>Continue</button>

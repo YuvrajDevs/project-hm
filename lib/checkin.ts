@@ -46,8 +46,19 @@ export function checkInScore(c: { mood: number; moodStatus: string }) {
 export const combinedScore = (parts: { mood: number; moodStatus: string }[]) =>
   parts.length ? parts.reduce((s, p) => s + checkInScore(p), 0) / parts.length : 0;
 
-/** A colour for a -1..1 score: red when hard, through orange and yellow, to green when warm. */
+const HARD = [0x29, 0x62, 0xff]; // #2962FF
+const MID = [0xe9, 0xe6, 0xd8]; // a soft off-white, so the middle of the scale stays clean instead of turning grey-green
+const WARM = [0xff, 0xd6, 0x00]; // #FFD600
+
+const unit = (score: number) => Math.max(0, Math.min(1, (score + 1) / 2));
+
+/** A colour for a -1..1 score: blue when the day is hard, off-white in between, yellow when it is warm. */
 export function scoreColor(score: number) {
-  const t = Math.max(0, Math.min(1, (score + 1) / 2));
-  return `hsl(${Math.round(t * 135)} 78% ${t > 0.35 && t < 0.62 ? 52 : 50}%)`;
+  const t = unit(score);
+  const [from, to, k] = t < 0.5 ? [HARD, MID, t * 2] : [MID, WARM, (t - 0.5) * 2];
+  const [r, g, b] = from.map((f, i) => Math.round(f + (to[i] - f) * k));
+  return `#${[r, g, b].map((n) => n.toString(16).padStart(2, "0")).join("")}`;
 }
+
+/** A number colour that stays readable on that background. */
+export const scoreInk = (score: number) => (unit(score) < 0.4 ? "#ffffff" : "#111111");
