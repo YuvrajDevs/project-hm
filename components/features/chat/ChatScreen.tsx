@@ -65,9 +65,11 @@ export const ChatScreen = ({ onClose }: { onClose: () => void }) => {
   const partnerUid = partner?.uid;
   const partnerName = partnerLabel(user, partner, "your partner");
 
-  const [keyStatus, setKeyStatus] = useState<KeyStatus | "checking">("checking");
+  const [keyStatus, setKeyStatus] = useState<KeyStatus | "checking" | "error">("checking");
   const [keyEpoch, setKeyEpoch] = useState(0);
-  useEffect(() => { if (uid) ensureChatKeys(uid).then(setKeyStatus).catch((e) => { console.error(e); setKeyStatus("ready"); }); }, [uid, keyEpoch]);
+  // A failure here must not be treated as "ready" - that used to hide a missing/mismatched key
+  // until a send failed later and showed as a misleading "check your connection" error.
+  useEffect(() => { if (uid) ensureChatKeys(uid).then(setKeyStatus).catch((e) => { console.error(e); setKeyStatus("error"); }); }, [uid, keyEpoch]);
 
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [loaded, setLoaded] = useState(false);
@@ -96,13 +98,20 @@ export const ChatScreen = ({ onClose }: { onClose: () => void }) => {
   const firstLoad = useRef(true);
 
   useEffect(() => {
-    if (!coupleId || !partnerUid || keyStatus !== "ready") return;
-    return subscribeToChat(coupleId, partnerUid, count, (next, more) => {
-      setMessages(next);
-      setMayHaveMore(more);
-      setLoaded(true);
-    });
-  }, [coupleId, partnerUid, count, keyStatus]);
+    if (!coupleId || !uid || !partnerUid || keyStatus !== "ready") return;
+    return subscribeToChat(
+      coupleId,
+      uid,
+      partnerUid,
+      count,
+      (next, more) => {
+        setMessages(next);
+        setMayHaveMore(more);
+        setLoaded(true);
+      },
+      (e) => { console.error(e); setError("Couldn't load chat. Check your connection and try again."); }
+    );
+  }, [coupleId, uid, partnerUid, count, keyStatus]);
 
   // Stay at the bottom as messages arrive, unless the reader scrolled up to look at something
   useLayoutEffect(() => {
@@ -318,8 +327,23 @@ export const ChatScreen = ({ onClose }: { onClose: () => void }) => {
 
       {/* The conversation stays mounted while Saved is open, so nothing reloads when you come back */}
       <div className={cn("relative z-10 flex-1 min-h-0 flex flex-col", saved && "hidden")}>
-        {uid && keyStatus === "needs-unlock" && (
-          <DeviceKeyGate uid={uid} onDone={() => { setKeyStatus("checking"); setKeyEpoch((n) => n + 1); }} />
+        {uid && (keyStatus === "needs-unlock" || keyStatus === "needs-setup") && (
+          <DeviceKeyGate uid={uid} keyStatus={keyStatus} onDone={() => { setKeyStatus("checking"); setKeyEpoch((n) => n + 1); }} />
+        )}
+        {uid && keyStatus === "error" && (
+          <div className="absolute inset-0 z-30 bg-[var(--page)] flex items-center justify-center p-6">
+            <div className="w-full max-w-sm flex flex-col gap-4 text-center">
+              <p className="font-bebas text-2xl tracking-widest uppercase">Couldn&apos;t set up chat</p>
+              <p className="font-outfit text-sm text-neutral-500 leading-relaxed">Check your connection and try again.</p>
+              <button
+                type="button"
+                onClick={() => { setKeyStatus("checking"); setKeyEpoch((n) => n + 1); }}
+                className="w-full h-12 rounded-2xl bg-white text-black font-bebas tracking-widest uppercase active:scale-95 transition-all"
+              >
+                Retry
+              </button>
+            </div>
+          </div>
         )}
         <div
           ref={scroller}

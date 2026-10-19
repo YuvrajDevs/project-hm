@@ -46,16 +46,25 @@ binary envelope keeps the size budget essentially where it was before encryption
 in `lib/chatMedia.ts` didn't need to change).
 
 **Non-extractable operational key, but a plaintext copy kept for backup.**
-This was the one real conflict in the brief: "store the private key as a non-extractable CryptoKey"
-and "let the user back it up with a passphrase *later*, from Settings" can't both be fully true — once
-a key is imported non-extractable, WebCrypto will never export it again, so a backup set up after the
-fact has nothing to wrap. The honest resolution (documented in `lib/e2ee.ts`) is: keep a non-extractable
-copy for all day-to-day encrypt/decrypt (so ordinary code can never accidentally export it), and also
-keep a plaintext JWK copy in the same IndexedDB origin solely so the optional backup flow can wrap it
-on demand. Both live inside the same on-device trust boundary already — the non-extractable copy
-guards against *code* exporting the key, not against an attacker who already has script access to the
-origin. Forcing backup setup at key-generation time would have avoided this, but that means a
-passphrase prompt before someone's first message, which is the wrong trade for this app.
+The private key is stored non-extractably for all day-to-day encrypt/decrypt (so ordinary code can
+never accidentally export it), and a plaintext JWK copy is also kept in the same IndexedDB origin so
+the backup flow can wrap it on demand. Both live inside the same on-device trust boundary already —
+the non-extractable copy guards against *code* exporting the key, not against an attacker who already
+has script access to the origin.
+
+**Revision: backup is required at key setup, not optional from Settings later.**
+The original version generated a key, published it immediately, and left backup as something to set
+up later from Settings. In practice this meant a published key with no way to recover it: a second
+device, a cleared browser, or a reinstalled app all landed on a dead end whose only exit was
+"start fresh" — which overwrites the account's one published key and deletes any backup that did
+exist, breaking every other device and the partner's ability to decrypt in the same stroke. That
+cascade was the actual cause of chat "breaking on most devices."
+The fix: a key is generated locally but **not published** until it has been backed up. `ensureChatKeys`
+returns a third status, `"needs-setup"`, for exactly this gap — a local key with no backup yet — and
+`completeKeySetup(uid, passphrase)` wraps the key, saves the backup, and only then publishes. Every
+published key is therefore guaranteed recoverable. The cost is a passphrase prompt at first use
+instead of "later from Settings" — the right trade once a missing backup turned out to be the thing
+actually breaking the feature.
 
 **Migration: delete old plaintext messages, don't re-encrypt them.**
 Re-encrypting old messages needs both partners' chat keys to already exist — but those keys are

@@ -46,12 +46,13 @@ export const hasLocalPrivateKey = async (uid: string): Promise<boolean> => { set
 
 const samePoint = (a?: JsonWebKey, b?: JsonWebKey) => !!a && !!b && a.x === b.x && a.y === b.y;
 
-export type KeyStatus = "ready" | "needs-unlock";
+export type KeyStatus = "ready" | "needs-unlock" | "needs-setup";
 
-// Make sure this device holds the key that is published for this user. First use generates and
-// publishes one; a key left by an older version is adopted only if it matches what is published.
-// If a different key is published (this is a second device or browser), nothing is overwritten:
-// the caller must unlock this device with the backup passphrase, or deliberately start fresh.
+// Make sure this device holds the key that is published for this user. First use generates one
+// locally (but does not publish it yet - see below); a key left by an older version is adopted
+// only if it matches what is published. If a different key is published (this is a second device
+// or browser), nothing is overwritten: the caller must unlock this device with the backup
+// passphrase, or deliberately start fresh.
 export const ensureChatKeys = async (uid: string): Promise<KeyStatus> => {
   setKeyScope(uid);
   const userRef = doc(db, "users", uid);
@@ -72,11 +73,26 @@ export const ensureChatKeys = async (uid: string): Promise<KeyStatus> => {
       publicJwk = await generateAndStoreKeyPair();
     }
   }
-  if (!published) {
-    await updateDoc(userRef, { chatPublicKey: publicJwk });
-    return "ready";
-  }
-  return samePoint(publicJwk, published) ? "ready" : "needs-unlock";
+  // A local key that doesn't match what's published means a different device holds the published
+  // key for this account; this device must unlock with the backup passphrase, or start fresh.
+  if (published && !samePoint(publicJwk, published)) return "needs-unlock";
+  // "Ready" requires a recoverable backup to already exist - a published key with no backup is a
+  // key that a lost or wiped device could never get back, which is how "start fresh" used to
+  // cascade into breaking every other device sharing this key. completeKeySetup() creates the
+  // backup and only then publishes, so this device must go through it first.
+  if (!(await backupKeyExists(uid))) return "needs-setup";
+  if (!published) await updateDoc(userRef, { chatPublicKey: publicJwk });
+  return "ready";
+};
+
+// Finishes first-time setup on a device returning "needs-setup": wraps the local key with
+// `passphrase` and saves the backup, then publishes the public key. Publishing only after the
+// backup exists is what guarantees every published key is recoverable.
+export const completeKeySetup = async (uid: string, passphrase: string): Promise<void> => {
+  setKeyScope(uid);
+  await backupLocalKey(uid, passphrase);
+  const publicJwk = (await getKey("publicKeyJwk")) as JsonWebKey | undefined;
+  if (publicJwk) await updateDoc(doc(db, "users", uid), { chatPublicKey: publicJwk });
 };
 
 // One function for every case that invalidates the current key material: re-pair, partner leaves,
@@ -98,20 +114,24 @@ export const rotateKeys = async (uid: string): Promise<JsonWebKey> => {
 const aesKeyCache = new Map<string, { key: CryptoKey; partnerJwkThumbprint: string }>();
 const thumbprint = (jwk: JsonWebKey) => `${jwk.x}.${jwk.y}`;
 
-export const getAesKeyForCouple = async (coupleId: string, partnerUid: string): Promise<CryptoKey | null> => {
+export const getAesKeyForCouple = async (uid: string, coupleId: string, partnerUid: string): Promise<CryptoKey | null> => {
+  // Scope to this user before touching the local key: without this, a stale scope left by
+  // another account in the same browser tab would silently read the wrong private key.
+  setKeyScope(uid);
   const partnerSnap = await getDoc(doc(db, "users", partnerUid));
   const partnerJwk = partnerSnap.data()?.chatPublicKey as JsonWebKey | undefined;
   if (!partnerJwk) return null;
 
   const tp = thumbprint(partnerJwk);
-  const cached = aesKeyCache.get(coupleId);
+  const cacheKey = `${uid}:${coupleId}`;
+  const cached = aesKeyCache.get(cacheKey);
   if (cached && cached.partnerJwkThumbprint === tp) return cached.key;
 
   const privateKey = (await getKey("privateKey")) as CryptoKey | undefined;
   if (!privateKey) return null;
 
   const aesKey = await deriveSharedAesKey(privateKey, partnerJwk);
-  aesKeyCache.set(coupleId, { key: aesKey, partnerJwkThumbprint: tp });
+  aesKeyCache.set(cacheKey, { key: aesKey, partnerJwkThumbprint: tp });
   return aesKey;
 };
 

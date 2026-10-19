@@ -77,7 +77,7 @@ export const SavedMessages = ({ onOpenChat }: { onOpenChat: () => void }) => {
 
   useEffect(() => {
     if (!coupleId || !uid || !partnerUid) return;
-    return subscribeToSavedChat(coupleId, uid, partnerUid, setItems);
+    return subscribeToSavedChat(coupleId, uid, partnerUid, setItems, () => setError("Couldn't load saved messages. Check your connection and try again."));
   }, [coupleId, uid, partnerUid]);
 
   if (!coupleId || !uid || !partnerUid) return null;
