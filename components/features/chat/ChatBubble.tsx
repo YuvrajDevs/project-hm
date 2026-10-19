@@ -152,7 +152,7 @@ export const ChatBubble = ({
               className={cn(
                 "min-w-0 rounded-[1.4rem] rounded-br-md cursor-pointer transition-shadow",
                 message.kind === "sticker" && !message.once ? "overflow-hidden" : media && !message.once ? "overflow-hidden border border-white/10" : message.kind === "voice" && !message.once ? "px-3.5 py-3" : message.once ? "" : "px-4 py-2.5",
-                plainBox && (mine ? "bg-white text-black" : "bg-white/[0.07] border border-white/10 text-white"),
+                plainBox && (mine ? "bg-white text-black" : "bg-[#2b2b31] border border-white/10 text-white"),
                 !mine && "rounded-br-[1.4rem] rounded-bl-md",
                 joinsPrev && (mine ? "rounded-tr-md" : "rounded-tl-md"),
                 selected && "ring-2 ring-white/30",
@@ -188,11 +188,11 @@ export const ChatBubble = ({
       </AnimatePresence>
 
       {last && (
-        <div className={cn("flex items-center gap-1.5 mt-1 px-1 font-outfit text-xs tabular-nums text-neutral-500", !mine && "ml-8")}>
+        <div className={cn("flex items-center gap-1.5 mt-1 px-2 py-0.5 rounded-full bg-black/55 text-neutral-200 backdrop-blur-sm font-outfit text-xs tabular-nums", !mine && "ml-8")}>
           {saved && <Bookmark className="w-3 h-3 text-neutral-300" fill="currentColor" aria-label="Saved" />}
           <span>{message.pending ? "Sending" : clockTime(message.createdAt)}</span>
           {mine && seen && !message.pending && (
-            <span className="flex items-center gap-1 text-neutral-400"><CheckCheck className="w-3.5 h-3.5" /> Seen</span>
+            <span className="flex items-center gap-1 text-neutral-300"><CheckCheck className="w-3.5 h-3.5" /> Seen</span>
           )}
         </div>
       )}

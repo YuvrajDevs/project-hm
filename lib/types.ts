@@ -9,6 +9,7 @@ export interface User {
   gender?: string;
   partnerNickname?: string;
   photoURL?: string;
+  avatarImage?: string; // a picture they chose, as a small data URL
   partnerId?: string;
   coupleId?: string;
   role?: UserRole;

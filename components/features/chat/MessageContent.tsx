@@ -6,6 +6,7 @@ import type { ChatMessage } from "@/lib/types";
 import { formatClock, mediaUrl } from "@/lib/chatMedia";
 import { isStickerId, stickerUrl } from "@/lib/stickers";
 import { cn } from "@/lib/utils";
+import { OnceIcon } from "@/components/ui/OnceIcon";
 
 export type Tone = "mine" | "theirs";
 
@@ -123,8 +124,8 @@ const OnceChip = ({ message, tone, partnerName, opening, onOpenOnce }: {
       aria-label={`Open ${word.toLowerCase()} from ${partnerName}. It can only be seen once`}
       className="flex items-center gap-3 px-4 py-3 text-left active:scale-[0.98] transition-transform focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-white/60 rounded-[inherit]"
     >
-      <span className="w-9 h-9 shrink-0 rounded-full border-2 border-dashed border-pink-300 text-pink-300 flex items-center justify-center font-bebas text-lg leading-none">
-        {opening ? <Loader2 className="w-4 h-4 animate-spin" /> : "1"}
+      <span className="w-9 h-9 shrink-0 flex items-center justify-center text-pink-300">
+        {opening ? <Loader2 className="w-5 h-5 animate-spin" /> : <OnceIcon className="w-8 h-8" />}
       </span>
       <span className="min-w-0">
         <span className="block font-outfit text-sm font-medium flex items-center gap-1.5"><Icon className="w-3.5 h-3.5" /> {word}</span>

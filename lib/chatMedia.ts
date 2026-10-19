@@ -224,3 +224,28 @@ export async function prepareWallpaper(file: File): Promise<string> {
   }
   throw new ChatMediaError("That picture is too large for a wallpaper. Try a different one.");
 }
+
+/** A square profile picture, cropped from the middle, small enough to live on the profile itself. */
+export async function prepareAvatar(file: File): Promise<string> {
+  if (!file.type.startsWith("image/")) throw new ChatMediaError("That file isn't a picture.");
+  let bitmap: ImageBitmap;
+  try { bitmap = await openBitmap(file); } catch { throw new ChatMediaError("Couldn't open that picture. Try a different one."); }
+  try {
+    const side = Math.min(bitmap.width, bitmap.height);
+    for (const px of [320, 256, 192]) {
+      const canvas = document.createElement("canvas");
+      canvas.width = px;
+      canvas.height = px;
+      const ctx = canvas.getContext("2d");
+      if (!ctx) throw new ChatMediaError("Couldn't prepare that picture.");
+      ctx.drawImage(bitmap, (bitmap.width - side) / 2, (bitmap.height - side) / 2, side, side, 0, 0, px, px);
+      const blob = await canvasToBlob(canvas, 0.8);
+      if (!blob) continue;
+      const data = await blobToBase64(blob);
+      if (data.length <= 90_000) return `data:image/jpeg;base64,${data}`;
+    }
+  } finally {
+    bitmap.close?.();
+  }
+  throw new ChatMediaError("That picture is too large. Try a different one.");
+}

@@ -3,7 +3,7 @@
 import React, { useEffect, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 import { motion } from "framer-motion";
-import { EyeOff, Loader2, Pause, Play, X } from "lucide-react";
+import { Loader2, Pause, Play, X } from "lucide-react";
 import { useMailbox } from "@/context/MailboxContext";
 import { downloadChatVideo } from "@/lib/firestore-helpers";
 import { formatClock, mediaUrl } from "@/lib/chatMedia";
@@ -15,7 +15,7 @@ const ONCE_TEXT_SECONDS = 60;
 
 const closeButton = "w-10 h-10 rounded-full bg-[#1c1c1c] border border-[#2a2a2a] flex items-center justify-center text-neutral-300 hover:text-white hover:bg-[#242424] transition-all";
 
-const Shell = ({ label, onClose, children, dismissOnBackdrop = true }: { label: string; onClose: () => void; children: React.ReactNode; dismissOnBackdrop?: boolean }) => {
+const Shell = ({ label, onClose, children, dismissOnBackdrop = true, dark = false }: { label: string; onClose: () => void; children: React.ReactNode; dismissOnBackdrop?: boolean; dark?: boolean }) => {
   useScrollLock(true);
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => { if (e.key === "Escape") onClose(); };
@@ -36,7 +36,7 @@ const Shell = ({ label, onClose, children, dismissOnBackdrop = true }: { label: 
       role="dialog"
       aria-modal="true"
       aria-label={label}
-      className="fixed inset-0 z-[110] flex items-center justify-center p-4 overlay-backdrop"
+      className={cn("fixed inset-0 z-[110] flex items-center justify-center p-4", dark ? "bg-black/95" : "overlay-backdrop")}
     >
       <button type="button" onClick={(e) => { e.stopPropagation(); onClose(); }} aria-label="Close" className={cn(closeButton, "absolute top-[max(1.5rem,env(safe-area-inset-top))] right-6 z-10")}>
         <X className="w-4 h-4" />
@@ -145,10 +145,7 @@ const OnceText = ({ text, onDone }: { text: string; onDone: () => void }) => {
 // A view-once message, on screen for the only time it can be seen. What it shows is held in memory here:
 // the copy on the server was wiped the moment it was opened.
 export const OnceViewer = ({ message, bytes, onClose }: { message: ChatMessage; bytes?: Uint8Array; onClose: () => void }) => (
-  <Shell label="View once" onClose={onClose} dismissOnBackdrop={message.kind === "image"}>
-    <div className="absolute top-[max(1.5rem,env(safe-area-inset-top))] left-6 flex items-center gap-2 px-3 py-2 rounded-full bg-[#1c1c1c] border border-[#2a2a2a] font-bebas text-xs tracking-[0.2em] uppercase text-pink-300">
-      <EyeOff className="w-3.5 h-3.5" /> View once
-    </div>
+  <Shell label="View once" onClose={onClose} dismissOnBackdrop={message.kind === "image"} dark>
     {message.kind === "image" && message.data && (
       // eslint-disable-next-line @next/next/no-img-element
       <img src={`data:${message.mime};base64,${message.data}`} alt="" draggable={false} onClick={(e) => e.stopPropagation()} className="max-w-full max-h-[85dvh] rounded-[1.5rem] object-contain shadow-2xl select-none" />

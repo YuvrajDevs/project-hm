@@ -9,7 +9,6 @@ import { useSensoryFeedback } from "@/hooks/useSensoryFeedback";
 import { REACTION_ICONS } from "@/lib/constants";
 import { useScrollLock } from "@/hooks/useScrollLock";
 import { AccentWords } from "@/components/ui/Wordmark";
-import { Avatar } from "@/components/ui/Avatar";
 import { AmbientBackground } from "@/components/ui/AmbientBackground";
 
 interface ReactionConfig {
@@ -68,7 +67,7 @@ export const QuickReact = ({ onClose }: { onClose: () => void }) => {
     
     try {
       playSend();
-      await sendSignal(selected.type, note.trim() || "");
+      await sendSignal(selected.type, note.trim() || "", false);
       
       // SYNC: Update user's global mood state
       await updateMood(selected.label, false);
@@ -252,11 +251,6 @@ export const IncomingReactionIndicator = () => {
             transition={{ duration: 0.6, ease: [0.16, 1, 0.3, 1] }}
             className="relative z-10 w-full max-w-sm flex flex-col items-center text-center gap-6"
           >
-            <div className="flex items-center gap-2.5 px-3 py-1.5 rounded-full bg-[#1c1c1c] border border-[#232323]">
-              <Avatar user={partner} size="xs" />
-              <span className="font-bebas text-xs tracking-[0.25em] uppercase text-neutral-300">{partner?.displayName || "Your partner"} is feeling</span>
-            </div>
-
             {/* The icon stands on its own, floating, no circle behind it */}
             {/* eslint-disable-next-line @next/next/no-img-element */}
             <img src={reactionConfig.url} alt="" className="w-44 h-44 sm:w-52 sm:h-52 object-contain animate-float drop-shadow-[0_18px_30px_rgba(0,0,0,0.35)]" />

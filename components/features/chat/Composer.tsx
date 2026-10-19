@@ -7,6 +7,7 @@ import { useVoiceRecorder } from "@/hooks/useVoiceRecorder";
 import { MAX_TEXT_CHARS, MAX_VOICE_SECONDS, formatClock, type VoiceClip } from "@/lib/chatMedia";
 import type { ChatReply } from "@/lib/types";
 import { cn } from "@/lib/utils";
+import { OnceIcon } from "@/components/ui/OnceIcon";
 
 const iconButton =
   "w-10 h-10 shrink-0 rounded-full flex items-center justify-center transition-all active:scale-90 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/50 disabled:opacity-30";
@@ -148,14 +149,11 @@ export const Composer = ({ onText, onSticker, onMedia, onVoice, onError, prepari
           aria-pressed={once}
           aria-label="View once"
           className={cn(
-            "w-11 h-11 shrink-0 rounded-full flex items-center justify-center font-bebas text-xl leading-none transition-all active:scale-90 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/50",
+            "w-11 h-11 shrink-0 rounded-full flex items-center justify-center transition-all active:scale-90 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/50",
             once ? "bg-pink-500 text-white shadow-[0_0_20px_rgba(236,72,153,0.45)]" : "bg-[#1c1c1c] border border-[#2a2a2a] text-neutral-300 hover:text-white hover:bg-[#242424]"
           )}
         >
-          <span className="relative">
-            1
-            <span className="absolute -inset-x-2 -inset-y-1.5 rounded-full border-2 border-dashed border-current opacity-60" aria-hidden="true" />
-          </span>
+          <OnceIcon className="w-6 h-6" />
         </button>
 
         <div className="flex-1 min-w-0 flex items-end gap-1 rounded-[1.6rem] bg-[#1c1c1c] border border-[#2a2a2a] focus-within:border-white/30 transition-colors pl-4 pr-1">
