@@ -338,14 +338,7 @@ service cloud.firestore {
           && request.resource.data.connection is number && request.resource.data.connection >= 1 && request.resource.data.connection <= 10
           && (!('reason' in request.resource.data) || (request.resource.data.reason is string && request.resource.data.reason.size() <= 280))
           && (!('joyReason' in request.resource.data) || (request.resource.data.joyReason is string && request.resource.data.joyReason.size() <= 280))
-          && (!('slot' in request.resource.data) || request.resource.data.slot in ['morning', 'night'])
-          && (!('night' in request.resource.data) || (
-            request.resource.data.night.mood is number && request.resource.data.night.mood >= 1 && request.resource.data.night.mood <= 10
-            && request.resource.data.night.connection is number && request.resource.data.night.connection >= 1 && request.resource.data.night.connection <= 10
-            && request.resource.data.night.moodStatus is string && request.resource.data.night.moodStatus.size() <= 40
-            && (!('reason' in request.resource.data.night) || request.resource.data.night.reason.size() <= 280)
-            && (!('joyReason' in request.resource.data.night) || request.resource.data.night.joyReason.size() <= 280)
-          ));
+          && (!('moodNow' in request.resource.data) || (request.resource.data.moodNow is string && request.resource.data.moodNow.size() <= 40));
       }
 
       match /reactions/{reactionId} {

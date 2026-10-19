@@ -48,7 +48,7 @@ import {
   updateUserNotificationSettings,
   sendQuickReact,
   saveCheckIn,
-  saveNightCheckIn,
+  updateCheckInMood,
   respondToMessage,
   updateUserTimezone,
   markMessageAsRead,
@@ -61,7 +61,6 @@ import {
   CapsuleContent
 } from "@/lib/firestore-helpers";
 import { isKnownDeck, slotFor } from "@/lib/games/decks";
-import { canNightSync, checkInSlot, finalOf } from "@/lib/checkin";
 import { getCheckInDateId, addDays, countStreak } from "@/lib/utils";
 
 interface MailboxContextType {
@@ -292,8 +291,7 @@ export const MailboxProvider: React.FC<{ children: React.ReactNode }> = ({ child
     // Latest entry per person (history is newest first)
     const todayCheckins = historyCheckins
         .filter(c => c.dateId === today)
-        .filter((c, i, all) => all.findIndex(o => o.userUid === c.userUid) === i)
-        .map(c => ({ ...c, ...finalOf(c) }));
+        .filter((c, i, all) => all.findIndex(o => o.userUid === c.userUid) === i);
     let syncScore = 0;
     let connectionAvgToday = 0;
     if (todayCheckins.length === 2) {
@@ -656,16 +654,7 @@ export const MailboxProvider: React.FC<{ children: React.ReactNode }> = ({ child
 
   const saveDailyCheckIn = async (checkIn: Omit<DailyCheckIn, "id" | "userUid" | "createdAt">) => {
     if (!user?.coupleId || !user?.uid || !user?.partnerId) throw new Error("not-connected");
-    const slot = checkInSlot(new Date(), couple?.dayTimezone);
-    const mineToday = checkins.find(c => c.userUid === user.uid && c.dateId === checkIn.dateId);
-    // A second sync, at night, goes onto the morning one and becomes the day's final word
-    if (canNightSync(mineToday, slot)) {
-      await saveNightCheckIn(user.coupleId, checkIn.dateId, user.uid, {
-        mood: checkIn.mood, connection: checkIn.connection, moodStatus: checkIn.moodStatus, reason: checkIn.reason, joyReason: checkIn.joyReason,
-      }, user.partnerId);
-      return;
-    }
-    await saveCheckIn(user.coupleId, { ...checkIn, slot, userUid: user.uid }, user.partnerId);
+    await saveCheckIn(user.coupleId, { ...checkIn, moodNow: checkIn.moodStatus, userUid: user.uid }, user.partnerId);
   };
 
   const sendSignal = async (type: ReactionType, note?: string, notify = true, docId?: string) => {
@@ -708,6 +697,8 @@ export const MailboxProvider: React.FC<{ children: React.ReactNode }> = ({ child
   const updateMood = async (mood: string, notify = true) => {
     if (!user?.uid) return;
     await updateUserMood(user.uid, mood, notify ? user.partnerId || undefined : undefined);
+    // The last headspace of the day is what colours that day on the calendar
+    if (user.coupleId) updateCheckInMood(user.coupleId, todayId, user.uid, mood);
   };
 
   const markNotiRead = async (id: string) => {

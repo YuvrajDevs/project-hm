@@ -245,20 +245,13 @@ export const saveCheckIn = async (coupleId: string, checkIn: Omit<DailyCheckIn, 
   return docRef;
 };
 
-/** The final check-in: added to today's day check-in, so the day ends on how you actually feel. */
-export const saveNightCheckIn = async (
-  coupleId: string, dateId: string, uid: string,
-  night: { mood: number; connection: number; moodStatus: string; reason?: string; joyReason?: string },
-  partnerUid: string
-) => {
-  const clean = Object.fromEntries(Object.entries(night).filter(([, v]) => v !== undefined && v !== ""));
-  await updateDoc(doc(db, "couples", coupleId, "checkins", `${dateId}_${uid}`), { night: { ...clean, at: new Date().toISOString() } });
-  await notifyPartner(partnerUid, {
-    uid: partnerUid,
-    type: "CHECK_IN",
-    title: "Final Check-In",
-    body: "Your partner just finished their final check-in.",
-  });
+/** Remember how this person felt last today, if they have checked in. Quietly does nothing if they haven't. */
+export const updateCheckInMood = async (coupleId: string, dateId: string, uid: string, moodNow: string) => {
+  try {
+    await updateDoc(doc(db, "couples", coupleId, "checkins", `${dateId}_${uid}`), { moodNow });
+  } catch {
+    // No check-in today, so there is nothing to colour
+  }
 };
 
 /**

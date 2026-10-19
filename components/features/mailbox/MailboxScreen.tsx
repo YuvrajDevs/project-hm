@@ -16,7 +16,6 @@ import { cn } from "@/lib/utils";
 import { GamesShelf } from "../games/GamesShelf";
 import { BucketList } from "../notes/BucketList";
 import { AccentWords } from "@/components/ui/Wordmark";
-import { canNightSync, checkInSlot } from "@/lib/checkin";
 
 interface MailboxScreenProps {
     onOpenCheckIn?: () => void;
@@ -26,10 +25,9 @@ interface MailboxScreenProps {
 export const MailboxScreen: React.FC<MailboxScreenProps> = ({ onOpenCheckIn, onComposeClick }) => {
 
 
-  const { loading, metrics, checkins, user, couple } = useMailbox();
+  const { loading, metrics, checkins, user } = useMailbox();
   const myCheckIn = checkins.find((c) => c.userUid === user?.uid);
   const checkedInToday = !!myCheckIn;
-  const nightOpen = canNightSync(myCheckIn, checkInSlot(new Date(), couple?.dayTimezone));
 
   if (loading) return null;
 
@@ -64,7 +62,7 @@ export const MailboxScreen: React.FC<MailboxScreenProps> = ({ onOpenCheckIn, onC
                         <span className="text-2xl md:text-3xl tracking-wide opacity-70">{(metrics?.streak ?? 0) === 1 ? "day" : "days"}</span>
                     </p>
                     <p className="font-outfit text-xs leading-snug opacity-75 text-pretty">
-                        {nightOpen ? "Final check-in is open." : checkedInToday ? "Today's check-in is done." : (metrics?.streak ?? 0) > 0 ? "Tap to check in today." : "Tap to start one together."}
+                        {checkedInToday ? "Today's check-in is done." : (metrics?.streak ?? 0) > 0 ? "Tap to check in today." : "Tap to start one together."}
                     </p>
                 </motion.button>
                 <MoodStatusHub />

@@ -121,9 +121,8 @@ export interface DailyCheckIn {
   reason?: string; // For gloomy moods
   joyReason?: string; // For happy moods
   dateId: string; // YYYY-MM-DD
-  slot?: "morning" | "night"; // which part of the day this first check-in was made in
-  // The second sync of the day, made at night after a morning one. It is the day's final word.
-  night?: { mood: number; connection: number; moodStatus: string; reason?: string; joyReason?: string; at: string };
+  // How they felt last that day (a headspace sent after the check-in updates it). Colours the calendar once the day ends.
+  moodNow?: string;
   createdAt: string;
 }
 

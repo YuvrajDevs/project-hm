@@ -13,19 +13,12 @@ import {
 import { formatDateId, eventFallsOn } from "@/lib/utils";
 import { useMailbox } from "@/context/MailboxContext";
 import { useScrollLock } from "@/hooks/useScrollLock";
-import { finalOf, combinedScore, scoreColor } from "@/lib/checkin";
-import { MOOD_TYPES } from "@/components/features/checkin/MoodSelector";
-import { REACTION_ICONS } from "@/lib/constants";
+import { combinedHeadspace, scoreColor, SYNCED_GREEN } from "@/lib/checkin";
 
 interface StreakGridProps {
   history: DailyCheckIn[];
 }
 
-// A mood's colour is the one its signal icon uses; very dark or very light ones get a number that still reads
-const moodColor = (status?: string) => {
-  const type = status ? MOOD_TYPES[status] : undefined;
-  return type ? REACTION_ICONS[type].color : "#94a3b8";
-};
 const DAYS_OF_WEEK = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
 
 export const StreakGrid: React.FC<StreakGridProps> = ({ history }) => {
@@ -85,29 +78,17 @@ export const StreakGrid: React.FC<StreakGridProps> = ({ history }) => {
 
   const nameFor = (uid: string) => uid === user?.uid ? "You" : (partnerLabel(user, partner, "Partner"));
 
+  // One entry per person for the day. A day is green while it is still today, then takes the colour of how it ended.
   const getDaySyncInfo = (dateId: string) => {
-    // One entry per person (history is newest first)
     const dayCheckins = history
         .filter(c => c.dateId === dateId)
         .filter((c, i, all) => all.findIndex(o => o.userUid === c.userUid) === i);
     if (dayCheckins.length === 0) return null;
-
-    const connectionScore = dayCheckins.reduce((sum, c) => sum + finalOf(c).connection, 0) / dayCheckins.length;
-    // You first, then your partner, each in the colour of how the day ended for them
     const ordered = [...dayCheckins].sort((a, b) => (a.userUid === user?.uid ? -1 : 0) - (b.userUid === user?.uid ? -1 : 0));
-    // Left half: how the day started for the two of you. Right half: how it ended. Same colour means no change.
-    const dayScore = combinedScore(ordered);
-    const finalScore = combinedScore(ordered.map(finalOf));
-    return {
-        checkins: ordered,
-        // No final check-in from anyone yet: the right half repeats the day's colour, striped
-        hasFinal: ordered.some(c => !!c.night),
-        colors: [scoreColor(dayScore), scoreColor(finalScore)],
-        dayScore,
-        finalScore,
-        syncScore: connectionScore,
-        count: dayCheckins.length
-    };
+    const both = ordered.length >= 2;
+    const ended = dateId < todayStr;
+    const score = combinedHeadspace(ordered.map(c => c.moodNow || c.moodStatus));
+    return { checkins: ordered, both, ended, color: ended ? scoreColor(score) : SYNCED_GREEN, ink: ended && score > -0.45 && score < 0.9 && scoreColor(score) !== "#2962ff" ? "#111" : "#fff", score };
   };
 
   const getDayEvents = (dateId: string) => events.filter(e => eventFallsOn(e.dateId, e.repeat, dateId));
@@ -142,6 +123,7 @@ export const StreakGrid: React.FC<StreakGridProps> = ({ history }) => {
   };
 
   const selectedData = selectedDate ? getDaySyncInfo(selectedDate) : null;
+  const connAvg = selectedData ? selectedData.checkins.reduce((t, c) => t + c.connection, 0) / selectedData.checkins.length : 0;
   const selectedEvents = selectedDate ? getDayEvents(selectedDate) : [];
   const monthSynced = days.filter(dt => parseDateId(dt).getMonth() === viewDate.getMonth() && getDaySyncInfo(dt)).length;
   const currentMonthLabel = viewDate.toLocaleDateString('en-US', { month: 'long', year: 'numeric' });
@@ -173,35 +155,26 @@ export const StreakGrid: React.FC<StreakGridProps> = ({ history }) => {
                 const d = parseDateId(date);
                 const isCurrentMonth = d.getMonth() === viewDate.getMonth();
                 const isToday = date === todayStr;
-                const [c1, c2] = info ? [info.colors[0], info.colors[1]] : [undefined, undefined];
-                // Left: the day check-in. Right: the final one. Both colours come from the two of you together.
-                const base = info ? `linear-gradient(90deg, ${c1} 0 50%, ${c2} 50% 100%)` : undefined;
-                const stripes = "repeating-linear-gradient(135deg, rgba(0,0,0,0.28) 0 3px, transparent 3px 7px)";
-                const fillStyle = info
-                    ? (info.hasFinal
-                        ? { background: base }
-                        : { backgroundImage: `${stripes}, ${base}`, backgroundSize: "50% 100%, 100% 100%", backgroundPosition: "right top, 0 0", backgroundRepeat: "no-repeat, no-repeat" })
-                    : undefined;
                 return (
                     <button
                         key={date}
                         type="button"
                         onClick={() => { setSelectedDate(date); setIsAddingEvent(false); }}
                         aria-label={`${d.toLocaleDateString(undefined, { month: "long", day: "numeric" })}${info ? ", checked in" : ""}`}
-                        style={fillStyle}
+                        style={info?.both ? { background: info.color } : undefined}
                         className={cn(
                             "relative aspect-square rounded-xl md:rounded-2xl flex items-center justify-center transition-transform active:scale-90 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/60",
-                            !info && "bg-white/[0.04]",
+                            !info?.both && "bg-white/[0.04]",
                             !isCurrentMonth && "opacity-30",
                             isToday && "ring-2 ring-white"
                         )}
                     >
                         <span
-                            className={cn("font-bebas text-sm md:text-lg leading-none", info ? "text-white [text-shadow:0_1px_2px_rgba(0,0,0,0.45)]" : "text-neutral-500")}
+                            style={info?.both ? { color: info.ink } : undefined}
+                            className={cn("font-bebas text-sm md:text-lg leading-none", !info?.both && "text-neutral-500")}
                         >
                             {d.getDate()}
                         </span>
-                        {info && info.count < 2 && <span className="absolute top-1 right-1 w-1.5 h-1.5 rounded-full bg-white ring-1 ring-black/40" aria-hidden="true" />}
                         {dayEvents.length > 0 && <span className="absolute bottom-1 left-1/2 -translate-x-1/2 w-1 h-1 rounded-full bg-cyan-300" />}
                     </button>
                 );
@@ -209,23 +182,14 @@ export const StreakGrid: React.FC<StreakGridProps> = ({ history }) => {
         </div>
 
         <div className="pt-3 border-t border-white/5 space-y-3">
+          <div className="flex items-center gap-3 font-outfit text-[11px] text-neutral-400">
+            <span className="w-4 h-4 rounded shrink-0" style={{ background: SYNCED_GREEN }} /> Synced today. It changes colour once the day ends.
+          </div>
           <div className="space-y-1.5">
-            <div className="h-2 rounded-full" style={{ background: `linear-gradient(90deg, ${scoreColor(-1)}, ${scoreColor(1)})` }} />
-            <div className="flex justify-between font-bebas text-[10px] tracking-widest uppercase text-neutral-500"><span>Hard day</span><span>Warm day</span></div>
+            <div className="h-2 rounded-full" style={{ background: `linear-gradient(90deg, ${scoreColor(-1)}, ${scoreColor(0)}, ${scoreColor(1)})` }} />
+            <div className="flex justify-between font-bebas text-[10px] tracking-widest uppercase text-neutral-500"><span>Cold day</span><span>Warm day</span></div>
           </div>
-          <div className="flex items-center gap-3 font-outfit text-[11px] text-neutral-500">
-            <span className="flex h-4 w-8 shrink-0 overflow-hidden rounded"><span className="w-1/2" style={{ background: scoreColor(-0.4) }} /><span className="w-1/2" style={{ background: scoreColor(0.5) }} /></span>
-            Left is the day check-in, right is the final one. Moving toward violet means the day got better.
-          </div>
-          <div className="flex items-center gap-3 font-outfit text-[11px] text-neutral-500">
-            <span className="flex h-4 w-8 shrink-0 overflow-hidden rounded" style={{ backgroundImage: `repeating-linear-gradient(135deg, rgba(0,0,0,0.28) 0 3px, transparent 3px 7px), linear-gradient(90deg, ${scoreColor(0)} 0 50%, ${scoreColor(0)} 50% 100%)`, backgroundSize: "50% 100%, 100% 100%", backgroundPosition: "right top, 0 0", backgroundRepeat: "no-repeat, no-repeat" }} />
-            Striped right side: no final check-in from either of you yet.
-          </div>
-          <div className="flex items-center gap-3 font-outfit text-[11px] text-neutral-500">
-            <span className="relative flex h-4 w-8 shrink-0 rounded" style={{ background: scoreColor(0) }}><span className="absolute top-0.5 right-0.5 w-1.5 h-1.5 rounded-full bg-white ring-1 ring-black/40" /></span>
-            Dot: only one of you checked in that day.
-          </div>
-          <p className="font-outfit text-[11px] text-neutral-600 leading-relaxed">The colour comes from both of your feelings and moods together. If only one of you checked in, it is just theirs.</p>
+          <p className="font-outfit text-[11px] text-neutral-600 leading-relaxed">A day takes its colour from the last headspace each of you shared that day. Only days you both synced are filled.</p>
         </div>
       </div>
 
@@ -403,58 +367,34 @@ export const StreakGrid: React.FC<StreakGridProps> = ({ history }) => {
                                         {/* Sync Score Row */}
                                         <div className="flex justify-between items-center bg-[#1c1c1c] p-6 border-b border-[#232323]">
                                             <div className="space-y-1">
-                                                <span className="font-bebas text-[10px] tracking-widest text-neutral-500 uppercase">{selectedData.count >= 2 ? "Connection (average, final)" : "Connection (final)"}</span>
-                                                <div className="text-5xl font-bebas text-white">{selectedData.syncScore.toFixed(1)}/10</div>
+                                                <span className="font-bebas text-[10px] tracking-widest text-neutral-500 uppercase">Connection</span>
+                                                <div className="text-5xl font-bebas text-white">{(selectedData.checkins.reduce((t, c) => t + c.connection, 0) / selectedData.checkins.length).toFixed(1)}/10</div>
                                             </div>
                                             <div className="w-12 h-12 rounded-full flex items-center justify-center bg-[#1c1c1c]">
-                                                {selectedData.syncScore >= 7 ? <Star className="w-6 h-6 text-yellow-400 fill-current" /> : 
-                                                selectedData.syncScore >= 4 ? <Sun className="w-6 h-6 text-orange-400" /> : 
+                                                {connAvg >= 7 ? <Star className="w-6 h-6 text-yellow-400 fill-current" /> : 
+                                                connAvg >= 4 ? <Sun className="w-6 h-6 text-orange-400" /> : 
                                                 <CloudRain className="w-6 h-6 text-red-400" />}
                                             </div>
                                         </div>
 
-                                        {/* Both check-ins, for each of you: the day one and the final one */}
-                                        <div className="p-6 space-y-5 bg-black/20">
-                                            <span className="font-bebas text-[10px] tracking-widest text-neutral-600 uppercase">Check-ins</span>
-                                            {(() => {
-                                                // One plain sentence for whichever of the scenarios this day is
-                                                const people = [user?.uid, partner?.uid].filter(Boolean) as string[];
-                                                const missing = people.filter(u => !selectedData.checkins.some(c => c.userUid === u));
-                                                const noFinal = selectedData.checkins.filter(c => !c.night).map(c => nameFor(c.userUid));
-                                                const bits: string[] = [];
-                                                if (missing.length) bits.push(`${missing.map(nameFor).join(" and ")} didn't check in`);
-                                                if (noFinal.length) bits.push(`no final check-in from ${noFinal.join(" or ")}`);
-                                                return bits.length ? <p className="font-outfit text-xs text-neutral-400 leading-relaxed">{bits.join(", ")}.</p> : <p className="font-outfit text-xs text-neutral-400">Both of you did a day and a final check-in.</p>;
-                                            })()}
-                                            {selectedData.checkins.map((checkin) => {
-                                                const rows = [
-                                                    { label: "Day", data: { mood: checkin.mood, moodStatus: checkin.moodStatus, reason: checkin.reason, joyReason: checkin.joyReason } },
-                                                    ...(checkin.night ? [{ label: "Final", data: checkin.night }] : []),
-                                                ];
-                                                return (
-                                                    <div key={checkin.id} className="space-y-3 pb-5 last:pb-0 border-b border-white/5 last:border-0">
-                                                        <div className="flex items-center gap-2">
-                                                            <div className="w-6 h-6 rounded-full bg-white/10 flex items-center justify-center text-[10px] font-bebas">{nameFor(checkin.userUid)[0]}</div>
-                                                            <span className="font-bebas text-[10px] tracking-widest text-neutral-400 uppercase">{nameFor(checkin.userUid)}</span>
-                                                        </div>
-                                                        {rows.map((row) => (
-                                                            <div key={row.label} className="pl-8 space-y-1">
-                                                                <div className="flex items-center justify-between gap-3">
-                                                                    <span className="font-bebas text-[10px] tracking-widest text-neutral-500 uppercase">{row.label}</span>
-                                                                    <span className="flex items-center gap-3 text-xs font-bebas">
-                                                                        <span className="text-white">{row.data.mood}/10</span>
-                                                                        <span style={{ color: moodColor(row.data.moodStatus) }}>{row.data.moodStatus}</span>
-                                                                    </span>
-                                                                </div>
-                                                                {(row.data.reason || row.data.joyReason) && (
-                                                                    <p className="text-xs font-outfit text-white leading-relaxed italic opacity-80">&quot;{row.data.reason || row.data.joyReason}&quot;</p>
-                                                                )}
-                                                            </div>
-                                                        ))}
-                                                        {!checkin.night && <p className="pl-8 font-outfit text-[11px] text-neutral-600">No final check-in yet.</p>}
+                                        {/* How each of you felt */}
+                                        <div className="p-6 space-y-4 bg-black/20">
+                                            <span className="font-bebas text-[10px] tracking-widest text-neutral-600 uppercase">Check-in</span>
+                                            {selectedData.checkins.map((checkin) => (
+                                                <div key={checkin.id} className="space-y-1.5">
+                                                    <div className="flex items-center justify-between gap-3">
+                                                        <span className="font-bebas text-[11px] tracking-widest text-neutral-300 uppercase">{nameFor(checkin.userUid)}</span>
+                                                        <span className="flex items-center gap-3 text-xs font-bebas">
+                                                            <span className="text-white">{checkin.mood}/10</span>
+                                                            <span className="text-neutral-400">{checkin.moodNow || checkin.moodStatus}</span>
+                                                        </span>
                                                     </div>
-                                                );
-                                            })}
+                                                    {(checkin.reason || checkin.joyReason) && (
+                                                        <p className="text-xs font-outfit text-white leading-relaxed italic opacity-80">&quot;{checkin.reason || checkin.joyReason}&quot;</p>
+                                                    )}
+                                                </div>
+                                            ))}
+                                            {!selectedData.both && <p className="font-outfit text-[11px] text-neutral-600">Only one of you checked in, so this day isn&apos;t filled in.</p>}
                                         </div>
                                     </div>
                                 )}
