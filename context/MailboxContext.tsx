@@ -281,11 +281,15 @@ export const MailboxProvider: React.FC<{ children: React.ReactNode }> = ({ child
     const completeDays = new Set([...usersByDay].filter(([, users]) => users.size >= 2).map(([day]) => day));
     const historyStreak = countStreak(completeDays, today);
 
-    // The running count is kept on the couple, so it is not limited by how much history is loaded
+    // The streak is the run of days, ending today or yesterday, on which both of you synced: exactly the filled
+    // days on the calendar. The count kept on the couple only matters when that run reaches back past the
+    // history that is loaded, where the calendar can't show the start of it.
     let currentStreak = historyStreak;
-    if (metricsStreakLastDay) {
-        const stored = metricsStreakLastDay === today || metricsStreakLastDay === yesterday ? (metricsStreakCount || 0) : 0;
-        currentStreak = Math.max(stored, completeDays.has(today) && metricsStreakLastDay !== today ? historyStreak : 0);
+    const oldestLoaded = historyCheckins.reduce((min, c) => (c.dateId < min ? c.dateId : min), today);
+    const runStart = addDays(completeDays.has(today) ? today : addDays(today, -1), -(historyStreak - 1));
+    const mayBeCut = historyStreak > 0 && historyCheckins.length >= 100 && runStart <= addDays(oldestLoaded, 1);
+    if (mayBeCut && metricsStreakLastDay && (metricsStreakLastDay === today || metricsStreakLastDay === yesterday)) {
+        currentStreak = Math.max(historyStreak, metricsStreakCount || 0);
     }
 
     // Latest entry per person (history is newest first)
