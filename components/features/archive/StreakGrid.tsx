@@ -13,7 +13,7 @@ import {
 import { formatDateId, eventFallsOn } from "@/lib/utils";
 import { useMailbox } from "@/context/MailboxContext";
 import { useScrollLock } from "@/hooks/useScrollLock";
-import { finalOf, combinedScore, scoreColor, scoreInk } from "@/lib/checkin";
+import { finalOf, combinedScore, scoreColor } from "@/lib/checkin";
 import { MOOD_TYPES } from "@/components/features/checkin/MoodSelector";
 import { REACTION_ICONS } from "@/lib/constants";
 
@@ -100,6 +100,8 @@ export const StreakGrid: React.FC<StreakGridProps> = ({ history }) => {
     const finalScore = combinedScore(ordered.map(finalOf));
     return {
         checkins: ordered,
+        // No final check-in from anyone yet: the right half repeats the day's colour, striped
+        hasFinal: ordered.some(c => !!c.night),
         colors: [scoreColor(dayScore), scoreColor(finalScore)],
         dayScore,
         finalScore,
@@ -173,14 +175,20 @@ export const StreakGrid: React.FC<StreakGridProps> = ({ history }) => {
                 const isToday = date === todayStr;
                 const [c1, c2] = info ? [info.colors[0], info.colors[1]] : [undefined, undefined];
                 // Left: the day check-in. Right: the final one. Both colours come from the two of you together.
-                const fill = info ? `linear-gradient(90deg, ${c1} 0 50%, ${c2} 50% 100%)` : undefined;
+                const base = info ? `linear-gradient(90deg, ${c1} 0 50%, ${c2} 50% 100%)` : undefined;
+                const stripes = "repeating-linear-gradient(135deg, rgba(0,0,0,0.28) 0 3px, transparent 3px 7px)";
+                const fillStyle = info
+                    ? (info.hasFinal
+                        ? { background: base }
+                        : { backgroundImage: `${stripes}, ${base}`, backgroundSize: "50% 100%, 100% 100%", backgroundPosition: "right top, 0 0", backgroundRepeat: "no-repeat, no-repeat" })
+                    : undefined;
                 return (
                     <button
                         key={date}
                         type="button"
                         onClick={() => { setSelectedDate(date); setIsAddingEvent(false); }}
                         aria-label={`${d.toLocaleDateString(undefined, { month: "long", day: "numeric" })}${info ? ", checked in" : ""}`}
-                        style={fill ? { background: fill } : undefined}
+                        style={fillStyle}
                         className={cn(
                             "relative aspect-square rounded-xl md:rounded-2xl flex items-center justify-center transition-transform active:scale-90 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/60",
                             !info && "bg-white/[0.04]",
@@ -189,11 +197,11 @@ export const StreakGrid: React.FC<StreakGridProps> = ({ history }) => {
                         )}
                     >
                         <span
-                            style={info ? { color: scoreInk(info.dayScore) } : undefined}
-                            className={cn("font-bebas text-sm md:text-lg leading-none", !info && "text-neutral-500")}
+                            className={cn("font-bebas text-sm md:text-lg leading-none", info ? "text-white [text-shadow:0_1px_2px_rgba(0,0,0,0.45)]" : "text-neutral-500")}
                         >
                             {d.getDate()}
                         </span>
+                        {info && info.count < 2 && <span className="absolute top-1 right-1 w-1.5 h-1.5 rounded-full bg-white ring-1 ring-black/40" aria-hidden="true" />}
                         {dayEvents.length > 0 && <span className="absolute bottom-1 left-1/2 -translate-x-1/2 w-1 h-1 rounded-full bg-cyan-300" />}
                     </button>
                 );
@@ -207,7 +215,15 @@ export const StreakGrid: React.FC<StreakGridProps> = ({ history }) => {
           </div>
           <div className="flex items-center gap-3 font-outfit text-[11px] text-neutral-500">
             <span className="flex h-4 w-8 shrink-0 overflow-hidden rounded"><span className="w-1/2" style={{ background: scoreColor(-0.4) }} /><span className="w-1/2" style={{ background: scoreColor(0.5) }} /></span>
-            Left is the day check-in, right is the final one. If the right is warmer, the day got better.
+            Left is the day check-in, right is the final one. Moving toward violet means the day got better.
+          </div>
+          <div className="flex items-center gap-3 font-outfit text-[11px] text-neutral-500">
+            <span className="flex h-4 w-8 shrink-0 overflow-hidden rounded" style={{ backgroundImage: `repeating-linear-gradient(135deg, rgba(0,0,0,0.28) 0 3px, transparent 3px 7px), linear-gradient(90deg, ${scoreColor(0)} 0 50%, ${scoreColor(0)} 50% 100%)`, backgroundSize: "50% 100%, 100% 100%", backgroundPosition: "right top, 0 0", backgroundRepeat: "no-repeat, no-repeat" }} />
+            Striped right side: no final check-in from either of you yet.
+          </div>
+          <div className="flex items-center gap-3 font-outfit text-[11px] text-neutral-500">
+            <span className="relative flex h-4 w-8 shrink-0 rounded" style={{ background: scoreColor(0) }}><span className="absolute top-0.5 right-0.5 w-1.5 h-1.5 rounded-full bg-white ring-1 ring-black/40" /></span>
+            Dot: only one of you checked in that day.
           </div>
           <p className="font-outfit text-[11px] text-neutral-600 leading-relaxed">The colour comes from both of your feelings and moods together. If only one of you checked in, it is just theirs.</p>
         </div>
@@ -400,6 +416,16 @@ export const StreakGrid: React.FC<StreakGridProps> = ({ history }) => {
                                         {/* Both check-ins, for each of you: the day one and the final one */}
                                         <div className="p-6 space-y-5 bg-black/20">
                                             <span className="font-bebas text-[10px] tracking-widest text-neutral-600 uppercase">Check-ins</span>
+                                            {(() => {
+                                                // One plain sentence for whichever of the scenarios this day is
+                                                const people = [user?.uid, partner?.uid].filter(Boolean) as string[];
+                                                const missing = people.filter(u => !selectedData.checkins.some(c => c.userUid === u));
+                                                const noFinal = selectedData.checkins.filter(c => !c.night).map(c => nameFor(c.userUid));
+                                                const bits: string[] = [];
+                                                if (missing.length) bits.push(`${missing.map(nameFor).join(" and ")} didn't check in`);
+                                                if (noFinal.length) bits.push(`no final check-in from ${noFinal.join(" or ")}`);
+                                                return bits.length ? <p className="font-outfit text-xs text-neutral-400 leading-relaxed">{bits.join(", ")}.</p> : <p className="font-outfit text-xs text-neutral-400">Both of you did a day and a final check-in.</p>;
+                                            })()}
                                             {selectedData.checkins.map((checkin) => {
                                                 const rows = [
                                                     { label: "Day", data: { mood: checkin.mood, moodStatus: checkin.moodStatus, reason: checkin.reason, joyReason: checkin.joyReason } },

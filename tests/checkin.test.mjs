@@ -40,8 +40,8 @@ test("warm feelings score high, hard ones low, and both partners are averaged", 
   assert.ok(checkInScore({ mood: 9, moodStatus: "Tired" }) > checkInScore({ mood: 2, moodStatus: "Tired" }));
 });
 
-test("colours run from blue when hard to yellow when warm", () => {
-  assert.equal(scoreColor(-1), "#2962ff");
-  assert.equal(scoreColor(1), "#ffd600");
+test("colours run from red when hard to violet-blue when warm", () => {
+  assert.equal(scoreColor(-1), "#d50000");
+  assert.equal(scoreColor(1), "#7c4dff");
   assert.notEqual(scoreColor(0), scoreColor(0.5));
 });
