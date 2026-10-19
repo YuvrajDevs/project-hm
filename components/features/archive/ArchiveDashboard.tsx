@@ -32,7 +32,7 @@ export const ArchiveDashboard: React.FC<ArchiveDashboardProps> = () => {
 
   const connectionValue = !myCheckIn && !partnerCheckIn ? "—" : `${metrics.connectionAvgToday.toFixed(1)}/10`;
   const connectionSubtext = !myCheckIn
-    ? "Tap to check in"
+    ? "You haven't checked in today"
     : !partnerCheckIn
       ? `Only you so far. Waiting on ${partnerName}`
       : metrics.connectionAvgToday >= 7 ? "Feeling close" : (metrics.connectionAvgToday >= 4 ? "Somewhere in between" : "A gentle day might help");
