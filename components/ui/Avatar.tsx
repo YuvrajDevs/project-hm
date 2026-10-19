@@ -4,6 +4,7 @@ import type { User } from "@/lib/types";
 import { cn } from "@/lib/utils";
 
 const SIZES = {
+  xs: { box: "w-6 h-6 rounded-full", icon: "w-3.5 h-3.5" },
   sm: { box: "w-10 h-10 rounded-2xl", icon: "w-5 h-5" },
   md: { box: "w-14 h-14 rounded-[1.4rem]", icon: "w-7 h-7" },
   lg: { box: "w-28 h-28 rounded-[2.4rem]", icon: "w-14 h-14" },

@@ -25,7 +25,8 @@ interface MailboxScreenProps {
 export const MailboxScreen: React.FC<MailboxScreenProps> = ({ onOpenCheckIn, onComposeClick }) => {
 
 
-  const { loading, metrics } = useMailbox();
+  const { loading, metrics, checkins, user } = useMailbox();
+  const checkedInToday = checkins.some((c) => c.userUid === user?.uid);
 
   if (loading) return null;
 
@@ -41,10 +42,13 @@ export const MailboxScreen: React.FC<MailboxScreenProps> = ({ onOpenCheckIn, onC
 
             {/* Today at a glance: the streak on the left, how each of you is feeling stacked on the right, all one height */}
             <section className="grid grid-cols-2 gap-3 items-stretch">
-                <motion.div
+                <motion.button
+                    type="button"
+                    onClick={onOpenCheckIn}
+                    aria-label={checkedInToday ? "Daily check-in done. View it" : "Open the daily check-in"}
                     initial={{ opacity: 0, y: 12 }}
                     animate={{ opacity: 1, y: 0 }}
-                    className="tone-amber rounded-[1.5rem] px-4 py-4 flex flex-col justify-between gap-2 min-h-[16rem] md:min-h-[18rem]"
+                    className="tone-amber rounded-[1.5rem] px-4 py-4 flex flex-col justify-between gap-2 min-h-[16rem] md:min-h-[18rem] text-left w-full transition-all hover:brightness-110 active:scale-[0.98] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/70"
                 >
                     <div className="flex items-center justify-between gap-2">
                         <span className="font-bebas text-[10px] tracking-[0.18em] uppercase leading-none opacity-70 truncate">Check-in streak</span>
@@ -57,9 +61,9 @@ export const MailboxScreen: React.FC<MailboxScreenProps> = ({ onOpenCheckIn, onC
                         <span className="text-2xl md:text-3xl tracking-wide opacity-70">{(metrics?.streak ?? 0) === 1 ? "day" : "days"}</span>
                     </p>
                     <p className="font-outfit text-xs leading-snug opacity-75 text-pretty">
-                        {(metrics?.streak ?? 0) > 0 ? "In a row, both of you." : "Check in together to start one."}
+                        {checkedInToday ? "Today's check-in is done." : (metrics?.streak ?? 0) > 0 ? "Tap to check in today." : "Tap to start one together."}
                     </p>
-                </motion.div>
+                </motion.button>
                 <MoodStatusHub />
             </section>
 

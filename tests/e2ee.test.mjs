@@ -9,6 +9,8 @@ import {
   deriveSharedAesKey,
   encryptDraft,
   decryptMessage,
+  encryptBytes,
+  decryptBytes,
   fingerprint,
   wrapPrivateKeyJwk,
   unwrapPrivateKeyJwk,
@@ -101,4 +103,27 @@ test("fingerprint is deterministic and distinguishes different keys", async () =
   const fpB = await fingerprint(b.publicJwk);
   assert.equal(fpA1, fpA2);
   assert.notEqual(fpA1, fpB);
+});
+
+test("a reply and a video's details travel inside the encrypted message", async () => {
+  const { aliceAesKey, bobAesKey } = await pairedKeys();
+  const reply = { id: "m1", by: BOB, kind: "text", text: "see you at 8?" };
+  const enc = await encryptDraft(COUPLE, ALICE, "video", { mime: "video/mp4", dur: 42, w: 1280, h: 720, thumb: "AAAA", path: "chat/couple1/abc", size: 1234, reply }, aliceAesKey);
+  assert.ok(!enc.ct.includes("abc"), "the storage path is not readable in the stored message");
+  const dec = await decryptMessage(COUPLE, ALICE, "video", enc.iv, enc.ct, bobAesKey);
+  assert.deepEqual(dec.reply, reply);
+  assert.equal(dec.path, "chat/couple1/abc");
+  assert.equal(dec.dur, 42);
+  assert.equal(dec.size, 1234);
+});
+
+test("an encrypted file opens only with the same key and the same context", async () => {
+  const { aliceAesKey, bobAesKey } = await pairedKeys();
+  const stranger = (await pairedKeys()).aliceAesKey;
+  const bytes = crypto.getRandomValues(new Uint8Array(60_000));
+  const sealed = await encryptBytes(bytes, aliceAesKey, `video|${COUPLE}|${ALICE}`);
+  assert.equal(sealed.length, bytes.length + 12 + 16, "iv in front, tag at the end");
+  assert.deepEqual(await decryptBytes(sealed, bobAesKey, `video|${COUPLE}|${ALICE}`), bytes);
+  await assert.rejects(decryptBytes(sealed, stranger, `video|${COUPLE}|${ALICE}`));
+  await assert.rejects(decryptBytes(sealed, bobAesKey, `video|${COUPLE}|${BOB}`), "a file can't be passed off as another person's");
 });

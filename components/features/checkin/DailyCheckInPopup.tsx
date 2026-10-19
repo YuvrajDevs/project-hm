@@ -3,7 +3,7 @@
 import React, { useState, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { useMailbox } from "@/context/MailboxContext";
-import { ArrowRight, X, Zap, Send, Heart, Smile, Link2 } from "lucide-react";
+import { ArrowRight, Check, X, Zap, Send, Heart, Smile, Link2 } from "lucide-react";
 import { MoodSelector, MoodIcon, MOOD_TYPES } from "./MoodSelector";
 import { ReactionType } from "@/lib/types";
 import { useSensoryFeedback } from "@/hooks/useSensoryFeedback";
@@ -196,6 +196,9 @@ export const DailyCheckInPopup: React.FC<DailyCheckInPopupProps> = ({ onClose })
 
           {step === "summary" && (
             <motion.div key="summary" initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} className="space-y-6">
+              <div className="flex items-center justify-center gap-2 font-bebas tracking-[0.25em] uppercase text-sm text-emerald-300">
+                <Check className="w-4 h-4" /> Daily check-in done
+              </div>
               {!partnerCheckIn ? (
                 <>
                   <div className="tone-pink rounded-[1.5rem] p-8 space-y-4 text-center">

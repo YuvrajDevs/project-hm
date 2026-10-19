@@ -20,6 +20,7 @@ import {
   DocumentData,
   FirestoreDataConverter,
   QueryDocumentSnapshot,
+  DocumentSnapshot,
   SnapshotOptions,
   limit,
   limitToLast,
@@ -27,7 +28,8 @@ import {
   arrayRemove,
   serverTimestamp
 } from "firebase/firestore";
-import { db, auth } from "./firebase";
+import { db, auth, storage } from "./firebase";
+import { ref as storageRef, uploadBytes, getBytes, deleteObject } from "firebase/storage";
 import { 
   SafeSpaceMessage,
   EmotionalProfile,
@@ -43,12 +45,13 @@ import {
   ActiveGame,
   BucketItem,
   ChatMessage,
-  ChatKind
+  ChatKind,
+  ChatReply
 } from "./types";
 import { DECK_BY_ID, slotFor, type DeckId } from "./games/decks";
 import type { User as FirebaseUser } from "firebase/auth";
 import { REACTION_ICONS } from "./constants";
-import { getAesKeyForCouple, encryptDraft, decryptMessage, rotateKeys } from "./e2ee.ts";
+import { getAesKeyForCouple, encryptDraft, decryptMessage, encryptBytes, decryptBytes, rotateKeys } from "./e2ee.ts";
 import { ChatMediaError } from "./chatMedia.ts";
 
 /**
@@ -1187,7 +1190,8 @@ export const sendContactMessage = async (message: { name?: string; email: string
  *
  * Messages are end-to-end encrypted (lib/e2ee.ts): the stored doc never holds plaintext content,
  * only senderUid/kind/v/iv/ct/createdAt/savedBy. Photos and voice notes are squeezed on the device
- * and encrypted into the same payload as the rest of the message, so chat needs no file storage.
+ * and encrypted into the same payload as the rest of the message. Only videos are too big for that: they are
+ * encrypted on the device and stored as ciphertext in Storage, with the key and path inside the message.
  * The security rules cap how large one message can be.
  */
 const toChat = (d: QueryDocumentSnapshot): ChatMessage => {
@@ -1196,6 +1200,7 @@ const toChat = (d: QueryDocumentSnapshot): ChatMessage => {
     ...data,
     id: d.id,
     createdAt: data.createdAt instanceof Timestamp ? data.createdAt.toDate().toISOString() : new Date().toISOString(),
+    openedAt: data.openedAt instanceof Timestamp ? data.openedAt.toDate().toISOString() : undefined,
     pending: d.metadata.hasPendingWrites,
   } as ChatMessage;
 };
@@ -1204,6 +1209,8 @@ const toChat = (d: QueryDocumentSnapshot): ChatMessage => {
 // schema, a missing shared key, or a failed decrypt (tamper, or a key that's been rotated away) all
 // land on `decryptFailed`, which MessageContent shows as a placeholder instead of crashing.
 const decryptChat = async (raw: ChatMessage, uid: string, coupleId: string, partnerUid: string): Promise<ChatMessage> => {
+  // A view-once message that has been opened has no content left, by design: that isn't a failure
+  if (raw.once && raw.openedAt) return { ...raw, decryptFailed: false };
   if (raw.v !== 1 || !raw.iv || !raw.ct) return { ...raw, decryptFailed: true };
   try {
     const aesKey = await getAesKeyForCouple(uid, coupleId, partnerUid);
@@ -1264,6 +1271,11 @@ export interface ChatDraft {
   h?: number;
   dur?: number;
   sticker?: string;
+  thumb?: string;
+  path?: string;
+  size?: number;
+  reply?: ChatReply;
+  once?: boolean;
 }
 
 /**
@@ -1282,7 +1294,9 @@ export const sendChatMessage = async (
   const { v, iv, ct } = await encryptDraft(coupleId, uid, draft.kind, draft, aesKey);
   const now = new Date().toISOString();
   const batch = writeBatch(db);
-  batch.set(doc(collection(db, "couples", coupleId, "chat")), { senderUid: uid, kind: draft.kind, v, iv, ct, createdAt: serverTimestamp() });
+  batch.set(doc(collection(db, "couples", coupleId, "chat")), {
+    senderUid: uid, kind: draft.kind, v, iv, ct, createdAt: serverTimestamp(), ...(draft.once ? { once: true } : {}),
+  });
   batch.update(doc(db, "couples", coupleId), {
     chatLastAt: now,
     chatLastBy: uid,
@@ -1305,6 +1319,107 @@ export const setChatMessageSaved = (coupleId: string, messageId: string, uid: st
 
 export const deleteChatMessage = (coupleId: string, messageId: string) =>
   deleteDoc(doc(db, "couples", coupleId, "chat", messageId));
+
+/**
+ * Open a view-once message: the content is wiped from the server in the same step, so it can be seen
+ * here once and never again. The caller keeps what it already decrypted on screen for as long as it shows it.
+ */
+export const openOnceMessage = async (coupleId: string, message: ChatMessage) => {
+  await updateDoc(doc(db, "couples", coupleId, "chat", message.id), { openedAt: serverTimestamp(), ct: "x" });
+  if (message.path) deleteObject(storageRef(storage, message.path)).catch(() => {});
+};
+
+const videoAad = (coupleId: string, senderUid: string) => `video|${coupleId}|${senderUid}`;
+
+/** Encrypt a video on the device and upload it. Only the couple can read it; storage holds ciphertext. */
+export const uploadChatVideo = async (coupleId: string, uid: string, partnerUid: string, bytes: Uint8Array, mime: string) => {
+  const aesKey = await getAesKeyForCouple(uid, coupleId, partnerUid);
+  if (!aesKey) throw new ChatMediaError("Your partner hasn't set up encrypted chat yet.");
+  const sealed = await encryptBytes(bytes, aesKey, videoAad(coupleId, uid));
+  const path = `chat/${coupleId}/${crypto.randomUUID()}`;
+  await uploadBytes(storageRef(storage, path), sealed, { contentType: "application/octet-stream", customMetadata: { sender: uid } });
+  void mime;
+  return path;
+};
+
+/** Download and decrypt a video, as bytes ready to play. */
+export const downloadChatVideo = async (coupleId: string, uid: string, partnerUid: string, senderUid: string, path: string) => {
+  const aesKey = await getAesKeyForCouple(uid, coupleId, partnerUid);
+  if (!aesKey) throw new ChatMediaError("Chat isn't unlocked on this device.");
+  const sealed = new Uint8Array(await getBytes(storageRef(storage, path), 27 * 1024 * 1024));
+  return decryptBytes(sealed, aesKey, videoAad(coupleId, senderUid));
+};
+
+export const removeChatVideo = (path: string) => deleteObject(storageRef(storage, path)).catch(() => {});
+
+/**
+ * Chat wallpaper. Each person has one document describing how THEIR chat looks: where the picture comes from
+ * (their own, or the one their partner set), and how dim or blurred it is. The picture itself is encrypted
+ * like any message, so the server never sees it.
+ */
+export interface WallpaperSettings {
+  source: "own" | "partner" | "none";
+  dim: number;       // 0-4
+  blur: number;      // 0-4
+  hasImage: boolean; // an own picture is stored
+  updatedAt: string;
+  dismissedOffer?: string; // the partner's updatedAt that this person said "no thanks" to
+}
+export interface ChatWallpaper { settings: WallpaperSettings | null; image: string | null; mime: string | null }
+
+const wallpaperDoc = (coupleId: string, uid: string) => doc(db, "couples", coupleId, "chat_wallpaper", uid);
+
+const readWallpaper = async (coupleId: string, readerUid: string, partnerUid: string, ownerUid: string, d: DocumentSnapshot): Promise<ChatWallpaper> => {
+  if (!d.exists()) return { settings: null, image: null, mime: null };
+  const data = d.data({ serverTimestamps: "estimate" });
+  const settings: WallpaperSettings = {
+    source: data.source, dim: data.dim ?? 0, blur: data.blur ?? 0, hasImage: !!data.ct,
+    updatedAt: data.updatedAt instanceof Timestamp ? data.updatedAt.toDate().toISOString() : new Date().toISOString(),
+    dismissedOffer: data.dismissedOffer,
+  };
+  if (!data.ct || !data.iv) return { settings, image: null, mime: null };
+  try {
+    const aesKey = await getAesKeyForCouple(readerUid, coupleId, partnerUid);
+    if (!aesKey) return { settings, image: null, mime: null };
+    const fields = await decryptMessage(coupleId, ownerUid, "image", data.iv, data.ct, aesKey);
+    return { settings, image: fields.data ?? null, mime: fields.mime ?? "image/jpeg" };
+  } catch {
+    return { settings, image: null, mime: null };
+  }
+};
+
+/** Both wallpaper documents, live: mine and my partner's. */
+export const subscribeToWallpapers = (
+  coupleId: string, uid: string, partnerUid: string,
+  callback: (mine: ChatWallpaper, theirs: ChatWallpaper) => void,
+) => {
+  let mine: ChatWallpaper = { settings: null, image: null, mime: null };
+  let theirs: ChatWallpaper = { settings: null, image: null, mime: null };
+  const emit = () => callback(mine, theirs);
+  const a = onSnapshot(wallpaperDoc(coupleId, uid), async (d) => { mine = await readWallpaper(coupleId, uid, partnerUid, uid, d); emit(); }, () => {});
+  const b = onSnapshot(wallpaperDoc(coupleId, partnerUid), async (d) => { theirs = await readWallpaper(coupleId, uid, partnerUid, partnerUid, d); emit(); }, () => {});
+  return () => { a(); b(); };
+};
+
+/** Save my wallpaper choice. Pass `imageBase64` to set a new picture of my own. */
+export const saveWallpaper = async (
+  coupleId: string, uid: string, partnerUid: string,
+  next: { source: WallpaperSettings["source"]; dim: number; blur: number; imageBase64?: string; keepImage?: boolean; dismissedOffer?: string },
+) => {
+  const payload: Record<string, unknown> = { source: next.source, dim: next.dim, blur: next.blur, updatedAt: serverTimestamp() };
+  if (next.dismissedOffer) payload.dismissedOffer = next.dismissedOffer;
+  if (next.imageBase64) {
+    const aesKey = await getAesKeyForCouple(uid, coupleId, partnerUid);
+    if (!aesKey) throw new ChatMediaError("Your partner hasn't set up encrypted chat yet.");
+    const { iv, ct } = await encryptDraft(coupleId, uid, "image", { mime: "image/jpeg", data: next.imageBase64 }, aesKey);
+    Object.assign(payload, { iv, ct });
+    await setDoc(wallpaperDoc(coupleId, uid), payload);
+  } else if (next.keepImage) {
+    await setDoc(wallpaperDoc(coupleId, uid), payload, { merge: true });
+  } else {
+    await setDoc(wallpaperDoc(coupleId, uid), payload);
+  }
+};
 
 // One-time cleanup for the move to end-to-end encryption: messages written before this shipped have
 // no `v` field and can't be decrypted (no key existed yet when they were sent), so they are cleared

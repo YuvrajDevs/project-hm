@@ -495,7 +495,7 @@ test("a message must be from the sender, stamped by the server, and well formed"
   await assertFails(setDoc(chatRef(ALICE, "x1"), cipherMsg(BOB)));                                       // pretending to be Bob
   await assertFails(setDoc(chatRef(ALICE, "x2"), cipherMsg(ALICE, { createdAt: Timestamp.now() })));     // client-chosen time
   await assertFails(setDoc(chatRef(ALICE, "x3"), cipherMsg(ALICE, { savedBy: [ALICE] })));                // extra field
-  await assertFails(setDoc(chatRef(ALICE, "x4"), cipherMsg(ALICE, { kind: "video" })));                   // unknown kind
+  await assertFails(setDoc(chatRef(ALICE, "x4"), cipherMsg(ALICE, { kind: "gif" })));                     // unknown kind
   await assertFails(setDoc(chatRef(ALICE, "x5"), cipherMsg(ALICE, { v: 2 })));                            // wrong version
   await assertFails(setDoc(chatRef(ALICE, "x6"), cipherMsg(ALICE, { iv: "A".repeat(15) })));              // wrong iv length
   await assertFails(setDoc(chatRef(ALICE, "x7"), cipherMsg(ALICE, { ct: "" })));                          // empty ciphertext
@@ -524,6 +524,38 @@ test("only the sender can unsend a message", async () => {
   await assertFails(deleteDoc(chatRef(BOB, "c1")));
   await assertFails(deleteDoc(chatRef(MALLORY, "c1")));
   await assertSucceeds(deleteDoc(chatRef(ALICE, "c1")));
+});
+
+test("view once: only the recipient can open it, once, and opening wipes the content", async () => {
+  await seedCouple();
+  await assertSucceeds(setDoc(chatRef(ALICE, "o1"), cipherMsg(ALICE, { kind: "video", once: true })));
+  await assertFails(setDoc(chatRef(ALICE, "o2"), cipherMsg(ALICE, { once: false })));                       // once can only be true
+  await assertFails(updateDoc(chatRef(ALICE, "o1"), { openedAt: serverTimestamp(), ct: "x" }));             // the sender can't "open" their own
+  await assertFails(updateDoc(chatRef(MALLORY, "o1"), { openedAt: serverTimestamp(), ct: "x" }));
+  await assertFails(updateDoc(chatRef(BOB, "o1"), { openedAt: serverTimestamp() }));                        // must wipe the content too
+  await assertFails(updateDoc(chatRef(BOB, "o1"), { openedAt: serverTimestamp(), ct: "A".repeat(50) }));    // not a different payload
+  await assertSucceeds(updateDoc(chatRef(BOB, "o1"), { openedAt: serverTimestamp(), ct: "x" }));
+  await assertFails(updateDoc(chatRef(BOB, "o1"), { openedAt: serverTimestamp(), ct: "x" }));              // only once
+  // An ordinary message can't be "opened"
+  await assertSucceeds(setDoc(chatRef(ALICE, "n1"), cipherMsg(ALICE)));
+  await assertFails(updateDoc(chatRef(BOB, "n1"), { openedAt: serverTimestamp(), ct: "x" }));
+});
+
+test("chat wallpaper: each person writes only their own, both can read", async () => {
+  await seedCouple();
+  const wp = (uid, extra = {}) => doc(db(uid), "couples", COUPLE, "chat_wallpaper", uid);
+  const body = (extra = {}) => ({ source: "own", dim: 2, blur: 1, iv: "A".repeat(16), ct: "A".repeat(100), updatedAt: serverTimestamp(), ...extra });
+  await assertSucceeds(setDoc(wp(ALICE), body()));
+  await assertSucceeds(getDoc(doc(db(BOB), "couples", COUPLE, "chat_wallpaper", ALICE)));
+  await assertFails(getDoc(doc(db(MALLORY), "couples", COUPLE, "chat_wallpaper", ALICE)));
+  await assertFails(setDoc(doc(db(BOB), "couples", COUPLE, "chat_wallpaper", ALICE), body()));              // not Bob's to write
+  await assertFails(setDoc(wp(ALICE), body({ dim: 5 })));                                                    // level out of range
+  await assertFails(setDoc(wp(ALICE), body({ blur: -1 })));
+  await assertFails(setDoc(wp(ALICE), body({ source: "elsewhere" })));
+  await assertFails(setDoc(wp(ALICE), body({ ct: "A".repeat(900001) })));
+  await assertFails(setDoc(wp(ALICE), body({ extra: 1 })));
+  await assertSucceeds(setDoc(wp(BOB), { source: "partner", dim: 0, blur: 0, updatedAt: serverTimestamp() }));
+  await assertSucceeds(deleteDoc(wp(ALICE)));
 });
 
 test("a message and the chat summary on the couple are written together", async () => {

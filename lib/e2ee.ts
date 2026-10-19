@@ -24,6 +24,8 @@ import {
 export {
   encryptDraft,
   decryptMessage,
+  encryptBytes,
+  decryptBytes,
   fingerprint,
   generateKeyPairJwk,
   importNonExtractablePrivateKey,

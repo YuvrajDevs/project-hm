@@ -211,7 +211,15 @@ export interface PartnerNote {
 }
 
 // 💬 Chat: the everyday conversation between the two of them (couples/{id}/chat)
-export type ChatKind = "text" | "image" | "voice" | "sticker";
+export type ChatKind = "text" | "image" | "voice" | "sticker" | "video";
+
+// What a reply points at: a short preview, so the quote still reads after the original is gone
+export interface ChatReply {
+  id: string;
+  by: string;          // uid of who wrote the message being replied to
+  kind: ChatKind;
+  text?: string;       // the first words, for text messages
+}
 
 export interface ChatMessage {
   id: string;
@@ -222,7 +230,13 @@ export interface ChatMessage {
   data?: string;       // photos and voice notes: the file itself, base64 - decrypted client-side
   w?: number;          // photos: size in pixels, so the bubble holds its shape while loading
   h?: number;
-  dur?: number;        // voice notes: seconds
+  dur?: number;        // voice notes and videos: seconds
+  thumb?: string;      // videos: a small still picture, base64 jpeg
+  path?: string;       // videos: where the encrypted file sits in storage
+  size?: number;       // videos: bytes of the original file
+  reply?: ChatReply;   // set when this message answers another one
+  once?: boolean;      // view once: gone for good after the other person opens it
+  openedAt?: string;   // view once: when it was opened (the content is wiped then)
   sticker?: string;    // stickers: the id of one of the sticker pictures that ship with the app
   createdAt: string;
   savedBy?: string[];  // people who saved it for themselves

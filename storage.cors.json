@@ -1,0 +1,8 @@
+[
+  {
+    "origin": ["https://honestmailbox.com", "https://www.honestmailbox.com"],
+    "method": ["GET", "POST", "PUT", "DELETE"],
+    "responseHeader": ["Content-Type", "Authorization", "x-goog-resumable"],
+    "maxAgeSeconds": 3600
+  }
+]

@@ -3,23 +3,27 @@
 import React, { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
 import { presence } from "@/lib/presence";
 import { AnimatePresence, motion } from "framer-motion";
-import { ArrowDown, ArrowLeft, Bookmark, MessageCircleHeart } from "lucide-react";
+import { ArrowDown, ArrowLeft, Bookmark, ChevronRight, MessageCircleHeart } from "lucide-react";
 import { useMailbox } from "@/context/MailboxContext";
 import { Avatar } from "@/components/ui/Avatar";
 import { AmbientBackground } from "@/components/ui/AmbientBackground";
 import {
-  deleteChatMessage, markChatSeen, migrateChatToE2ee, sendChatMessage, setChatMessageSaved, subscribeToChat, type ChatDraft,
+  deleteChatMessage, downloadChatVideo, markChatSeen, migrateChatToE2ee, openOnceMessage, saveWallpaper, sendChatMessage, setChatMessageSaved,
+  subscribeToChat, subscribeToWallpapers, uploadChatVideo, removeChatVideo, type ChatDraft, type ChatWallpaper,
 } from "@/lib/firestore-helpers";
-import { ChatMediaError, prepareImage, type VoiceClip } from "@/lib/chatMedia";
+import { ChatMediaError, prepareImage, prepareVideo, type VoiceClip } from "@/lib/chatMedia";
 import { ensureChatKeys, type KeyStatus } from "@/lib/e2ee";
 import { DeviceKeyGate } from "./DeviceKeyGate";
-import type { ChatMessage } from "@/lib/types";
+import type { ChatMessage, ChatReply } from "@/lib/types";
 import { useSensoryFeedback } from "@/hooks/useSensoryFeedback";
 import { useScrollLock } from "@/hooks/useScrollLock";
 import { cn, partnerLabel } from "@/lib/utils";
 import { ChatBubble } from "./ChatBubble";
 import { Composer } from "./Composer";
 import { ImageViewer } from "./ImageViewer";
+import { OnceViewer, VideoViewer } from "./MediaViewers";
+import { ChatSettings } from "./ChatSettings";
+import { effectiveWallpaper, pendingOffer } from "./wallpaper";
 import { SavedMessages } from "./SavedMessages";
 
 const PAGE = 40;
@@ -80,6 +84,13 @@ export const ChatScreen = ({ onClose }: { onClose: () => void }) => {
   const [error, setError] = useState("");
   const [preparing, setPreparing] = useState(false);
   const [view, setView] = useState<"chat" | "saved">("chat");
+  const [replyTo, setReplyTo] = useState<ChatReply | null>(null);
+  const [watching, setWatching] = useState<ChatMessage | null>(null);              // a video, full screen
+  const [onceShown, setOnceShown] = useState<{ message: ChatMessage; bytes?: Uint8Array } | null>(null);
+  const [openingOnce, setOpeningOnce] = useState<string | null>(null);
+  const [settingsOpen, setSettingsOpen] = useState(false);
+  const emptyWallpaper: ChatWallpaper = { settings: null, image: null, mime: null };
+  const [wallpapers, setWallpapers] = useState<{ mine: ChatWallpaper; theirs: ChatWallpaper }>({ mine: emptyWallpaper, theirs: emptyWallpaper });
   const [newBelow, setNewBelow] = useState(false);
   const [clearedNotice, setClearedNotice] = useState(false);
   useEffect(() => {
@@ -112,6 +123,22 @@ export const ChatScreen = ({ onClose }: { onClose: () => void }) => {
       (e) => { console.error(e); setError("Couldn't load chat. Check your connection and try again."); }
     );
   }, [coupleId, uid, partnerUid, count, keyStatus]);
+
+  useEffect(() => {
+    if (!coupleId || !uid || !partnerUid || keyStatus !== "ready") return;
+    return subscribeToWallpapers(coupleId, uid, partnerUid, (mine, theirs) => setWallpapers({ mine, theirs }));
+  }, [coupleId, uid, partnerUid, keyStatus]);
+
+  // Tapping anywhere outside the message that is open closes its options
+  useEffect(() => {
+    if (!selectedId) return;
+    const onDown = (e: PointerEvent) => {
+      const el = e.target as Element | null;
+      if (!el?.closest(`[data-chat-message="${selectedId}"]`)) setSelectedId(null);
+    };
+    document.addEventListener("pointerdown", onDown, true);
+    return () => document.removeEventListener("pointerdown", onDown, true);
+  }, [selectedId]);
 
   // Stay at the bottom as messages arrive, unless the reader scrolled up to look at something
   useLayoutEffect(() => {
@@ -183,13 +210,13 @@ export const ChatScreen = ({ onClose }: { onClose: () => void }) => {
   // Escape steps back: out of Saved first, then out of the chat (a photo viewer handles its own Escape)
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
-      if (e.key !== "Escape" || viewing) return;
+      if (e.key !== "Escape" || viewing || watching || onceShown || settingsOpen) return;
       if (view === "saved") setView("chat");
       else onClose();
     };
     window.addEventListener("keydown", onKey);
     return () => window.removeEventListener("keydown", onKey);
-  }, [view, viewing, onClose]);
+  }, [view, viewing, watching, onceShown, settingsOpen, onClose]);
 
   const rows = useMemo(() => messages.map((m, i) => {
     const prev = messages[i - 1];
@@ -209,48 +236,86 @@ export const ChatScreen = ({ onClose }: { onClose: () => void }) => {
     return null;
   }, [messages, partnerSeen, uid]);
 
+  const wallpaper = effectiveWallpaper(wallpapers.mine, wallpapers.theirs);
+  const offer = pendingOffer(wallpapers.mine, wallpapers.theirs);
+
   if (!user || !coupleId || !uid || !partnerUid) return null;
 
   const send = async (draft: ChatDraft) => {
     setError("");
     playPop();
-    await sendChatMessage(coupleId, uid, partnerUid, draft);
+    const reply = replyTo || undefined;
+    setReplyTo(null);
+    await sendChatMessage(coupleId, uid, partnerUid, { ...draft, reply });
   };
 
-  const sendText = (text: string) => {
-    send({ kind: "text", text }).catch((err) => {
-      console.error(err);
-      setError(err instanceof ChatMediaError ? err.message : "That message didn't send. Check your connection and try again.");
-    });
+  const fail = (what: string) => (err: unknown) => {
+    console.error(err);
+    setError(err instanceof ChatMediaError ? err.message : `That ${what} didn't send. Check your connection and try again.`);
   };
 
-  const sendPhoto = async (file: File) => {
+  const sendText = (text: string, once: boolean) => { send({ kind: "text", text, once }).catch(fail("message")); };
+
+  const sendMedia = async (file: File, once: boolean) => {
     setPreparing(true);
     setError("");
     try {
-      const img = await prepareImage(file);
-      await send({ kind: "image", mime: img.mime, data: img.data, w: img.w, h: img.h });
+      if (file.type.startsWith("video/")) {
+        const v = await prepareVideo(file);
+        const path = await uploadChatVideo(coupleId, uid, partnerUid, v.bytes, v.mime);
+        try {
+          await send({ kind: "video", mime: v.mime, dur: v.dur, w: v.w, h: v.h, thumb: v.thumb || undefined, path, size: v.size, once });
+        } catch (err) {
+          removeChatVideo(path); // nothing points at the upload any more
+          throw err;
+        }
+      } else {
+        const img = await prepareImage(file);
+        await send({ kind: "image", mime: img.mime, data: img.data, w: img.w, h: img.h, once });
+      }
     } catch (err) {
-      console.error(err);
-      setError(err instanceof ChatMediaError ? err.message : "That photo didn't send. Try again.");
+      fail("file")(err);
     } finally {
       setPreparing(false);
     }
   };
 
-  const sendSticker = (id: string) => {
-    send({ kind: "sticker", sticker: id }).catch((err) => {
-      console.error(err);
-      setError(err instanceof ChatMediaError ? err.message : "That sticker didn't send. Check your connection and try again.");
-    });
+  const sendSticker = (id: string) => { send({ kind: "sticker", sticker: id }).catch(fail("sticker")); };
+
+  const sendVoice = (clip: VoiceClip, once: boolean) => {
+    send({ kind: "voice", mime: clip.mime, data: clip.data, dur: clip.dur, once }).catch(fail("voice note"));
   };
 
-  const sendVoice = (clip: VoiceClip) => {
-    send({ kind: "voice", mime: clip.mime, data: clip.data, dur: clip.dur }).catch((err) => {
+  // Opening a view-once message: fetch what it needs first (a video), then wipe it from the server and show it
+  const openOnce = async (m: ChatMessage) => {
+    if (openingOnce || m.openedAt) return;
+    setOpeningOnce(m.id);
+    setError("");
+    try {
+      const bytes = m.kind === "video" && m.path ? await downloadChatVideo(coupleId, uid, partnerUid, m.senderUid, m.path) : undefined;
+      await openOnceMessage(coupleId, m);
+      setOnceShown({ message: m, bytes });
+    } catch (err) {
       console.error(err);
-      setError(err instanceof ChatMediaError ? err.message : "That voice note didn't send. Try again.");
-    });
+      setError("Couldn't open that. Check your connection and try again.");
+    } finally {
+      setOpeningOnce(null);
+    }
   };
+
+  const startReply = (m: ChatMessage) => {
+    setSelectedId(null);
+    setReplyTo({ id: m.id, by: m.senderUid, kind: m.kind, text: m.kind === "text" && !m.once ? (m.text || "").slice(0, 120) : undefined });
+  };
+
+  const jumpTo = (id: string) => {
+    const el = scroller.current?.querySelector(`[data-chat-message="${id}"]`);
+    if (!el) return;
+    el.scrollIntoView({ block: "center", behavior: "smooth" });
+    el.animate([{ opacity: 0.4 }, { opacity: 1 }], { duration: 700 });
+  };
+
+  const nameOf = (u: string) => (u === uid ? "You" : partnerName);
 
   const toggleSaved = (m: ChatMessage) => {
     const saved = !!m.savedBy?.includes(uid);
@@ -298,13 +363,21 @@ export const ChatScreen = ({ onClose }: { onClose: () => void }) => {
             </div>
           ) : (
             <>
-              <Avatar user={partner} size="sm" />
-              <div className="min-w-0 flex-1">
-                <h2 className="font-bebas text-xl tracking-widest uppercase leading-none truncate">{partnerTitle}</h2>
-                <p className="font-outfit text-xs text-neutral-500 mt-1 truncate">
-                  {partner?.currentMood ? `Feeling ${partner.currentMood}` : "Just the two of you"}
-                </p>
-              </div>
+              <button
+                type="button"
+                onClick={() => setSettingsOpen(true)}
+                aria-label="Chat settings"
+                className="min-w-0 flex-1 flex items-center gap-3 text-left rounded-2xl -my-1 py-1 pr-2 hover:bg-white/[0.04] active:scale-[0.99] transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/50"
+              >
+                <Avatar user={partner} size="sm" />
+                <span className="min-w-0 flex-1">
+                  <span className="block font-bebas text-xl tracking-widest uppercase leading-none truncate">{partnerTitle}</span>
+                  <span className="block font-outfit text-xs text-neutral-500 mt-1 truncate">
+                    {partner?.currentMood ? `Feeling ${partner.currentMood}` : "Just the two of you"}
+                  </span>
+                </span>
+                <ChevronRight className="w-4 h-4 shrink-0 text-neutral-600" aria-hidden="true" />
+              </button>
               <button
                 type="button"
                 onClick={() => setView("saved")}
@@ -345,11 +418,27 @@ export const ChatScreen = ({ onClose }: { onClose: () => void }) => {
             </div>
           </div>
         )}
+        {wallpaper && (
+          // Fills the chat area and nothing more: the header and the rest of the app keep their own look
+          <div className="absolute inset-0 z-0 overflow-hidden pointer-events-none" aria-hidden="true">
+            {/* eslint-disable-next-line @next/next/no-img-element */}
+            <img src={wallpaper.src} alt="" className="absolute inset-0 w-full h-full object-cover" style={{ filter: `blur(${wallpaper.blur}px)`, transform: wallpaper.blur ? "scale(1.1)" : undefined }} />
+            <div className="absolute inset-0" style={{ background: `rgba(0,0,0,${wallpaper.dim})` }} />
+          </div>
+        )}
+        {offer && (
+          <div className="relative z-20 mx-4 mt-2 rounded-2xl bg-[#1c1c1c]/95 border border-[#2a2a2a] px-3 py-2.5 flex items-center gap-3">
+            <Avatar user={partner} size="xs" />
+            <p className="flex-1 min-w-0 font-outfit text-xs text-neutral-200">{partnerName} set a chat wallpaper. Use it too?</p>
+            <button type="button" onClick={() => saveWallpaper(coupleId, uid, partnerUid, { source: "partner", dim: wallpapers.mine.settings?.dim ?? 2, blur: wallpapers.mine.settings?.blur ?? 0 }).catch(() => setError("Couldn't save that. Try again."))} className="px-3 h-8 rounded-full bg-white text-black font-bebas text-xs tracking-widest uppercase active:scale-95">Use it</button>
+            <button type="button" onClick={() => saveWallpaper(coupleId, uid, partnerUid, { source: "none", dim: 2, blur: 0, dismissedOffer: offer.updatedAt }).catch(() => {})} className="px-2 h-8 font-bebas text-xs tracking-widest uppercase text-neutral-400 hover:text-white">No</button>
+          </div>
+        )}
         <div
           ref={scroller}
           onScroll={onScroll}
           onClick={(e) => { if (e.target === e.currentTarget) setSelectedId(null); }}
-          className="flex-1 min-h-0 overflow-y-auto overscroll-contain"
+          className="relative z-10 flex-1 min-h-0 overflow-y-auto overscroll-contain"
         >
           <div ref={content} className="min-h-full flex flex-col w-full max-w-2xl mx-auto px-4 pt-2 pb-4">
             {!loaded ? (
@@ -399,10 +488,17 @@ export const ChatScreen = ({ onClose }: { onClose: () => void }) => {
                       saved={!!m.savedBy?.includes(uid)}
                       seen={seenId === m.id}
                       partnerName={partnerName}
+                      partner={partner}
+                      replyAuthor={nameOf}
+                      opening={openingOnce === m.id}
                       onSelect={() => setSelectedId((cur) => (cur === m.id ? null : m.id))}
                       onOpenImage={setViewing}
+                      onOpenVideo={setWatching}
+                      onOpenOnce={openOnce}
                       onSave={() => toggleSaved(m)}
                       onUnsend={() => unsend(m)}
+                      onReply={() => startReply(m)}
+                      onJump={jumpTo}
                     />
                   </React.Fragment>
                 ))}
@@ -427,7 +523,7 @@ export const ChatScreen = ({ onClose }: { onClose: () => void }) => {
           )}
         </AnimatePresence>
 
-        <div className="shrink-0 border-t border-white/5 bg-[var(--page)] pb-[env(safe-area-inset-bottom)]">
+        <div className={cn("relative z-10 shrink-0 border-t border-white/5 pb-[env(safe-area-inset-bottom)]", wallpaper ? "bg-[var(--page)]/80 backdrop-blur-md" : "bg-[var(--page)]")}>
           <div className="w-full max-w-2xl mx-auto">
             {clearedNotice && (
               <p className="px-5 pt-2 text-neutral-400 font-outfit text-xs text-center">
@@ -435,13 +531,18 @@ export const ChatScreen = ({ onClose }: { onClose: () => void }) => {
               </p>
             )}
             {error && <p role="alert" className="px-5 pt-2 text-rose-400 font-outfit text-xs text-center">{error}</p>}
-            <Composer onText={sendText} onSticker={sendSticker} onPhoto={sendPhoto} onVoice={sendVoice} onError={setError} preparing={preparing} />
+            <Composer onText={sendText} onSticker={sendSticker} onMedia={sendMedia} onVoice={sendVoice} onError={setError} preparing={preparing} reply={replyTo} replyName={replyTo ? nameOf(replyTo.by) : ""} onCancelReply={() => setReplyTo(null)} />
           </div>
         </div>
       </div>
 
       <AnimatePresence>
         {viewing && <ImageViewer key="viewer" message={viewing} onClose={() => setViewing(null)} />}
+        {watching && <VideoViewer key="video" message={watching} onClose={() => setWatching(null)} />}
+        {onceShown && <OnceViewer key="once" message={onceShown.message} bytes={onceShown.bytes} onClose={() => setOnceShown(null)} />}
+        {settingsOpen && (
+          <ChatSettings key="settings" coupleId={coupleId} uid={uid} partner={partner} partnerName={partnerName} mine={wallpapers.mine} theirs={wallpapers.theirs} onClose={() => setSettingsOpen(false)} />
+        )}
       </AnimatePresence>
     </motion.div>
   );
