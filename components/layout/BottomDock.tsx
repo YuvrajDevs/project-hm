@@ -2,7 +2,7 @@
 
 import React from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { Plus, Smile, BarChart3, MessageSquareHeart, User, Inbox } from "lucide-react";
+import { BarChart3, MessageCircle, User } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { cn } from "@/lib/utils";
 import { useSensoryFeedback } from "@/hooks/useSensoryFeedback";
@@ -12,8 +12,6 @@ interface BottomDockProps {
   onViewChange: (view: "mailbox" | "archive") => void;
   onChatClick: () => void;
   onComposeClick: () => void;
-  onEmojiClick: () => void;
-  showEmojiDot?: boolean;
   showInboxDot?: boolean;
 }
 
@@ -22,8 +20,6 @@ export const BottomDock: React.FC<BottomDockProps> = ({
   onViewChange, 
   onChatClick,
   onComposeClick, 
-  onEmojiClick,
-  showEmojiDot = false,
   showInboxDot = false
 }) => {
   const router = useRouter();
@@ -53,37 +49,18 @@ export const BottomDock: React.FC<BottomDockProps> = ({
             transition={{ type: "spring", damping: 20, stiffness: 100 }}
             className="pointer-events-auto relative flex items-center gap-1 p-2 bg-[#0e0e0e] border border-[#232323] rounded-[1.5rem] shadow-[0_20px_50px_rgba(0,0,0,0.5)]"
           >
-        {/* Far Left: Inbox Button */}
+        {/* Far Left: Chat */}
         <button
-          aria-label="Inbox"
+          aria-label="Chat"
           onClick={() => { playTick(); vibrateTick(); onChatClick(); }}
           className="relative w-14 h-14 rounded-full flex items-center justify-center transition-all group active:scale-90 text-neutral-400 hover:text-white hover:bg-white/5"
         >
-          <Inbox className="w-6 h-6 group-hover:scale-110 transition-transform" />
+          <MessageCircle className="w-6 h-6 group-hover:scale-110 transition-transform" />
           {showInboxDot && (
             <span className="absolute top-3.5 right-3.5 w-2.5 h-2.5 bg-pink-500 rounded-full border-2 border-[#0e0e0e]" aria-label="New messages" />
           )}
           <span className="absolute -top-12 left-1/2 -translate-x-1/2 px-3 py-1 bg-white text-black text-[10px] font-bebas tracking-widest uppercase rounded-lg opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none">
-            Inbox
-          </span>
-        </button>
-
-        {/* Left: Emoji Button */}
-        <button
-          aria-label="Send a signal"
-          onClick={() => {
-            playTick();
-            vibrateTick();
-            onEmojiClick();
-          }}
-          className="relative w-14 h-14 rounded-full flex items-center justify-center text-neutral-400 hover:text-white hover:bg-white/5 transition-all group active:scale-90"
-        >
-          <Smile className="w-6 h-6 group-hover:scale-110 transition-transform" />
-          {showEmojiDot && (
-            <span className="absolute top-4 right-4 w-2 h-2 bg-pink-500 rounded-full border-2 border-[#0e0e0e]" />
-          )}
-          <span className="absolute -top-12 left-1/2 -translate-x-1/2 px-3 py-1 bg-white text-black text-[10px] font-bebas tracking-widest uppercase rounded-lg opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none">
-            React
+            Chat
           </span>
         </button>
 

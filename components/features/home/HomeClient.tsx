@@ -561,7 +561,6 @@ export function HomeClient() {
           onChatClick={() => setChatOpen(true)}
           showInboxDot={hasUnreadChat(couple, user?.uid)}
           onComposeClick={() => setShowCompose(true)}
-          onEmojiClick={() => setShowReactions(true)}
         />
       )}
     </div>

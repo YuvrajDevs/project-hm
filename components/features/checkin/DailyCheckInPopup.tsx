@@ -3,8 +3,8 @@
 import React, { useState, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { useMailbox } from "@/context/MailboxContext";
-import { ArrowRight, X, Zap, Send, Heart, Smile, Link2 } from "lucide-react";
-import { MoodSelector, MoodIcon, MOOD_TYPES } from "./MoodSelector";
+import { ArrowRight, Check, X, Zap, Send, Heart, Smile, Link2 } from "lucide-react";
+import { MoodSelector, MOOD_TYPES } from "./MoodSelector";
 import { ReactionType } from "@/lib/types";
 import { useSensoryFeedback } from "@/hooks/useSensoryFeedback";
 import { partnerLabel } from "@/lib/utils";
@@ -26,12 +26,11 @@ export const DailyCheckInPopup: React.FC<DailyCheckInPopupProps> = ({ onClose })
   const savingRef = React.useRef(false);
   const [error, setError] = useState("");
 
+  const myCheckIn = checkins.find(c => c.userUid === user?.uid);
+  // Already synced today: straight to the summary
   useEffect(() => {
-    const userCheckIn = checkins.find(c => c.userUid === user?.uid);
-    if (userCheckIn && step === "intro") {
-        setStep("summary");
-    }
-  }, [checkins, user, step]);
+    if (myCheckIn && step === "intro") setStep("summary");
+  }, [myCheckIn, step]);
 
   const partnerCheckIn = checkins.find(c => c.userUid === partner?.uid);
 
@@ -70,10 +69,9 @@ export const DailyCheckInPopup: React.FC<DailyCheckInPopupProps> = ({ onClose })
   };
 
   const calculateSyncScore = () => {
-    const userCheckIn = checkins.find(c => c.userUid === user?.uid);
-    if (!userCheckIn || !partnerCheckIn) return 0;
-    const moodDiff = Math.abs(userCheckIn.mood - partnerCheckIn.mood);
-    const connDiff = Math.abs(userCheckIn.connection - partnerCheckIn.connection);
+    if (!myCheckIn || !partnerCheckIn) return 0;
+    const moodDiff = Math.abs(myCheckIn.mood - partnerCheckIn.mood);
+    const connDiff = Math.abs(myCheckIn.connection - partnerCheckIn.connection);
     return Math.max(0, 100 - (moodDiff * 7) - (connDiff * 7));
   };
 
@@ -196,6 +194,9 @@ export const DailyCheckInPopup: React.FC<DailyCheckInPopupProps> = ({ onClose })
 
           {step === "summary" && (
             <motion.div key="summary" initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} className="space-y-6">
+              <div className="flex items-center justify-center gap-2 font-bebas tracking-[0.25em] uppercase text-sm text-emerald-300">
+                <Check className="w-4 h-4" /> Daily check-in done
+              </div>
               {!partnerCheckIn ? (
                 <>
                   <div className="tone-pink rounded-[1.5rem] p-8 space-y-4 text-center">
@@ -215,16 +216,6 @@ export const DailyCheckInPopup: React.FC<DailyCheckInPopupProps> = ({ onClose })
                       <div className="font-bebas text-7xl leading-none tabular-nums">{score}%</div>
                     </div>
                     <span className="font-bebas text-xl tracking-widest uppercase pb-1">{score >= 75 ? "Deep sync" : score >= 55 ? "In tune" : score >= 35 ? "Adapting" : "Far apart"}</span>
-                  </div>
-                  <div className="grid grid-cols-2 gap-3">
-                    <div className="tone-pink rounded-[1.5rem] p-5 flex flex-col justify-between gap-3 min-h-[7rem]">
-                      <span className="font-bebas text-[10px] tracking-[0.3em] uppercase leading-none opacity-70 block truncate">You</span>
-                      <p className="font-bebas text-2xl leading-none tracking-wide uppercase truncate flex items-center gap-2"><MoodIcon mood={user?.currentMood} className="w-7 h-7 shrink-0 object-contain" />{user?.currentMood || "Synced"}</p>
-                    </div>
-                    <div className="tone-blue rounded-[1.5rem] p-5 flex flex-col justify-between gap-3 min-h-[7rem]">
-                      <span className="font-bebas text-[10px] tracking-[0.3em] uppercase leading-none opacity-70 truncate block">{partnerName}</span>
-                      <p className="font-bebas text-2xl leading-none tracking-wide uppercase truncate flex items-center gap-2"><MoodIcon mood={partner?.currentMood} className="w-7 h-7 shrink-0 object-contain" />{partner?.currentMood || "Connected"}</p>
-                    </div>
                   </div>
                   <p className="font-outfit text-sm text-neutral-400 leading-relaxed px-1">{getSuggestion(score)}</p>
                   <button onClick={onClose} className={primary}>Continue</button>

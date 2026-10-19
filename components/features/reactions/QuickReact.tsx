@@ -9,6 +9,7 @@ import { useSensoryFeedback } from "@/hooks/useSensoryFeedback";
 import { REACTION_ICONS } from "@/lib/constants";
 import { useScrollLock } from "@/hooks/useScrollLock";
 import { AccentWords } from "@/components/ui/Wordmark";
+import { AmbientBackground } from "@/components/ui/AmbientBackground";
 
 interface ReactionConfig {
     type: ReactionType;
@@ -66,7 +67,7 @@ export const QuickReact = ({ onClose }: { onClose: () => void }) => {
     
     try {
       playSend();
-      await sendSignal(selected.type, note.trim() || "");
+      await sendSignal(selected.type, note.trim() || "", false);
       
       // SYNC: Update user's global mood state
       await updateMood(selected.label, false);
@@ -213,74 +214,69 @@ export const IncomingReactionIndicator = () => {
       {activeSplash && reactionConfig && (
         <motion.div
           key={activeSplash.id}
+          role="dialog"
+          aria-label={`${partner?.displayName || "Your partner"} is feeling ${reactionConfig.label}`}
           initial={{ opacity: 0 }}
           animate={{ opacity: 1 }}
           exit={{ opacity: 0 }}
-          transition={{ duration: 0.6 }}
-          className={`fixed inset-0 z-[300] flex items-center justify-center ${reactionConfig.bgColor} backdrop-blur-xl p-8`}
+          transition={{ duration: 0.5 }}
+          onClick={() => { if (isManual) setActiveSplash(null); }}
+          className="fixed inset-0 z-[300] flex flex-col items-center justify-center bg-[var(--page)] overflow-hidden px-8"
         >
-            <div className="max-w-md w-full space-y-12 text-center relative">
-                
-                {/* Manual Close Button */}
-                {isManual && (
-                    <motion.button 
-                        initial={{ opacity: 0, rotate: -90 }}
-                        animate={{ opacity: 1, rotate: 0 }}
-                        onClick={() => setActiveSplash(null)}
-                        className="absolute -top-20 right-0 p-4 rounded-full bg-black/5 hover:bg-black/10 transition-colors"
-                    >
-                        <X className="w-8 h-8 text-black/40" />
-                    </motion.button>
-                )}
+          <AmbientBackground variant="bright" gender={partner?.gender} />
+          {/* A soft glow in the colour of the feeling, behind everything */}
+          <motion.div
+            aria-hidden="true"
+            animate={{ scale: [1, 1.12, 1], opacity: [0.28, 0.42, 0.28] }}
+            transition={{ duration: 4, repeat: Infinity, ease: "easeInOut" }}
+            style={{ background: `radial-gradient(circle, ${reactionConfig.color === "#ffffff" ? "#a3a3a3" : reactionConfig.color} 0%, transparent 65%)` }}
+            className="absolute left-1/2 top-[40%] -translate-x-1/2 -translate-y-1/2 w-[min(120vw,46rem)] h-[min(120vw,46rem)] pointer-events-none"
+          />
 
-                <motion.div 
-                    initial={{ scale: 0.8, y: 20, opacity: 0 }}
-                    animate={{ scale: 1, y: 0, opacity: 1 }}
-                    exit={{ scale: 1.1, y: -20, opacity: 0 }}
-                    transition={{ duration: 0.6, ease: [0.16, 1, 0.3, 1] }}
-                    className="space-y-10"
-                >
-                    <div className="relative mx-auto w-40 h-40">
-                        <motion.div 
-                            animate={{ scale: [1, 1.2, 1], opacity: [0.1, 0.2, 0.1] }}
-                            transition={{ duration: 3, repeat: Infinity }}
-                            style={{ backgroundColor: reactionConfig.color }}
-                            className="absolute inset-0 rounded-full blur-3xl"
-                        />
-                        <div className="relative bg-white border border-neutral-100 rounded-full w-full h-full flex items-center justify-center shadow-2xl overflow-hidden p-6">
-                            <img src={reactionConfig.url} alt={reactionConfig.label} className="w-full h-full object-contain" />
-                        </div>
-                    </div>
+          {isManual && (
+            <button
+              type="button"
+              onClick={(e) => { e.stopPropagation(); setActiveSplash(null); }}
+              aria-label="Close"
+              className="absolute top-[max(1.5rem,env(safe-area-inset-top))] right-6 w-11 h-11 rounded-full bg-[#1c1c1c] border border-[#232323] flex items-center justify-center text-neutral-400 hover:text-white transition-colors"
+            >
+              <X className="w-5 h-5" />
+            </button>
+          )}
 
-                    <div className="space-y-4">
-                        <div className="flex flex-col items-center gap-2">
-                            <h2 
-                                className="text-6xl font-bebas tracking-tight uppercase leading-none"
-                                style={{ color: reactionConfig.color === '#ffffff' ? '#000000' : reactionConfig.color }}
-                            >
-                                {reactionConfig.label}
-                            </h2>
-                            <p className="text-[10px] font-bebas text-neutral-400 tracking-[0.5em] uppercase">From {partner?.displayName}</p>
-                        </div>
-                        
-                        {activeSplash.note && (
-                            <motion.div 
-                                initial={{ opacity: 0, y: 10 }}
-                                animate={{ opacity: 1, y: 0 }}
-                                transition={{ delay: 0.3 }}
-                                className="inline-block px-8 py-4 text-white rounded-[1.5rem] shadow-xl font-outfit text-base italic"
-                                style={{ backgroundColor: reactionConfig.color === '#ffffff' ? '#171717' : reactionConfig.color }}
-                            >
-                                &quot;{activeSplash.note}&quot;
-                            </motion.div>
-                        )}
-                    </div>
+          <motion.div
+            initial={{ scale: 0.9, y: 24, opacity: 0 }}
+            animate={{ scale: 1, y: 0, opacity: 1 }}
+            exit={{ scale: 1.05, y: -16, opacity: 0 }}
+            transition={{ duration: 0.6, ease: [0.16, 1, 0.3, 1] }}
+            className="relative z-10 w-full max-w-sm flex flex-col items-center text-center gap-6"
+          >
+            {/* The icon stands on its own, floating, no circle behind it */}
+            {/* eslint-disable-next-line @next/next/no-img-element */}
+            <img src={reactionConfig.url} alt="" className="w-44 h-44 sm:w-52 sm:h-52 object-contain animate-float drop-shadow-[0_18px_30px_rgba(0,0,0,0.35)]" />
 
-                    <p className="text-[8px] font-bebas text-neutral-300 tracking-[0.6em] uppercase pt-4 animate-pulse">
-                        {isManual ? "Tuning into their heart" : "A signal of intention"}
-                    </p>
-                </motion.div>
-            </div>
+            <h2
+              className="text-7xl sm:text-8xl font-bebas tracking-wide uppercase leading-none"
+              style={{ color: reactionConfig.color === "#ffffff" ? undefined : reactionConfig.color }}
+            >
+              {reactionConfig.label}
+            </h2>
+
+            {activeSplash.note && (
+              <motion.p
+                initial={{ opacity: 0, y: 10 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ delay: 0.3 }}
+                className="max-w-full px-6 py-4 rounded-[1.5rem] bg-[#1c1c1c] border border-[#2a2a2a] text-white font-outfit text-base leading-relaxed break-words text-pretty"
+              >
+                &ldquo;{activeSplash.note}&rdquo;
+              </motion.p>
+            )}
+
+            <p className="font-bebas text-[10px] tracking-[0.45em] uppercase text-neutral-500 pt-2">
+              {isManual ? "Tap anywhere to close" : "A signal of intention"}
+            </p>
+          </motion.div>
         </motion.div>
       )}
     </AnimatePresence>

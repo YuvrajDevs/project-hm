@@ -2,29 +2,20 @@
 
 import React from "react";
 import { motion } from "framer-motion";
-import { 
-  Flame, 
-  Activity, 
-  Thermometer, 
-  Mail, 
-  Zap, 
-  Wind,
-  ArrowRight
-} from "lucide-react";
+import { Flame, Activity, Thermometer, Mail, Zap, Wind } from "lucide-react";
 import { StreakGrid } from "./StreakGrid";
 import { useMailbox } from "@/context/MailboxContext";
 import { cn, formatRelativeTime, partnerLabel } from "@/lib/utils";
+import { AccentWords } from "@/components/ui/Wordmark";
 
 interface ArchiveDashboardProps {
-  onOpenInbox: () => void;
-  onOpenCheckIn: () => void;
-  onOpenSignals: () => void;
+  onOpenInbox?: () => void;
+  onOpenCheckIn?: () => void;
+  onOpenSignals?: () => void;
 }
 
-export const ArchiveDashboard: React.FC<ArchiveDashboardProps> = ({ onOpenInbox, onOpenCheckIn, onOpenSignals }) => {
+export const ArchiveDashboard: React.FC<ArchiveDashboardProps> = () => {
   const { metrics, user, partner, checkins } = useMailbox();
-
-  const scrollToCalendar = () => document.getElementById("archive-calendar")?.scrollIntoView({ behavior: "smooth", block: "start" });
 
   if (!metrics) return null;
 
@@ -62,133 +53,74 @@ export const ArchiveDashboard: React.FC<ArchiveDashboardProps> = ({ onOpenInbox,
 
   const cards = [
     {
-      id: "streak",
-      icon: <Flame className="w-5 h-5 text-orange-500" />,
-      label: "Check-in Streak",
-      value: `${metrics.streak} ${metrics.streak === 1 ? "Day" : "Days"}`,
-      subtext: streakSubtext,
-      color: metrics.streak > 0 ? "text-orange-400" : "text-neutral-600",
-      hint: "See calendar",
-      onClick: scrollToCalendar
+      id: "streak", tone: "tone-amber", icon: <Flame className="w-4 h-4" />, label: "Streak",
+      value: `${metrics.streak}`, unit: metrics.streak === 1 ? "day" : "days", subtext: streakSubtext,
     },
     {
-      id: "sync",
-      icon: <Thermometer className="w-5 h-5 text-yellow-500" />,
-      label: "Today's Connection",
-      value: connectionValue,
-      subtext: connectionSubtext,
-      color: !myCheckIn && !partnerCheckIn ? "text-neutral-600" : (metrics.connectionAvgToday >= 7 ? "text-yellow-400" : "text-orange-400"),
-      hint: myCheckIn ? "View today" : "Check in",
-      onClick: onOpenCheckIn
+      id: "sync", tone: "tone-teal", icon: <Thermometer className="w-4 h-4" />, label: "Connection today",
+      value: connectionValue, unit: "", subtext: connectionSubtext,
     },
     {
-      id: "pulse",
-      icon: <Mail className="w-5 h-5 text-pink-500" />,
-      label: "Waiting On You",
-      value: `${metrics.unreadCount} ${metrics.unreadCount === 1 ? "Note" : "Notes"}`,
-      subtext: metrics.unreadCount > 0 ? `From ${partnerName}, not answered yet` : "All caught up",
-      color: metrics.unreadCount > 0 ? "text-pink-400" : "text-neutral-600",
-      hint: "Open the mailbox",
-      onClick: onOpenInbox
+      id: "pulse", tone: "tone-pink", icon: <Mail className="w-4 h-4" />, label: "Waiting on you",
+      value: `${metrics.unreadCount}`, unit: metrics.unreadCount === 1 ? "note" : "notes",
+      subtext: metrics.unreadCount > 0 ? `From ${partnerName}` : "All caught up",
     },
     {
-      id: "activity",
-      icon: <Activity className="w-5 h-5 text-blue-500" />,
-      label: "Last Activity",
-      value: activity ? formatRelativeTime(activity.time) : "Nothing yet",
+      id: "activity", tone: "tone-blue", icon: <Activity className="w-4 h-4" />, label: "Last activity",
+      value: activity ? formatRelativeTime(activity.time) : "—", unit: "",
       subtext: activity ? `${activityWho} ${activityWhat}` : "Send the first note",
-      color: activity ? "text-blue-400" : "text-neutral-600",
-      hint: "Open the mailbox",
-      onClick: onOpenInbox
     },
     {
-      id: "touch",
-      icon: <Zap className="w-5 h-5 text-cyan-500" />,
-      label: "Signals This Week",
-      value: `${metrics.reactsCount}`,
-      subtext: metrics.reactsCount > 0 ? "Small signals between you two" : "Send one in a tap",
-      color: metrics.reactsCount > 0 ? "text-cyan-400" : "text-neutral-600",
-      hint: "Send a signal",
-      onClick: onOpenSignals
+      id: "touch", tone: "tone-violet", icon: <Zap className="w-4 h-4" />, label: "Signals this week",
+      value: `${metrics.reactsCount}`, unit: "", subtext: metrics.reactsCount > 0 ? "Between you two" : "Send one in a tap",
     },
     {
-      id: "state",
-      icon: <Wind className="w-5 h-5 text-emerald-500" />,
-      label: "Right Now",
-      value: metrics.state,
-      subtext: STATE_HELP[metrics.state] || "Based on today's signals and check-ins",
-      color: metrics.state === "In Conflict" ? "text-red-500" : (["Deep Peace", "Harmonious"].includes(metrics.state) ? "text-emerald-400" : "text-neutral-400"),
-      hint: "Update your mood",
-      onClick: onOpenSignals
-    }
+      id: "state", tone: metrics.state === "In Conflict" ? "tone-red" : "tone-emerald", icon: <Wind className="w-4 h-4" />, label: "Right now",
+      value: metrics.state, unit: "", subtext: STATE_HELP[metrics.state] || "From today's signals",
+    },
   ];
 
   return (
-    <motion.div 
+    <motion.div
       initial={{ opacity: 0, y: 10 }}
       animate={{ opacity: 1, y: 0 }}
       exit={{ opacity: 0, y: -10 }}
       transition={{ duration: 0.4, ease: "easeOut" }}
-      className="space-y-12 pb-20 relative"
+      className="min-h-screen bg-transparent pb-32 relative"
     >
-      {/* 1. Header Hero */}
-      <section className="px-6 pt-12 relative z-10">
-        <motion.div
-            initial={{ opacity: 0, y: 10 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ delay: 0.2 }}
-            className="space-y-2"
-        >
-            <h1 className="text-6xl font-bebas tracking-wider uppercase leading-none">
-              The <span className="text-transparent bg-clip-text bg-gradient-to-r from-yellow-400 to-red-500">Archive</span>
-            </h1>
-            <p className="text-neutral-500 text-[10px] tracking-[0.4em] uppercase font-bebas mt-4">How the two of you are doing, at a glance</p>
-        </motion.div>
-      </section>
+      <div className="max-w-4xl mx-auto px-6 pt-12 space-y-10 relative z-10">
+        <header className="space-y-2">
+          <h1 className="text-6xl font-bebas text-white tracking-widest uppercase leading-none"><AccentWords text="The Archive" /></h1>
+          <p className="text-neutral-500 font-outfit text-[10px] uppercase tracking-[0.4em]">How the two of you are doing</p>
+        </header>
 
-      {/* 2. Metrics Cards (Moved above the calendar) */}
-      <section className="px-6 grid grid-cols-2 md:grid-cols-3 gap-6 relative z-10">
-        {cards.map((card, idx) => (
-          <motion.button
-            type="button"
-            onClick={card.onClick}
-            key={card.id}
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ delay: 0.3 + idx * 0.05 }}
-            className="bg-[#161616] border border-[#2a2a2a] rounded-[1.5rem] p-6 md:p-10 space-y-4 md:space-y-6 hover:bg-[#242424] active:scale-[0.98] transition-all cursor-pointer group text-left flex flex-col"
-          >
-            <div className="flex justify-between items-start">
-              <div className="p-2.5 rounded-2xl bg-[#161616] group-hover:scale-110 transition-transform">
-                {card.icon}
-              </div>
-            </div>
-            
-            <div className="space-y-1">
-              <div className="text-[10px] md:text-xs font-bebas tracking-widest text-neutral-500 uppercase">{card.label}</div>
-              <div className={cn("text-2xl md:text-4xl font-bebas tracking-widest uppercase break-words", card.color)}>{card.value}</div>
-              <div className="text-[10px] md:text-[11px] font-outfit text-neutral-500 leading-relaxed">{card.subtext}</div>
-            </div>
+        {/* Today at a glance: small cards, same colours as the home screen */}
+        <section className="grid grid-cols-2 md:grid-cols-3 gap-3">
+          {cards.map((card, idx) => (
+            <motion.div
+              key={card.id}
+              initial={{ opacity: 0, y: 12 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ delay: 0.1 + idx * 0.04 }}
+              className={cn(card.tone, "rounded-[1.5rem] p-4 text-left flex flex-col justify-between gap-3 min-h-[8.5rem] ")}
+            >
+              <span className="flex items-center justify-between gap-2">
+                <span className="font-bebas text-[10px] tracking-[0.18em] uppercase leading-none opacity-70 truncate">{card.label}</span>
+                <span className="w-7 h-7 shrink-0 rounded-full bg-black/15 flex items-center justify-center" aria-hidden="true">{card.icon}</span>
+              </span>
+              <span className="font-bebas leading-none flex items-baseline gap-1.5 min-w-0">
+                <span className={cn("tabular-nums truncate", card.value.length > 6 ? "text-3xl" : "text-5xl")}>{card.value}</span>
+                {card.unit && <span className="text-lg opacity-70">{card.unit}</span>}
+              </span>
+              <span className="font-outfit text-[11px] leading-snug opacity-75 text-pretty">{card.subtext}</span>
+            </motion.div>
+          ))}
+        </section>
 
-            <div className="flex items-center gap-1 text-[10px] font-bebas tracking-widest uppercase text-neutral-600 group-hover:text-white transition-colors mt-auto">
-              {card.hint} <ArrowRight className="w-3 h-3" />
-            </div>
-          </motion.button>
-        ))}
-      </section>
-
-      {/* 3. Streak Grid (The focal point) */}
-      <section id="archive-calendar" className="px-6 relative z-10 scroll-mt-28">
-        <StreakGrid history={metrics.historyCheckins} />
-      </section>
-
-      {/* Footer Reflection (Reduced space) */}
-      <footer className="px-10 py-8 text-center opacity-30 relative z-10">
-        <div className="w-px h-8 bg-gradient-to-b from-transparent via-white/20 to-transparent mx-auto mb-4" />
-        <p className="text-[8px] font-bebas tracking-[0.5em] text-neutral-400 uppercase">
-          Documenting your pulse
-        </p>
-      </footer>
+        <section id="archive-calendar" className="scroll-mt-28">
+          <StreakGrid history={metrics.historyCheckins} />
+        </section>
+      </div>
     </motion.div>
   );
 };

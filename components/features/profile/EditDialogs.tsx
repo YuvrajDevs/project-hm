@@ -1,7 +1,8 @@
 "use client";
 
-import React, { useState } from "react";
-import { Plus, X } from "lucide-react";
+import React, { useRef, useState } from "react";
+import { ImagePlus, Plus, X } from "lucide-react";
+import { ChatMediaError, prepareAvatar } from "@/lib/chatMedia";
 import { Sheet } from "@/components/ui/Sheet";
 import { Avatar } from "@/components/ui/Avatar";
 import { cn } from "@/lib/utils";
@@ -136,19 +137,28 @@ export const FactsDialog = ({ facts, onSave, onClose }: {
 };
 
 // Your own name, line and avatar
-export const AboutDialog = ({ name, bio, gender, onSave, onClose }: {
-  name: string; bio: string; gender?: string;
-  onSave: (next: { name: string; bio: string; gender: string }) => Promise<void>;
+export const AboutDialog = ({ name, bio, gender, avatarImage, birthday, onSave, onClose }: {
+  name: string; bio: string; gender?: string; avatarImage?: string; birthday?: string;
+  onSave: (next: { name: string; bio: string; gender: string; avatarImage: string; birthday: string }) => Promise<void>;
   onClose: () => void;
 }) => {
   const [n, setN] = useState(name);
   const [b, setB] = useState(bio);
   const [g, setG] = useState(gender || "Non-binary");
+  const [photo, setPhoto] = useState(avatarImage || "");
+  const [bday, setBday] = useState(birthday || "");
   const [saving, setSaving] = useState(false);
+  const [err, setErr] = useState("");
+  const picker = useRef<HTMLInputElement>(null);
   const save = async () => {
     setSaving(true);
-    await onSave({ name: n.trim(), bio: b.trim().slice(0, MAX_BIO), gender: g });
+    await onSave({ name: n.trim(), bio: b.trim().slice(0, MAX_BIO), gender: g, avatarImage: photo, birthday: bday });
     setSaving(false);
+  };
+  const choose = async (file: File) => {
+    setErr("");
+    try { setPhoto(await prepareAvatar(file)); }
+    catch (e) { setErr(e instanceof ChatMediaError ? e.message : "Couldn't use that picture."); }
   };
   return (
     <Sheet
@@ -158,26 +168,51 @@ export const AboutDialog = ({ name, bio, gender, onSave, onClose }: {
       footer={<button type="button" onClick={save} disabled={saving || !n.trim()} className={primary}>{saving ? "Saving" : "Save"}</button>}
     >
       <div className="space-y-5">
-        <div className="space-y-2">
-          <span className={label}>Avatar</span>
-          <div className="flex gap-3">
-            {AVATARS.map((a) => (
-              <button
-                key={a.id}
-                type="button"
-                onClick={() => setG(a.id)}
-                aria-pressed={g === a.id}
-                aria-label={a.label}
-                className={cn("rounded-[1.4rem] p-1 border-2 transition-all active:scale-95 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/50", g === a.id ? "border-white" : "border-transparent opacity-60 hover:opacity-100")}
-              >
-                <Avatar user={{ gender: a.id, displayName: a.label }} size="md" />
+        <div className="space-y-3">
+          <span className={label}>Picture</span>
+          <div className="flex items-center gap-4">
+            <Avatar user={{ gender: g, displayName: n, avatarImage: photo }} size="lg" className="!w-24 !h-24 !rounded-full" />
+            <div className="flex flex-col gap-2">
+              <input ref={picker} type="file" accept="image/*" className="hidden" aria-hidden="true" tabIndex={-1}
+                onChange={(e) => { const f = e.target.files?.[0]; e.target.value = ""; if (f) choose(f); }} />
+              <button type="button" onClick={() => picker.current?.click()} className="px-4 py-2.5 rounded-full bg-white text-black font-bebas text-xs tracking-widest uppercase flex items-center gap-2 active:scale-95 transition-all">
+                <ImagePlus className="w-3.5 h-3.5" /> {photo ? "Change photo" : "Choose a photo"}
               </button>
-            ))}
+              {photo && (
+                <button type="button" onClick={() => setPhoto("")} className="px-4 py-2 rounded-full bg-[#1c1c1c] border border-[#2a2a2a] text-neutral-300 font-bebas text-xs tracking-widest uppercase active:scale-95 transition-all">
+                  Remove photo
+                </button>
+              )}
+            </div>
           </div>
+          {err && <p role="alert" className="text-rose-400 text-xs font-outfit">{err}</p>}
+          {!photo && (
+            <div className="space-y-2">
+              <span className={label}>Or an avatar</span>
+              <div className="flex gap-3">
+                {AVATARS.map((a) => (
+                  <button
+                    key={a.id}
+                    type="button"
+                    onClick={() => setG(a.id)}
+                    aria-pressed={g === a.id}
+                    aria-label={a.label}
+                    className={cn("rounded-[1.4rem] p-1 border-2 transition-all active:scale-95 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/50", g === a.id ? "border-white" : "border-transparent opacity-60 hover:opacity-100")}
+                  >
+                    <Avatar user={{ gender: a.id, displayName: a.label }} size="md" />
+                  </button>
+                ))}
+              </div>
+            </div>
+          )}
         </div>
         <div className="space-y-1">
           <label htmlFor="profile-name" className={label}>Name</label>
           <input id="profile-name" value={n} onChange={(e) => setN(e.target.value)} maxLength={30} placeholder="Your name" className={input} />
+        </div>
+        <div className="space-y-1">
+          <label htmlFor="profile-birthday" className={label}>Birthday</label>
+          <input id="profile-birthday" type="date" value={bday} onChange={(e) => setBday(e.target.value)} className={input} />
         </div>
         <div className="space-y-1">
           <div className="flex items-baseline justify-between">

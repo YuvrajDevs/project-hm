@@ -18,19 +18,19 @@ test("addDays is unaffected by daylight-saving changes", () => {
   assert.equal(addDays("2026-03-08", -1), "2026-03-07");
 });
 
-test("the check-in day rolls over at 6 AM in the given timezone", () => {
+test("the check-in day is the calendar day in the given timezone", () => {
   // 00:30 UTC on 15 Oct = 06:00 IST on 15 Oct, and 20:30 on 14 Oct in New York
   const moment = new Date("2026-10-15T00:30:00Z");
   assert.equal(getCheckInDateId(moment, "Asia/Kolkata"), "2026-10-15");
   assert.equal(getCheckInDateId(moment, "America/New_York"), "2026-10-14");
-  // 23:00 UTC on 14 Oct = 04:30 IST on 15 Oct: still counts as the 14th
-  assert.equal(getCheckInDateId(new Date("2026-10-14T23:00:00Z"), "Asia/Kolkata"), "2026-10-14");
+  // 23:00 UTC on 14 Oct = 04:30 IST on 15 Oct: already the 15th
+  assert.equal(getCheckInDateId(new Date("2026-10-14T23:00:00Z"), "Asia/Kolkata"), "2026-10-15");
 });
 
 test("two partners in different places agree on the day when they share a timezone", () => {
   const moment = new Date("2026-10-14T20:00:00Z");
   assert.equal(getCheckInDateId(moment, "Asia/Kolkata"), getCheckInDateId(moment, "Asia/Kolkata"));
-  assert.notEqual(getCheckInDateId(moment, "Asia/Kolkata"), getCheckInDateId(new Date("2026-10-15T02:00:00Z"), "Asia/Kolkata"));
+  assert.notEqual(getCheckInDateId(moment, "Asia/Kolkata"), getCheckInDateId(new Date("2026-10-15T20:00:00Z"), "Asia/Kolkata"));
 });
 
 test("an unknown timezone falls back instead of throwing", () => {

@@ -2,7 +2,7 @@
 // beyond types (type-only, erased). Kept separate from lib/e2ee.ts so these can be unit-tested
 // directly without pulling in Firebase. See lib/e2ee.ts for the device/network orchestration that
 // wraps these (key storage, publishing the public key, deriving the per-couple AES key).
-import type { ChatKind } from "./types.ts";
+import type { ChatKind, ChatReply } from "./types.ts";
 
 const EC_PARAMS = { name: "ECDH", namedCurve: "P-256" } as const;
 const PBKDF2_ITERATIONS = 600_000;
@@ -18,6 +18,10 @@ export interface E2eeDraft {
   h?: number;
   dur?: number;
   sticker?: string;
+  thumb?: string;
+  path?: string;
+  size?: number;
+  reply?: ChatReply;
 }
 
 export interface WrappedKeyBlob {
@@ -81,6 +85,10 @@ export const encryptDraft = async (
   if (draft.h !== undefined) meta.h = draft.h;
   if (draft.dur !== undefined) meta.dur = draft.dur;
   if (draft.sticker !== undefined) meta.sticker = draft.sticker;
+  if (draft.thumb !== undefined) meta.thumb = draft.thumb;
+  if (draft.path !== undefined) meta.path = draft.path;
+  if (draft.size !== undefined) meta.size = draft.size;
+  if (draft.reply !== undefined) meta.reply = draft.reply;
   const metaBytes = new TextEncoder().encode(JSON.stringify(meta));
   const rawData = draft.data ? fromBase64(draft.data) : new Uint8Array(0);
 
@@ -120,6 +128,22 @@ export const decryptMessage = async (
   const tail = bytes.slice(4 + metaLen);
   if (tail.length > 0) meta.data = toBase64(tail);
   return meta;
+};
+
+// Large files (videos) are encrypted on their own, with the same shared key and a fresh IV, then stored as
+// opaque bytes. The IV goes in front of the ciphertext so one blob is all that is needed to open it again.
+export const encryptBytes = async (bytes: Uint8Array, aesKey: CryptoKey, aad: string): Promise<Uint8Array> => {
+  const iv = crypto.getRandomValues(new Uint8Array(IV_BYTES));
+  const ct = new Uint8Array(await crypto.subtle.encrypt({ name: "AES-GCM", iv, additionalData: new TextEncoder().encode(aad) }, aesKey, new Uint8Array(bytes)));
+  const out = new Uint8Array(IV_BYTES + ct.length);
+  out.set(iv, 0);
+  out.set(ct, IV_BYTES);
+  return out;
+};
+
+export const decryptBytes = async (blob: Uint8Array, aesKey: CryptoKey, aad: string): Promise<Uint8Array> => {
+  const iv = new Uint8Array(blob.slice(0, IV_BYTES));
+  return new Uint8Array(await crypto.subtle.decrypt({ name: "AES-GCM", iv, additionalData: new TextEncoder().encode(aad) }, aesKey, new Uint8Array(blob.slice(IV_BYTES))));
 };
 
 // A short, deterministic digest of a public key the two of you can read aloud to verify you're

@@ -1,5 +1,6 @@
 import { initializeApp, getApps, getApp } from "firebase/app";
 import { initializeAppCheck, ReCaptchaV3Provider } from "firebase/app-check";
+import { getStorage, connectStorageEmulator } from "firebase/storage";
 import { initializeFirestore, getFirestore, connectFirestoreEmulator } from "firebase/firestore";
 import { 
   getAuth, 
@@ -40,6 +41,7 @@ const db = (() => {
   catch { return getFirestore(app); }
 })();
 const auth = getAuth(app);
+const storage = getStorage(app);
 
 // App Check proves a request comes from this app and not a script. It only runs when a reCAPTCHA v3 site key
 // is set; turn on enforcement for Firestore in the Firebase console once real traffic shows up as verified.
@@ -57,6 +59,7 @@ if (useEmulators && !(globalThis as { __hmEmulators?: boolean }).__hmEmulators) 
   (globalThis as { __hmEmulators?: boolean }).__hmEmulators = true;
   connectAuthEmulator(auth, "http://127.0.0.1:9099", { disableWarnings: true });
   connectFirestoreEmulator(db, "127.0.0.1", 8080);
+  connectStorageEmulator(storage, "127.0.0.1", 9199);
   // The Auth emulator accepts a made-up Google identity, so tests can sign in without a real account
   (window as unknown as { __hmTestSignIn?: (email: string, name: string) => Promise<unknown> }).__hmTestSignIn =
     (email, name) => signInWithCredential(auth, GoogleAuthProvider.credential(JSON.stringify({ sub: email, email, email_verified: true, name })));
@@ -82,6 +85,6 @@ export const reauthenticate = (user: FirebaseUser) => {
   return reauthenticateWithPopup(user, googleProvider);
 };
 
-export { db, auth, googleProvider };
+export { db, auth, storage, googleProvider };
 
 

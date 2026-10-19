@@ -3,6 +3,9 @@
 
 export const MAX_DATA_CHARS = 640_000;
 export const MAX_VOICE_SECONDS = 60;
+export const MAX_VIDEO_SECONDS = 120;
+export const MAX_VIDEO_BYTES = 25 * 1024 * 1024 - 1; // under 25 MB
+export const MAX_TEXT_CHARS = 4096;
 const MAX_EDGE = 1280;
 
 export class ChatMediaError extends Error {}
@@ -134,3 +137,115 @@ export const formatClock = (seconds: number) => {
   const s = Math.max(0, Math.round(seconds));
   return `${Math.floor(s / 60)}:${String(s % 60).padStart(2, "0")}`;
 };
+
+export interface PreparedVideo { mime: string; bytes: Uint8Array; dur: number; w: number; h: number; thumb: string; size: number }
+
+const loadVideo = (url: string) =>
+  new Promise<HTMLVideoElement>((resolve, reject) => {
+    const v = document.createElement("video");
+    v.preload = "metadata";
+    v.muted = true;
+    v.playsInline = true;
+    v.onloadedmetadata = () => resolve(v);
+    v.onerror = () => reject(new ChatMediaError("Couldn't open that video. Try a different one."));
+    v.src = url;
+  });
+
+/** A small still from near the start, so the bubble has something to show before the video is opened. */
+const stillFrom = (v: HTMLVideoElement) =>
+  new Promise<string>((resolve) => {
+    const draw = () => {
+      const scale = Math.min(1, 360 / Math.max(v.videoWidth, v.videoHeight, 1));
+      const canvas = document.createElement("canvas");
+      canvas.width = Math.max(1, Math.round(v.videoWidth * scale));
+      canvas.height = Math.max(1, Math.round(v.videoHeight * scale));
+      canvas.getContext("2d")?.drawImage(v, 0, 0, canvas.width, canvas.height);
+      canvas.toBlob(async (b) => resolve(b ? await blobToBase64(b) : ""), "image/jpeg", 0.6);
+    };
+    v.onseeked = draw;
+    v.onerror = () => resolve("");
+    try { v.currentTime = Math.min(0.1, (v.duration || 1) / 2); } catch { resolve(""); }
+  });
+
+/** Check a video against the limits and read what the bubble needs: length, shape and a still picture. */
+export async function prepareVideo(file: File): Promise<PreparedVideo> {
+  if (!file.type.startsWith("video/")) throw new ChatMediaError("That file isn't a video.");
+  if (file.size > MAX_VIDEO_BYTES) throw new ChatMediaError("That video is over 25 MB. Pick a shorter or smaller one.");
+  const url = URL.createObjectURL(file);
+  try {
+    const v = await loadVideo(url);
+    // Some recordings (screen captures, browser recordings) don't say how long they are until the end is reached
+    if (v.duration === Infinity) {
+      await new Promise<void>((resolve) => { v.ontimeupdate = () => { v.ontimeupdate = null; resolve(); }; v.currentTime = 1e101; });
+      v.currentTime = 0;
+    }
+    if (!Number.isFinite(v.duration) || v.duration <= 0) throw new ChatMediaError("Couldn't read that video's length. Try a different one.");
+    if (v.duration > MAX_VIDEO_SECONDS + 0.5) throw new ChatMediaError("Videos can be up to 2 minutes long.");
+    const thumb = await stillFrom(v);
+    return {
+      mime: file.type || "video/mp4",
+      bytes: new Uint8Array(await file.arrayBuffer()),
+      dur: Math.max(1, Math.round(v.duration)),
+      w: v.videoWidth,
+      h: v.videoHeight,
+      thumb,
+      size: file.size,
+    };
+  } finally {
+    URL.revokeObjectURL(url);
+  }
+}
+
+/** A wallpaper: wider than a chat photo is tall, and small enough to share through the couple's data. */
+export async function prepareWallpaper(file: File): Promise<string> {
+  if (!file.type.startsWith("image/")) throw new ChatMediaError("That file isn't a picture.");
+  let bitmap: ImageBitmap;
+  try { bitmap = await openBitmap(file); } catch { throw new ChatMediaError("Couldn't open that picture. Try a different one."); }
+  try {
+    for (const edge of [1080, 900, 720, 560]) {
+      const scale = Math.min(1, edge / Math.max(bitmap.width, bitmap.height));
+      const w = Math.max(1, Math.round(bitmap.width * scale));
+      const h = Math.max(1, Math.round(bitmap.height * scale));
+      const canvas = document.createElement("canvas");
+      canvas.width = w;
+      canvas.height = h;
+      const ctx = canvas.getContext("2d");
+      if (!ctx) throw new ChatMediaError("Couldn't prepare that picture.");
+      ctx.drawImage(bitmap, 0, 0, w, h);
+      for (const quality of [0.72, 0.6, 0.48]) {
+        const blob = await canvasToBlob(canvas, quality);
+        if (!blob) continue;
+        const data = await blobToBase64(blob);
+        if (data.length <= 520_000) return data;
+      }
+    }
+  } finally {
+    bitmap.close?.();
+  }
+  throw new ChatMediaError("That picture is too large for a wallpaper. Try a different one.");
+}
+
+/** A square profile picture, cropped from the middle, small enough to live on the profile itself. */
+export async function prepareAvatar(file: File): Promise<string> {
+  if (!file.type.startsWith("image/")) throw new ChatMediaError("That file isn't a picture.");
+  let bitmap: ImageBitmap;
+  try { bitmap = await openBitmap(file); } catch { throw new ChatMediaError("Couldn't open that picture. Try a different one."); }
+  try {
+    const side = Math.min(bitmap.width, bitmap.height);
+    for (const px of [320, 256, 192]) {
+      const canvas = document.createElement("canvas");
+      canvas.width = px;
+      canvas.height = px;
+      const ctx = canvas.getContext("2d");
+      if (!ctx) throw new ChatMediaError("Couldn't prepare that picture.");
+      ctx.drawImage(bitmap, (bitmap.width - side) / 2, (bitmap.height - side) / 2, side, side, 0, 0, px, px);
+      const blob = await canvasToBlob(canvas, 0.8);
+      if (!blob) continue;
+      const data = await blobToBase64(blob);
+      if (data.length <= 90_000) return `data:image/jpeg;base64,${data}`;
+    }
+  } finally {
+    bitmap.close?.();
+  }
+  throw new ChatMediaError("That picture is too large. Try a different one.");
+}

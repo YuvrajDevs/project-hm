@@ -277,20 +277,48 @@ service cloud.firestore {
       match /chat/{messageId} {
         allow read: if isPartOfCouple(coupleId);
         allow create: if isPartOfCouple(coupleId)
-          && request.resource.data.keys().hasOnly(['senderUid', 'kind', 'v', 'iv', 'ct', 'createdAt'])
+          && request.resource.data.keys().hasOnly(['senderUid', 'kind', 'v', 'iv', 'ct', 'createdAt', 'once'])
           && request.resource.data.senderUid == request.auth.uid
           && request.resource.data.createdAt == request.time
-          && request.resource.data.kind in ['text', 'image', 'voice', 'sticker']
+          && request.resource.data.kind in ['text', 'image', 'voice', 'sticker', 'video']
+          && (!('once' in request.resource.data) || request.resource.data.once == true)
           && request.resource.data.v == 1
           && request.resource.data.iv is string && request.resource.data.iv.size() == 16
           && request.resource.data.ct is string
           && request.resource.data.ct.size() > 0 && request.resource.data.ct.size() <= 900000;
         allow update: if isPartOfCouple(coupleId)
-          && changedOnly(['savedBy'])
-          && request.resource.data.savedBy is list
-          && request.resource.data.savedBy.toSet().difference(resource.data.get('savedBy', []).toSet()).hasOnly([request.auth.uid])
-          && resource.data.get('savedBy', []).toSet().difference(request.resource.data.savedBy.toSet()).hasOnly([request.auth.uid]);
+          && (
+            (changedOnly(['savedBy'])
+              && request.resource.data.savedBy is list
+              && request.resource.data.savedBy.toSet().difference(resource.data.get('savedBy', []).toSet()).hasOnly([request.auth.uid])
+              && resource.data.get('savedBy', []).toSet().difference(request.resource.data.savedBy.toSet()).hasOnly([request.auth.uid]))
+            // View once: only the person it was sent TO can open it, once, and opening wipes the content
+            || (resource.data.get('once', false) == true
+              && resource.data.senderUid != request.auth.uid
+              && !('openedAt' in resource.data)
+              && changedOnly(['openedAt', 'ct'])
+              && request.resource.data.openedAt == request.time
+              && request.resource.data.ct is string && request.resource.data.ct.size() <= 4)
+          );
         allow delete: if isPartOfCouple(coupleId) && canDeleteCoupleItem(coupleId, resource.data.senderUid);
+      }
+
+      // Chat wallpaper: one document per person, describing how their own chat looks. The picture is
+      // ciphertext like any message. Either partner can read both (to offer a wallpaper to the other);
+      // each person writes only their own.
+      match /chat_wallpaper/{uid} {
+        allow read: if isPartOfCouple(coupleId);
+        allow create, update: if isPartOfCouple(coupleId)
+          && uid == request.auth.uid
+          && request.resource.data.keys().hasOnly(['source', 'dim', 'blur', 'iv', 'ct', 'updatedAt', 'dismissedOffer'])
+          && request.resource.data.source in ['own', 'partner', 'none']
+          && request.resource.data.dim is int && request.resource.data.dim >= 0 && request.resource.data.dim <= 4
+          && request.resource.data.blur is int && request.resource.data.blur >= 0 && request.resource.data.blur <= 4
+          && request.resource.data.updatedAt == request.time
+          && (!('ct' in request.resource.data) || (request.resource.data.ct is string && request.resource.data.ct.size() <= 900000))
+          && (!('iv' in request.resource.data) || (request.resource.data.iv is string && request.resource.data.iv.size() == 16))
+          && (!('dismissedOffer' in request.resource.data) || request.resource.data.dismissedOffer is string);
+        allow delete: if isPartOfCouple(coupleId) && uid == request.auth.uid;
       }
 
       // Finished games, kept so the two of them can look back at them
@@ -309,7 +337,8 @@ service cloud.firestore {
           && request.resource.data.mood is number && request.resource.data.mood >= 1 && request.resource.data.mood <= 10
           && request.resource.data.connection is number && request.resource.data.connection >= 1 && request.resource.data.connection <= 10
           && (!('reason' in request.resource.data) || (request.resource.data.reason is string && request.resource.data.reason.size() <= 280))
-          && (!('joyReason' in request.resource.data) || (request.resource.data.joyReason is string && request.resource.data.joyReason.size() <= 280));
+          && (!('joyReason' in request.resource.data) || (request.resource.data.joyReason is string && request.resource.data.joyReason.size() <= 280))
+          && (!('moodNow' in request.resource.data) || (request.resource.data.moodNow is string && request.resource.data.moodNow.size() <= 40));
       }
 
       match /reactions/{reactionId} {

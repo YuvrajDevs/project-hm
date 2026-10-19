@@ -37,7 +37,7 @@ export const NotificationToastManager = () => {
         if (!chatAt || chatAt === lastChatAt.current) return;
         lastChatAt.current = chatAt;
         if (!notificationsEnabled || !uid || chatBy === uid || presence.chatOpen) return;
-        const what = chatKind === "image" ? "Sent you a photo" : chatKind === "voice" ? "Sent you a voice note" : chatKind === "sticker" ? "Sent you a sticker" : "Sent you a message";
+        const what = chatKind === "image" ? "Sent you a photo" : chatKind === "voice" ? "Sent you a voice note" : chatKind === "video" ? "Sent you a video" : chatKind === "sticker" ? "Sent you a sticker" : "Sent you a message";
         show({ id: `chat_${chatAt}`, uid, type: "CHAT", title: partnerName, body: what, read: true, createdAt: chatAt });
     }, [couple, chatAt, chatBy, chatKind, notificationsEnabled, uid, partnerName, show]);
 
