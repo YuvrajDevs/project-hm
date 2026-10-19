@@ -1,8 +1,8 @@
-// Calendar-day helpers. A "day" in this app is a YYYY-MM-DD string that rolls over at 6 AM.
+// Calendar-day helpers. A "day" in this app is a YYYY-MM-DD string that rolls over at midnight.
 // Everything here works on plain strings and UTC arithmetic, so results never depend on
 // daylight-saving changes or on the device's own timezone unless one is asked for explicitly.
 
-const RESET_HOUR = 6;
+const RESET_HOUR = 0; // a day is the calendar day, so what the calendar calls today is what counts
 
 const pad = (n: number) => String(n).padStart(2, "0");
 
