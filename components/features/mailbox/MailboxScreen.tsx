@@ -16,6 +16,7 @@ import { cn } from "@/lib/utils";
 import { GamesShelf } from "../games/GamesShelf";
 import { BucketList } from "../notes/BucketList";
 import { AccentWords } from "@/components/ui/Wordmark";
+import { canNightSync, checkInSlot } from "@/lib/checkin";
 
 interface MailboxScreenProps {
     onOpenCheckIn?: () => void;
@@ -25,8 +26,10 @@ interface MailboxScreenProps {
 export const MailboxScreen: React.FC<MailboxScreenProps> = ({ onOpenCheckIn, onComposeClick }) => {
 
 
-  const { loading, metrics, checkins, user } = useMailbox();
-  const checkedInToday = checkins.some((c) => c.userUid === user?.uid);
+  const { loading, metrics, checkins, user, couple } = useMailbox();
+  const myCheckIn = checkins.find((c) => c.userUid === user?.uid);
+  const checkedInToday = !!myCheckIn;
+  const nightOpen = canNightSync(myCheckIn, checkInSlot(new Date(), couple?.dayTimezone));
 
   if (loading) return null;
 
@@ -53,7 +56,7 @@ export const MailboxScreen: React.FC<MailboxScreenProps> = ({ onOpenCheckIn, onC
                     <div className="flex items-center justify-between gap-2">
                         <span className="font-bebas text-[10px] tracking-[0.18em] uppercase leading-none opacity-70 truncate">Check-in streak</span>
                         <span className="w-8 h-8 shrink-0 rounded-full bg-black/10 flex items-center justify-center" aria-hidden="true">
-                            <Heart className={cn("w-4 h-4", (metrics?.streak ?? 0) > 0 ? "text-[#b4300b] fill-[#b4300b]" : "opacity-50")} />
+                            <Heart className={cn("w-4 h-4 transition-colors", checkedInToday ? "text-[#b4300b] fill-[#b4300b]" : "opacity-50")} />
                         </span>
                     </div>
                     <p className="font-bebas leading-none tabular-nums flex items-baseline gap-2">
@@ -61,7 +64,7 @@ export const MailboxScreen: React.FC<MailboxScreenProps> = ({ onOpenCheckIn, onC
                         <span className="text-2xl md:text-3xl tracking-wide opacity-70">{(metrics?.streak ?? 0) === 1 ? "day" : "days"}</span>
                     </p>
                     <p className="font-outfit text-xs leading-snug opacity-75 text-pretty">
-                        {checkedInToday ? "Today's check-in is done." : (metrics?.streak ?? 0) > 0 ? "Tap to check in today." : "Tap to start one together."}
+                        {nightOpen ? "Night check-in is open." : checkedInToday ? "Today's check-in is done." : (metrics?.streak ?? 0) > 0 ? "Tap to check in today." : "Tap to start one together."}
                     </p>
                 </motion.button>
                 <MoodStatusHub />

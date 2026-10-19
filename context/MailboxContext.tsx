@@ -48,6 +48,7 @@ import {
   updateUserNotificationSettings,
   sendQuickReact,
   saveCheckIn,
+  saveNightCheckIn,
   respondToMessage,
   updateUserTimezone,
   markMessageAsRead,
@@ -60,6 +61,7 @@ import {
   CapsuleContent
 } from "@/lib/firestore-helpers";
 import { isKnownDeck, slotFor } from "@/lib/games/decks";
+import { canNightSync, checkInSlot, finalOf } from "@/lib/checkin";
 import { getCheckInDateId, addDays, countStreak } from "@/lib/utils";
 
 interface MailboxContextType {
@@ -290,7 +292,8 @@ export const MailboxProvider: React.FC<{ children: React.ReactNode }> = ({ child
     // Latest entry per person (history is newest first)
     const todayCheckins = historyCheckins
         .filter(c => c.dateId === today)
-        .filter((c, i, all) => all.findIndex(o => o.userUid === c.userUid) === i);
+        .filter((c, i, all) => all.findIndex(o => o.userUid === c.userUid) === i)
+        .map(c => ({ ...c, ...finalOf(c) }));
     let syncScore = 0;
     let connectionAvgToday = 0;
     if (todayCheckins.length === 2) {
@@ -653,10 +656,16 @@ export const MailboxProvider: React.FC<{ children: React.ReactNode }> = ({ child
 
   const saveDailyCheckIn = async (checkIn: Omit<DailyCheckIn, "id" | "userUid" | "createdAt">) => {
     if (!user?.coupleId || !user?.uid || !user?.partnerId) throw new Error("not-connected");
-    await saveCheckIn(user.coupleId, {
-        ...checkIn,
-        userUid: user.uid
-    }, user.partnerId);
+    const slot = checkInSlot(new Date(), couple?.dayTimezone);
+    const mineToday = checkins.find(c => c.userUid === user.uid && c.dateId === checkIn.dateId);
+    // A second sync, at night, goes onto the morning one and becomes the day's final word
+    if (canNightSync(mineToday, slot)) {
+      await saveNightCheckIn(user.coupleId, checkIn.dateId, user.uid, {
+        mood: checkIn.mood, connection: checkIn.connection, moodStatus: checkIn.moodStatus, reason: checkIn.reason, joyReason: checkIn.joyReason,
+      }, user.partnerId);
+      return;
+    }
+    await saveCheckIn(user.coupleId, { ...checkIn, slot, userUid: user.uid }, user.partnerId);
   };
 
   const sendSignal = async (type: ReactionType, note?: string, notify = true, docId?: string) => {

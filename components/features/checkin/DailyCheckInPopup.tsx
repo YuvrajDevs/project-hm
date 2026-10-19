@@ -8,6 +8,7 @@ import { MoodSelector, MoodIcon, MOOD_TYPES } from "./MoodSelector";
 import { ReactionType } from "@/lib/types";
 import { useSensoryFeedback } from "@/hooks/useSensoryFeedback";
 import { partnerLabel } from "@/lib/utils";
+import { canNightSync, checkInSlot, finalOf } from "@/lib/checkin";
 
 interface DailyCheckInPopupProps {
   onClose: () => void;
@@ -15,7 +16,7 @@ interface DailyCheckInPopupProps {
 
 
 export const DailyCheckInPopup: React.FC<DailyCheckInPopupProps> = ({ onClose }) => {
-  const { user, partner, checkins, updateMood, sendSignal, saveDailyCheckIn, todayId: today } = useMailbox();
+  const { user, partner, couple, checkins, updateMood, sendSignal, saveDailyCheckIn, todayId: today } = useMailbox();
   const { playChime, playTick } = useSensoryFeedback();
   const [step, setStep] = useState<"intro" | "mood" | "connection" | "moodStatus" | "summary">("intro");
   const [mood, setMood] = useState(5);
@@ -26,12 +27,12 @@ export const DailyCheckInPopup: React.FC<DailyCheckInPopupProps> = ({ onClose })
   const savingRef = React.useRef(false);
   const [error, setError] = useState("");
 
+  const myCheckIn = checkins.find(c => c.userUid === user?.uid);
+  const night = canNightSync(myCheckIn, checkInSlot(new Date(), couple?.dayTimezone));
+  // Already synced: straight to the summary, unless it's night and the second sync is still to do
   useEffect(() => {
-    const userCheckIn = checkins.find(c => c.userUid === user?.uid);
-    if (userCheckIn && step === "intro") {
-        setStep("summary");
-    }
-  }, [checkins, user, step]);
+    if (myCheckIn && !night && step === "intro") setStep("summary");
+  }, [myCheckIn, night, step]);
 
   const partnerCheckIn = checkins.find(c => c.userUid === partner?.uid);
 
@@ -52,7 +53,7 @@ export const DailyCheckInPopup: React.FC<DailyCheckInPopupProps> = ({ onClose })
       // 2. Send signal (triggers splash)
       const type = MOOD_TYPES[moodStatus];
       if (type) {
-        await sendSignal(type, undefined, false, `checkin_${today}_${user.uid}`);
+        await sendSignal(type, undefined, false, `checkin_${today}_${user.uid}${night ? "_night" : ""}`);
       }
 
       // 3. Update persistent user mood label
@@ -70,10 +71,10 @@ export const DailyCheckInPopup: React.FC<DailyCheckInPopupProps> = ({ onClose })
   };
 
   const calculateSyncScore = () => {
-    const userCheckIn = checkins.find(c => c.userUid === user?.uid);
-    if (!userCheckIn || !partnerCheckIn) return 0;
-    const moodDiff = Math.abs(userCheckIn.mood - partnerCheckIn.mood);
-    const connDiff = Math.abs(userCheckIn.connection - partnerCheckIn.connection);
+    if (!myCheckIn || !partnerCheckIn) return 0;
+    const a = finalOf(myCheckIn), b = finalOf(partnerCheckIn);
+    const moodDiff = Math.abs(a.mood - b.mood);
+    const connDiff = Math.abs(a.connection - b.connection);
     return Math.max(0, 100 - (moodDiff * 7) - (connDiff * 7));
   };
 
@@ -142,8 +143,8 @@ export const DailyCheckInPopup: React.FC<DailyCheckInPopupProps> = ({ onClose })
                   <Zap className="w-6 h-6" />
                 </div>
                 <div className="space-y-2">
-                  <h2 className="font-bebas text-5xl tracking-wide uppercase leading-none">Time to sync up</h2>
-                  <p className="font-outfit text-sm leading-relaxed">A 30-second check-in keeps the two of you aligned through the day&apos;s noise. {partnerName} sees it when you finish.</p>
+                  <h2 className="font-bebas text-5xl tracking-wide uppercase leading-none">{night ? "Night sync" : "Time to sync up"}</h2>
+                  <p className="font-outfit text-sm leading-relaxed">{night ? `You synced this morning. How did the day leave you? This one is the colour your day gets on the calendar.` : `A 30-second check-in keeps the two of you aligned through the day's noise. ${partnerName} sees it when you finish.`}</p>
                 </div>
               </div>
               <button onClick={() => { playTick(); setStep("mood"); }} className={primary}>Start sync <ArrowRight className="w-4 h-4" /></button>
@@ -197,7 +198,7 @@ export const DailyCheckInPopup: React.FC<DailyCheckInPopupProps> = ({ onClose })
           {step === "summary" && (
             <motion.div key="summary" initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} className="space-y-6">
               <div className="flex items-center justify-center gap-2 font-bebas tracking-[0.25em] uppercase text-sm text-emerald-300">
-                <Check className="w-4 h-4" /> Daily check-in done
+                <Check className="w-4 h-4" /> {myCheckIn?.night ? "Morning and night check-ins done" : "Daily check-in done"}
               </div>
               {!partnerCheckIn ? (
                 <>

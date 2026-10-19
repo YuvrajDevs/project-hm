@@ -252,6 +252,18 @@ test("the sender can edit their note until it is answered, and either can hide i
   await assertFails(updateDoc(doc(db(ALICE), "couples", COUPLE, "mailbox", "m1"), { note: "changed after the answer" }));
 });
 
+test("a night sync is bounded and only the writer can add it", async () => {
+  await seedCouple();
+  const ref = (uid) => doc(db(uid), "couples", COUPLE, "checkins", `2026-10-20_${uid}`);
+  const base = { userUid: ALICE, dateId: "2026-10-20", mood: 6, connection: 6, moodStatus: "Love", slot: "morning" };
+  await assertSucceeds(setDoc(ref(ALICE), base));
+  await assertSucceeds(updateDoc(ref(ALICE), { night: { mood: 3, connection: 4, moodStatus: "Gloomy", at: "2026-10-20T21:00:00Z" } }));
+  await assertFails(updateDoc(ref(ALICE), { night: { mood: 11, connection: 4, moodStatus: "Gloomy", at: "x" } }));
+  await assertFails(updateDoc(ref(ALICE), { night: { mood: 3, connection: 4, moodStatus: "x".repeat(41), at: "x" } }));
+  await assertFails(setDoc(ref(ALICE), { ...base, slot: "noon" }));
+  await assertFails(updateDoc(doc(db(BOB), "couples", COUPLE, "checkins", `2026-10-20_${ALICE}`), { night: { mood: 3, connection: 4, moodStatus: "Gloomy", at: "x" } }));
+});
+
 test("a check-in document id must be the writer's own for that day", async () => {
   await seedCouple();
   await assertFails(setDoc(doc(db(ALICE), "couples", COUPLE, "checkins", "anything"), { userUid: ALICE, mood: 5, connection: 5, moodStatus: "Peace", dateId: "2026-10-12" }));

@@ -13,10 +13,25 @@ import {
 import { formatDateId, eventFallsOn } from "@/lib/utils";
 import { useMailbox } from "@/context/MailboxContext";
 import { useScrollLock } from "@/hooks/useScrollLock";
+import { finalOf } from "@/lib/checkin";
+import { MOOD_TYPES } from "@/components/features/checkin/MoodSelector";
+import { REACTION_ICONS } from "@/lib/constants";
 
 interface StreakGridProps {
   history: DailyCheckIn[];
 }
+
+// A mood's colour is the one its signal icon uses; very dark or very light ones get a number that still reads
+const moodColor = (status?: string) => {
+  const type = status ? MOOD_TYPES[status] : undefined;
+  return type ? REACTION_ICONS[type].color : "#94a3b8";
+};
+const inkFor = (hex: string) => {
+  const n = parseInt(hex.slice(1), 16);
+  const lum = (0.299 * (n >> 16) + 0.587 * ((n >> 8) & 255) + 0.114 * (n & 255)) / 255;
+  return lum > 0.6 ? "#111" : "#fff";
+};
+const LEGEND = ["Love", "Peace", "Closeness", "Brighter", "Appreciative", "Energized", "Reassurance", "Tired", "Not Okay", "Gloomy", "Anxious", "In Conflict"];
 
 const DAYS_OF_WEEK = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
 
@@ -84,20 +99,13 @@ export const StreakGrid: React.FC<StreakGridProps> = ({ history }) => {
         .filter((c, i, all) => all.findIndex(o => o.userUid === c.userUid) === i);
     if (dayCheckins.length === 0) return null;
 
-    const partnerA = dayCheckins[0];
-    const partnerB = dayCheckins[1];
-
-    let connectionScore = 0;
-    if (dayCheckins.length === 2) {
-        connectionScore = (partnerA.connection + partnerB.connection) / 2;
-    } else {
-        connectionScore = partnerA.connection; // Show single partner's if other hasn't synced
-    }
-
+    const connectionScore = dayCheckins.reduce((sum, c) => sum + finalOf(c).connection, 0) / dayCheckins.length;
+    // You first, then your partner, each in the colour of how the day ended for them
+    const ordered = [...dayCheckins].sort((a, b) => (a.userUid === user?.uid ? -1 : 0) - (b.userUid === user?.uid ? -1 : 0));
     return {
-        checkins: dayCheckins,
+        checkins: ordered,
+        colors: ordered.map(c => moodColor(finalOf(c).moodStatus)),
         syncScore: connectionScore,
-        status: connectionScore >= 7 ? "aligned" : (connectionScore >= 4 ? "neutral" : "rough"),
         count: dayCheckins.length
     };
   };
@@ -133,110 +141,78 @@ export const StreakGrid: React.FC<StreakGridProps> = ({ history }) => {
     setIsAddingEvent(false);
   };
 
-  const getStatusColor = (status: string | undefined, count: number, isCurrentMonth: boolean, isToday: boolean) => {
-    if (!isCurrentMonth && count === 0) return "bg-white/[0.01] border border-white/[0.02]";
-    if (count === 0) return "bg-white/[0.02] border border-white/5";
-    if (count === 1) return cn("bg-white/10 border border-white/10", isToday && "animate-pulse");
-    
-    switch (status) {
-      case "aligned": return "bg-yellow-400 shadow-[0_0_15px_rgba(250,204,21,0.4)] border-transparent";
-      case "neutral": return "bg-orange-500 shadow-[0_0_15px_rgba(249,115,22,0.3)] border-transparent";
-      case "rough": return "bg-red-500 shadow-[0_0_15px_rgba(239,68,68,0.3)] border-transparent";
-      default: return "bg-[#1c1c1c] border border-[#232323]";
-    }
-  };
-
   const selectedData = selectedDate ? getDaySyncInfo(selectedDate) : null;
   const selectedEvents = selectedDate ? getDayEvents(selectedDate) : [];
+  const monthSynced = days.filter(dt => parseDateId(dt).getMonth() === viewDate.getMonth() && getDaySyncInfo(dt)).length;
   const currentMonthLabel = viewDate.toLocaleDateString('en-US', { month: 'long', year: 'numeric' });
 
   return (
-    <div className="space-y-6">
-      {/* Month Navigation Header */}
-      <div className="flex items-center justify-between px-2">
-        <button 
-            onClick={handlePrevMonth}
-            className="p-3 rounded-2xl bg-[#161616] border border-[#2a2a2a] hover:bg-[#242424] transition-all active:scale-90"
-        >
+    <div className="space-y-4">
+      {/* The month: a compact card with the arrows inside */}
+      <div className="bg-[#161616] border border-[#232323] rounded-[1.5rem] p-4 md:p-6 space-y-4">
+        <div className="flex items-center justify-between">
+          <button onClick={handlePrevMonth} aria-label="Previous month" className="w-10 h-10 rounded-full bg-[#1c1c1c] border border-[#232323] flex items-center justify-center hover:bg-[#242424] transition-all active:scale-90">
             <ChevronLeft className="w-4 h-4 text-neutral-400" />
-        </button>
-        
-        <h2 className="text-2xl font-bebas text-white tracking-widest uppercase">{currentMonthLabel}</h2>
-
-        <button 
-            onClick={handleNextMonth}
-            className="p-3 rounded-2xl bg-[#161616] border border-[#2a2a2a] hover:bg-[#242424] transition-all active:scale-90"
-        >
+          </button>
+          <div className="text-center">
+            <h2 className="text-2xl font-bebas text-white tracking-widest uppercase leading-none">{currentMonthLabel}</h2>
+            <p className="font-outfit text-[11px] text-neutral-500 mt-1">{monthSynced === 0 ? "No check-ins yet" : `${monthSynced} ${monthSynced === 1 ? "day" : "days"} checked in`}</p>
+          </div>
+          <button onClick={handleNextMonth} aria-label="Next month" className="w-10 h-10 rounded-full bg-[#1c1c1c] border border-[#232323] flex items-center justify-center hover:bg-[#242424] transition-all active:scale-90">
             <ChevronRight className="w-4 h-4 text-neutral-400" />
-        </button>
-      </div>
+          </button>
+        </div>
 
-      {/* Calendar Grid Container */}
-      <div className="bg-[#161616] p-8 md:p-16 rounded-[1.5rem] md:rounded-[4rem] border border-[#232323] relative overflow-hidden group/grid">
-        {/* Master Grid (Header + Dates) */}
-        <div className="grid grid-cols-7 gap-y-10 md:gap-y-14 gap-x-4 md:gap-x-12 place-items-center relative z-10 h-full">
-            {/* Row 1: Days Header */}
+        <div className="grid grid-cols-7 gap-1.5 md:gap-2">
             {DAYS_OF_WEEK.map(day => (
-                <div key={day} className="text-center font-bebas text-[11px] md:text-sm tracking-[0.2em] text-neutral-600 uppercase">
-                    {day[0]}
-                </div>
+                <div key={day} className="text-center font-bebas text-[10px] tracking-[0.2em] text-neutral-600 uppercase pb-1">{day[0]}</div>
             ))}
-
-
-            {/* Rows 2-7: Date Circles */}
-            {days.map((date, idx) => {
+            {days.map((date) => {
                 const info = getDaySyncInfo(date);
                 const dayEvents = getDayEvents(date);
                 const d = parseDateId(date);
                 const isCurrentMonth = d.getMonth() === viewDate.getMonth();
                 const isToday = date === todayStr;
-
+                const [c1, c2] = info ? [info.colors[0], info.colors[1]] : [undefined, undefined];
+                // Both of you: the cell is split down the middle, you on the left. One of you: half and half empty.
+                const fill = info ? (c2 ? `linear-gradient(135deg, ${c1} 0 50%, ${c2} 50% 100%)` : `linear-gradient(135deg, ${c1} 0 50%, rgba(255,255,255,0.06) 50% 100%)`) : undefined;
+                const ink = c1 ? (c2 ? "#111" : inkFor(c1)) : undefined;
                 return (
-                    <motion.div
+                    <button
                         key={date}
-                        initial={{ scale: 0, opacity: 0 }}
-                        animate={{ scale: 1, opacity: 1 }}
-                        transition={{ delay: (idx % 7) * 0.05 + Math.floor(idx / 7) * 0.02 }}
+                        type="button"
+                        onClick={() => { setSelectedDate(date); setIsAddingEvent(false); }}
+                        aria-label={`${d.toLocaleDateString(undefined, { month: "long", day: "numeric" })}${info ? ", checked in" : ""}`}
+                        style={fill ? { background: fill } : undefined}
                         className={cn(
-                            "w-full relative cursor-pointer group/cell flex flex-col items-center justify-center gap-1",
-                            !isCurrentMonth && "opacity-20"
+                            "relative aspect-square rounded-xl md:rounded-2xl flex items-center justify-center transition-transform active:scale-90 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/60",
+                            !info && "bg-white/[0.04]",
+                            !isCurrentMonth && "opacity-30",
+                            isToday && "ring-2 ring-white"
                         )}
-                        onClick={() => {
-                            setSelectedDate(date);
-                            setIsAddingEvent(false);
-                        }}
                     >
-                        <div 
-                            className={cn(
-                                "w-10 h-10 md:w-16 md:h-16 rounded-full transition-all duration-500 flex items-center justify-center relative overflow-hidden",
-                                getStatusColor(info?.status, info?.count || 0, isCurrentMonth, isToday),
-                                isToday ? "border-2 border-white shadow-sm" : (info?.count || dayEvents.length ? "hover:scale-110 active:scale-95 shadow-lg border-2 border-white/10" : "border border-white/5")
-                            )} 
+                        <span
+                            style={ink ? { color: ink } : undefined}
+                            className={cn("font-bebas text-sm md:text-lg leading-none", !info && "text-neutral-500", c2 && "[text-shadow:0_0_6px_rgba(255,255,255,0.7)]")}
                         >
-                            <span className={cn(
-                                "text-[11px] md:text-xl font-bebas tracking-tighter transition-colors relative z-10",
-                                (info?.count ?? 0) >= 2 ? "text-black/80" : (isCurrentMonth ? "text-neutral-400" : "text-neutral-600")
-                            )}>
-                                {d.getDate()}
-                            </span>
-                            
-                            {dayEvents.length > 0 && (
-                                <div className="absolute top-1 right-1.5 w-1 h-1 rounded-full bg-cyan-400 shadow-[0_0_5px_rgba(34,211,238,0.5)]" />
-                            )}
-                        </div>
-                    </motion.div>
+                            {d.getDate()}
+                        </span>
+                        {dayEvents.length > 0 && <span className="absolute bottom-1 left-1/2 -translate-x-1/2 w-1 h-1 rounded-full bg-cyan-300" />}
+                    </button>
                 );
             })}
         </div>
-      </div>
 
-      {/* Legend */}
-      <div className="flex flex-wrap items-center justify-center gap-x-5 gap-y-2 px-2 text-[10px] font-bebas tracking-widest uppercase text-neutral-500">
-        <span className="flex items-center gap-2"><span className="w-2.5 h-2.5 rounded-full bg-yellow-400" /> Close</span>
-        <span className="flex items-center gap-2"><span className="w-2.5 h-2.5 rounded-full bg-orange-500" /> In between</span>
-        <span className="flex items-center gap-2"><span className="w-2.5 h-2.5 rounded-full bg-red-500" /> Distant</span>
-        <span className="flex items-center gap-2"><span className="w-2.5 h-2.5 rounded-full bg-white/20" /> One check-in</span>
-        <span className="text-neutral-600">Tap a day for details or to add a special day</span>
+        <div className="flex flex-wrap items-center gap-x-3 gap-y-1.5 pt-2 border-t border-white/5">
+          {LEGEND.map(m => (
+            <span key={m} className="flex items-center gap-1.5 font-outfit text-[10px] text-neutral-500">
+              <span className="w-2 h-2 rounded-full" style={{ background: moodColor(m) }} /> {m}
+            </span>
+          ))}
+        </div>
+        <p className="font-outfit text-[11px] text-neutral-600 leading-relaxed">
+          Each day takes the colour of how it ended: your night check-in, or your morning one if there is no night. Split cells show you on the left and your partner on the right. Tap a day for details.
+        </p>
       </div>
 
       {/* Detail Modal Layer */}
@@ -387,17 +363,17 @@ export const StreakGrid: React.FC<StreakGridProps> = ({ history }) => {
                                                         <div className="flex gap-4">
                                                             <div className="flex flex-col items-end">
                                                                 <span className="text-[8px] uppercase tracking-widest text-neutral-600 font-bebas">Mood</span>
-                                                                <span className="text-xs font-bebas text-white">{checkin.mood}/10</span>
+                                                                <span className="text-xs font-bebas text-white">{finalOf(checkin).mood}/10</span>
                                                             </div>
                                                             <div className="flex flex-col items-end">
                                                                 <span className="text-[8px] uppercase tracking-widest text-neutral-600 font-bebas">Status</span>
-                                                                <span className="text-xs font-bebas text-pink-500">{checkin.moodStatus}</span>
+                                                                <span className="text-xs font-bebas" style={{ color: moodColor(finalOf(checkin).moodStatus) }}>{finalOf(checkin).moodStatus}{checkin.night ? " · night" : ""}</span>
                                                             </div>
                                                         </div>
                                                     </div>
-                                                    {(checkin.reason || checkin.joyReason) && (
+                                                    {(finalOf(checkin).reason || finalOf(checkin).joyReason) && (
                                                         <p className="text-xs font-outfit text-white leading-relaxed italic opacity-80 pl-8">
-                                                            &quot;{checkin.reason || checkin.joyReason}&quot;
+                                                            &quot;{finalOf(checkin).reason || finalOf(checkin).joyReason}&quot;
                                                         </p>
                                                     )}
                                                 </div>

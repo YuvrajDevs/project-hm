@@ -245,6 +245,22 @@ export const saveCheckIn = async (coupleId: string, checkIn: Omit<DailyCheckIn, 
   return docRef;
 };
 
+/** The night sync: added to today's morning check-in, so the day ends on how you actually feel. */
+export const saveNightCheckIn = async (
+  coupleId: string, dateId: string, uid: string,
+  night: { mood: number; connection: number; moodStatus: string; reason?: string; joyReason?: string },
+  partnerUid: string
+) => {
+  const clean = Object.fromEntries(Object.entries(night).filter(([, v]) => v !== undefined && v !== ""));
+  await updateDoc(doc(db, "couples", coupleId, "checkins", `${dateId}_${uid}`), { night: { ...clean, at: new Date().toISOString() } });
+  await notifyPartner(partnerUid, {
+    uid: partnerUid,
+    type: "CHECK_IN",
+    title: "Night Check-In",
+    body: "Your partner just finished their night check-in.",
+  });
+};
+
 /**
  * Quick React Helpers
  */

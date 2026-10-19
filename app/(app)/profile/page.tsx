@@ -223,7 +223,13 @@ export default function ProfilePage() {
             <ArrowLeft className="w-5 h-5" />
           </button>
           {isPaired ? (
-            <div role="tablist" aria-label="Whose profile" className="relative flex bg-[#161616] p-1.5 rounded-full border border-white/10 pointer-events-auto">
+            <div role="tablist" aria-label="Whose profile" className="relative grid grid-cols-2 bg-[#161616] p-1.5 rounded-full border border-white/10 pointer-events-auto">
+              {/* One sliding pill moved with a plain transform, so it glides the same at any scroll position */}
+              <span
+                aria-hidden="true"
+                className="absolute top-1.5 bottom-1.5 left-1.5 w-[calc(50%-0.375rem)] rounded-full bg-white transition-transform duration-300 ease-out"
+                style={{ transform: view === "me" ? "translateX(0)" : "translateX(100%)" }}
+              />
               {(["me", "partner"] as const).map((v) => {
                 const active = view === v;
                 return (
@@ -232,9 +238,8 @@ export default function ProfilePage() {
                     role="tab"
                     aria-selected={active}
                     onClick={() => { setView(v); setEditor(null); setError(""); }}
-                    className={cn("px-6 py-2 rounded-full font-bebas text-[11px] tracking-widest uppercase relative z-10 transition-colors duration-300 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/50", active ? "text-black" : "text-neutral-500 hover:text-white")}
+                    className={cn("px-6 py-2 rounded-full font-bebas text-[11px] tracking-widest uppercase relative z-10 transition-colors duration-300 truncate max-w-[7.5rem] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/50", active ? "text-black" : "text-neutral-500 hover:text-white")}
                   >
-                    {active && <motion.div layoutId="profileTabActive" className="absolute inset-0 bg-white rounded-full z-[-1]" />}
                     {v === "me" ? "You" : partnerFirst}
                   </button>
                 );
