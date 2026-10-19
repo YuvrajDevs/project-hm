@@ -64,7 +64,7 @@ export const MailboxScreen: React.FC<MailboxScreenProps> = ({ onOpenCheckIn, onC
                         <span className="text-2xl md:text-3xl tracking-wide opacity-70">{(metrics?.streak ?? 0) === 1 ? "day" : "days"}</span>
                     </p>
                     <p className="font-outfit text-xs leading-snug opacity-75 text-pretty">
-                        {nightOpen ? "Night check-in is open." : checkedInToday ? "Today's check-in is done." : (metrics?.streak ?? 0) > 0 ? "Tap to check in today." : "Tap to start one together."}
+                        {nightOpen ? "Final check-in is open." : checkedInToday ? "Today's check-in is done." : (metrics?.streak ?? 0) > 0 ? "Tap to check in today." : "Tap to start one together."}
                     </p>
                 </motion.button>
                 <MoodStatusHub />

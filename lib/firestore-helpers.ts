@@ -245,7 +245,7 @@ export const saveCheckIn = async (coupleId: string, checkIn: Omit<DailyCheckIn, 
   return docRef;
 };
 
-/** The night sync: added to today's morning check-in, so the day ends on how you actually feel. */
+/** The final check-in: added to today's day check-in, so the day ends on how you actually feel. */
 export const saveNightCheckIn = async (
   coupleId: string, dateId: string, uid: string,
   night: { mood: number; connection: number; moodStatus: string; reason?: string; joyReason?: string },
@@ -256,8 +256,8 @@ export const saveNightCheckIn = async (
   await notifyPartner(partnerUid, {
     uid: partnerUid,
     type: "CHECK_IN",
-    title: "Night Check-In",
-    body: "Your partner just finished their night check-in.",
+    title: "Final Check-In",
+    body: "Your partner just finished their final check-in.",
   });
 };
 

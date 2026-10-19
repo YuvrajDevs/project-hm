@@ -13,7 +13,7 @@ import {
 import { formatDateId, eventFallsOn } from "@/lib/utils";
 import { useMailbox } from "@/context/MailboxContext";
 import { useScrollLock } from "@/hooks/useScrollLock";
-import { finalOf } from "@/lib/checkin";
+import { finalOf, combinedScore, scoreColor } from "@/lib/checkin";
 import { MOOD_TYPES } from "@/components/features/checkin/MoodSelector";
 import { REACTION_ICONS } from "@/lib/constants";
 
@@ -26,13 +26,6 @@ const moodColor = (status?: string) => {
   const type = status ? MOOD_TYPES[status] : undefined;
   return type ? REACTION_ICONS[type].color : "#94a3b8";
 };
-const inkFor = (hex: string) => {
-  const n = parseInt(hex.slice(1), 16);
-  const lum = (0.299 * (n >> 16) + 0.587 * ((n >> 8) & 255) + 0.114 * (n & 255)) / 255;
-  return lum > 0.6 ? "#111" : "#fff";
-};
-const LEGEND = ["Love", "Peace", "Closeness", "Brighter", "Appreciative", "Energized", "Reassurance", "Tired", "Not Okay", "Gloomy", "Anxious", "In Conflict"];
-
 const DAYS_OF_WEEK = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
 
 export const StreakGrid: React.FC<StreakGridProps> = ({ history }) => {
@@ -102,9 +95,14 @@ export const StreakGrid: React.FC<StreakGridProps> = ({ history }) => {
     const connectionScore = dayCheckins.reduce((sum, c) => sum + finalOf(c).connection, 0) / dayCheckins.length;
     // You first, then your partner, each in the colour of how the day ended for them
     const ordered = [...dayCheckins].sort((a, b) => (a.userUid === user?.uid ? -1 : 0) - (b.userUid === user?.uid ? -1 : 0));
+    // Left half: how the day started for the two of you. Right half: how it ended. Same colour means no change.
+    const dayScore = combinedScore(ordered);
+    const finalScore = combinedScore(ordered.map(finalOf));
     return {
         checkins: ordered,
-        colors: ordered.map(c => moodColor(finalOf(c).moodStatus)),
+        colors: [scoreColor(dayScore), scoreColor(finalScore)],
+        dayScore,
+        finalScore,
         syncScore: connectionScore,
         count: dayCheckins.length
     };
@@ -174,9 +172,8 @@ export const StreakGrid: React.FC<StreakGridProps> = ({ history }) => {
                 const isCurrentMonth = d.getMonth() === viewDate.getMonth();
                 const isToday = date === todayStr;
                 const [c1, c2] = info ? [info.colors[0], info.colors[1]] : [undefined, undefined];
-                // Both of you: the cell is split down the middle, you on the left. One of you: half and half empty.
-                const fill = info ? (c2 ? `linear-gradient(135deg, ${c1} 0 50%, ${c2} 50% 100%)` : `linear-gradient(135deg, ${c1} 0 50%, rgba(255,255,255,0.06) 50% 100%)`) : undefined;
-                const ink = c1 ? (c2 ? "#111" : inkFor(c1)) : undefined;
+                // Left: the day check-in. Right: the final one. Both colours come from the two of you together.
+                const fill = info ? `linear-gradient(90deg, ${c1} 0 50%, ${c2} 50% 100%)` : undefined;
                 return (
                     <button
                         key={date}
@@ -192,8 +189,7 @@ export const StreakGrid: React.FC<StreakGridProps> = ({ history }) => {
                         )}
                     >
                         <span
-                            style={ink ? { color: ink } : undefined}
-                            className={cn("font-bebas text-sm md:text-lg leading-none", !info && "text-neutral-500", c2 && "[text-shadow:0_0_6px_rgba(255,255,255,0.7)]")}
+                            className={cn("font-bebas text-sm md:text-lg leading-none", info ? "text-black/80" : "text-neutral-500")}
                         >
                             {d.getDate()}
                         </span>
@@ -203,16 +199,17 @@ export const StreakGrid: React.FC<StreakGridProps> = ({ history }) => {
             })}
         </div>
 
-        <div className="flex flex-wrap items-center gap-x-3 gap-y-1.5 pt-2 border-t border-white/5">
-          {LEGEND.map(m => (
-            <span key={m} className="flex items-center gap-1.5 font-outfit text-[10px] text-neutral-500">
-              <span className="w-2 h-2 rounded-full" style={{ background: moodColor(m) }} /> {m}
-            </span>
-          ))}
+        <div className="pt-3 border-t border-white/5 space-y-3">
+          <div className="space-y-1.5">
+            <div className="h-2 rounded-full" style={{ background: `linear-gradient(90deg, ${scoreColor(-1)}, ${scoreColor(-0.5)}, ${scoreColor(0)}, ${scoreColor(0.5)}, ${scoreColor(1)})` }} />
+            <div className="flex justify-between font-bebas text-[10px] tracking-widest uppercase text-neutral-500"><span>Hard day</span><span>Warm day</span></div>
+          </div>
+          <div className="flex items-center gap-3 font-outfit text-[11px] text-neutral-500">
+            <span className="flex h-4 w-8 shrink-0 overflow-hidden rounded"><span className="w-1/2" style={{ background: scoreColor(-0.4) }} /><span className="w-1/2" style={{ background: scoreColor(0.5) }} /></span>
+            Left is the day check-in, right is the final one. If the right is warmer, the day got better.
+          </div>
+          <p className="font-outfit text-[11px] text-neutral-600 leading-relaxed">The colour comes from both of your feelings and moods together. If only one of you checked in, it is just theirs.</p>
         </div>
-        <p className="font-outfit text-[11px] text-neutral-600 leading-relaxed">
-          Each day takes the colour of how it ended: your night check-in, or your morning one if there is no night. Split cells show you on the left and your partner on the right. Tap a day for details.
-        </p>
       </div>
 
       {/* Detail Modal Layer */}
@@ -367,7 +364,7 @@ export const StreakGrid: React.FC<StreakGridProps> = ({ history }) => {
                                                             </div>
                                                             <div className="flex flex-col items-end">
                                                                 <span className="text-[8px] uppercase tracking-widest text-neutral-600 font-bebas">Status</span>
-                                                                <span className="text-xs font-bebas" style={{ color: moodColor(finalOf(checkin).moodStatus) }}>{finalOf(checkin).moodStatus}{checkin.night ? " · night" : ""}</span>
+                                                                <span className="text-xs font-bebas" style={{ color: moodColor(finalOf(checkin).moodStatus) }}>{finalOf(checkin).moodStatus}{checkin.night ? " · final" : ""}</span>
                                                             </div>
                                                         </div>
                                                     </div>

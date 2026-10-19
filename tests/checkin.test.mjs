@@ -27,3 +27,22 @@ test("the night sync is offered once, after a morning one, at night", () => {
   assert.equal(canNightSync({ slot: "night" }, "night"), false);
   assert.equal(canNightSync(undefined, "night"), false);
 });
+
+import { checkInScore, combinedScore, scoreColor } from "../lib/checkin.ts";
+
+test("warm feelings score high, hard ones low, and both partners are averaged", () => {
+  const love = checkInScore({ mood: 9, moodStatus: "Love" });
+  const conflict = checkInScore({ mood: 2, moodStatus: "In Conflict" });
+  assert.ok(love > 0.7 && conflict < -0.7);
+  assert.ok(Math.abs(combinedScore([{ mood: 9, moodStatus: "Love" }, { mood: 2, moodStatus: "In Conflict" }])) < 0.1);
+  assert.equal(combinedScore([]), 0);
+  // the 1-10 mood slider moves the score a little, within the same feeling
+  assert.ok(checkInScore({ mood: 9, moodStatus: "Tired" }) > checkInScore({ mood: 2, moodStatus: "Tired" }));
+});
+
+test("colours run from red when hard to green when warm", () => {
+  const hue = (c) => Number(c.match(/hsl\((\d+)/)[1]);
+  assert.equal(hue(scoreColor(-1)), 0);
+  assert.equal(hue(scoreColor(1)), 135);
+  assert.ok(hue(scoreColor(-0.3)) < hue(scoreColor(0.3)));
+});

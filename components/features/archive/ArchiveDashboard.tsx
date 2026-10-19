@@ -9,15 +9,13 @@ import { cn, formatRelativeTime, partnerLabel } from "@/lib/utils";
 import { AccentWords } from "@/components/ui/Wordmark";
 
 interface ArchiveDashboardProps {
-  onOpenInbox: () => void;
-  onOpenCheckIn: () => void;
-  onOpenSignals: () => void;
+  onOpenInbox?: () => void;
+  onOpenCheckIn?: () => void;
+  onOpenSignals?: () => void;
 }
 
-export const ArchiveDashboard: React.FC<ArchiveDashboardProps> = ({ onOpenInbox, onOpenCheckIn, onOpenSignals }) => {
+export const ArchiveDashboard: React.FC<ArchiveDashboardProps> = () => {
   const { metrics, user, partner, checkins } = useMailbox();
-
-  const scrollToCalendar = () => document.getElementById("archive-calendar")?.scrollIntoView({ behavior: "smooth", block: "start" });
 
   if (!metrics) return null;
 
@@ -56,29 +54,29 @@ export const ArchiveDashboard: React.FC<ArchiveDashboardProps> = ({ onOpenInbox,
   const cards = [
     {
       id: "streak", tone: "tone-amber", icon: <Flame className="w-4 h-4" />, label: "Streak",
-      value: `${metrics.streak}`, unit: metrics.streak === 1 ? "day" : "days", subtext: streakSubtext, onClick: scrollToCalendar,
+      value: `${metrics.streak}`, unit: metrics.streak === 1 ? "day" : "days", subtext: streakSubtext,
     },
     {
       id: "sync", tone: "tone-teal", icon: <Thermometer className="w-4 h-4" />, label: "Connection today",
-      value: connectionValue, unit: "", subtext: connectionSubtext, onClick: onOpenCheckIn,
+      value: connectionValue, unit: "", subtext: connectionSubtext,
     },
     {
       id: "pulse", tone: "tone-pink", icon: <Mail className="w-4 h-4" />, label: "Waiting on you",
       value: `${metrics.unreadCount}`, unit: metrics.unreadCount === 1 ? "note" : "notes",
-      subtext: metrics.unreadCount > 0 ? `From ${partnerName}` : "All caught up", onClick: onOpenInbox,
+      subtext: metrics.unreadCount > 0 ? `From ${partnerName}` : "All caught up",
     },
     {
       id: "activity", tone: "tone-blue", icon: <Activity className="w-4 h-4" />, label: "Last activity",
       value: activity ? formatRelativeTime(activity.time) : "—", unit: "",
-      subtext: activity ? `${activityWho} ${activityWhat}` : "Send the first note", onClick: onOpenInbox,
+      subtext: activity ? `${activityWho} ${activityWhat}` : "Send the first note",
     },
     {
       id: "touch", tone: "tone-violet", icon: <Zap className="w-4 h-4" />, label: "Signals this week",
-      value: `${metrics.reactsCount}`, unit: "", subtext: metrics.reactsCount > 0 ? "Between you two" : "Send one in a tap", onClick: onOpenSignals,
+      value: `${metrics.reactsCount}`, unit: "", subtext: metrics.reactsCount > 0 ? "Between you two" : "Send one in a tap",
     },
     {
       id: "state", tone: metrics.state === "In Conflict" ? "tone-red" : "tone-emerald", icon: <Wind className="w-4 h-4" />, label: "Right now",
-      value: metrics.state, unit: "", subtext: STATE_HELP[metrics.state] || "From today's signals", onClick: onOpenSignals,
+      value: metrics.state, unit: "", subtext: STATE_HELP[metrics.state] || "From today's signals",
     },
   ];
 
@@ -99,14 +97,12 @@ export const ArchiveDashboard: React.FC<ArchiveDashboardProps> = ({ onOpenInbox,
         {/* Today at a glance: small cards, same colours as the home screen */}
         <section className="grid grid-cols-2 md:grid-cols-3 gap-3">
           {cards.map((card, idx) => (
-            <motion.button
-              type="button"
+            <motion.div
               key={card.id}
-              onClick={card.onClick}
               initial={{ opacity: 0, y: 12 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ delay: 0.1 + idx * 0.04 }}
-              className={cn(card.tone, "rounded-[1.5rem] p-4 text-left flex flex-col justify-between gap-3 min-h-[8.5rem] hover:brightness-110 active:scale-[0.98] transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/70")}
+              className={cn(card.tone, "rounded-[1.5rem] p-4 text-left flex flex-col justify-between gap-3 min-h-[8.5rem] ")}
             >
               <span className="flex items-center justify-between gap-2">
                 <span className="font-bebas text-[10px] tracking-[0.18em] uppercase leading-none opacity-70 truncate">{card.label}</span>
@@ -117,7 +113,7 @@ export const ArchiveDashboard: React.FC<ArchiveDashboardProps> = ({ onOpenInbox,
                 {card.unit && <span className="text-lg opacity-70">{card.unit}</span>}
               </span>
               <span className="font-outfit text-[11px] leading-snug opacity-75 text-pretty">{card.subtext}</span>
-            </motion.button>
+            </motion.div>
           ))}
         </section>
 

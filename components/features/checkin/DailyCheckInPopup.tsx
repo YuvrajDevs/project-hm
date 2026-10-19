@@ -143,8 +143,8 @@ export const DailyCheckInPopup: React.FC<DailyCheckInPopupProps> = ({ onClose })
                   <Zap className="w-6 h-6" />
                 </div>
                 <div className="space-y-2">
-                  <h2 className="font-bebas text-5xl tracking-wide uppercase leading-none">{night ? "Night sync" : "Time to sync up"}</h2>
-                  <p className="font-outfit text-sm leading-relaxed">{night ? `You synced this morning. How did the day leave you? This one is the colour your day gets on the calendar.` : `A 30-second check-in keeps the two of you aligned through the day's noise. ${partnerName} sees it when you finish.`}</p>
+                  <h2 className="font-bebas text-5xl tracking-wide uppercase leading-none">{night ? "Final check-in" : "Time to sync up"}</h2>
+                  <p className="font-outfit text-sm leading-relaxed">{night ? `You did your day check-in earlier. How did the day leave you? This final one decides your day's colour on the calendar.` : `A 30-second check-in keeps the two of you aligned through the day's noise. ${partnerName} sees it when you finish.`}</p>
                 </div>
               </div>
               <button onClick={() => { playTick(); setStep("mood"); }} className={primary}>Start sync <ArrowRight className="w-4 h-4" /></button>
@@ -198,7 +198,7 @@ export const DailyCheckInPopup: React.FC<DailyCheckInPopupProps> = ({ onClose })
           {step === "summary" && (
             <motion.div key="summary" initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} className="space-y-6">
               <div className="flex items-center justify-center gap-2 font-bebas tracking-[0.25em] uppercase text-sm text-emerald-300">
-                <Check className="w-4 h-4" /> {myCheckIn?.night ? "Morning and night check-ins done" : "Daily check-in done"}
+                <Check className="w-4 h-4" /> {myCheckIn?.night ? "Day and final check-ins done" : "Daily check-in done"}
               </div>
               {!partnerCheckIn ? (
                 <>
