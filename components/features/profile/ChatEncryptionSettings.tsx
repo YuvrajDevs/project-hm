@@ -167,7 +167,7 @@ export const ChatEncryptionSettings = () => {
                 {hasBackup ? "Update backup passphrase" : "Back up chat encryption"}
               </p>
               <p className="text-xs text-neutral-400 leading-relaxed">
-                Optional. Lets you restore chat on a new device. We never store the passphrase itself.
+                Lets you restore chat on a new device. We never store the passphrase itself.
               </p>
               <input
                 type="password"

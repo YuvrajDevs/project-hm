@@ -132,5 +132,10 @@ export const MessageContent = ({ message, tone, partnerName, onOpenImage }: {
     );
   }
   if (message.kind === "voice") return <VoiceNote message={message} tone={tone} />;
+  // An empty/missing text body (or an unrecognized kind) is not a legitimate empty message - it's
+  // the same signal as decryptFailed, so it gets the same placeholder instead of a blank bubble.
+  if (message.kind !== "text" || !message.text) {
+    return <p className="font-outfit text-sm italic opacity-70 px-4 py-2.5">Can&apos;t decrypt this message.</p>;
+  }
   return <p className="font-outfit text-[15px] leading-relaxed whitespace-pre-wrap break-words text-pretty">{message.text}</p>;
 };
