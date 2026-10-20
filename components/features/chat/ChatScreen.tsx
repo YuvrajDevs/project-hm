@@ -400,8 +400,8 @@ export const ChatScreen = ({ onClose }: { onClose: () => void }) => {
 
       {/* The conversation stays mounted while Saved is open, so nothing reloads when you come back */}
       <div className={cn("relative z-10 flex-1 min-h-0 flex flex-col", saved && "hidden")}>
-        {uid && (keyStatus === "needs-unlock" || keyStatus === "needs-setup") && (
-          <DeviceKeyGate uid={uid} keyStatus={keyStatus} onDone={() => { setKeyStatus("checking"); setKeyEpoch((n) => n + 1); }} />
+        {uid && coupleId && (keyStatus === "needs-unlock" || keyStatus === "needs-setup") && (
+          <DeviceKeyGate uid={uid} coupleId={coupleId} keyStatus={keyStatus} onDone={() => { setKeyStatus("checking"); setKeyEpoch((n) => n + 1); }} />
         )}
         {uid && keyStatus === "error" && (
           <div className="absolute inset-0 z-30 bg-[var(--page)] flex items-center justify-center p-6">

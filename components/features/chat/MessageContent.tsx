@@ -168,7 +168,7 @@ export const MessageContent = ({ message, tone, partnerName, onOpenImage, onOpen
 }) => {
   if (message.once) return <OnceChip message={message} tone={tone} partnerName={partnerName} opening={openingOnce} onOpenOnce={onOpenOnce} />;
   if (message.decryptFailed) {
-    return <p className="font-outfit text-sm italic opacity-70 px-4 py-2.5">Can&apos;t decrypt this message.</p>;
+    return <p className="font-outfit text-sm italic opacity-70 px-4 py-2.5">Can&apos;t open this message — the chat key changed.</p>;
   }
   if (message.kind === "video") return <VideoThumb message={message} onOpenVideo={onOpenVideo} />;
   if (message.kind === "image" && message.data && message.mime) {
@@ -203,7 +203,7 @@ export const MessageContent = ({ message, tone, partnerName, onOpenImage, onOpen
   // An empty/missing text body (or an unrecognized kind) is not a legitimate empty message - it's
   // the same signal as decryptFailed, so it gets the same placeholder instead of a blank bubble.
   if (message.kind !== "text" || !message.text) {
-    return <p className="font-outfit text-sm italic opacity-70 px-4 py-2.5">Can&apos;t decrypt this message.</p>;
+    return <p className="font-outfit text-sm italic opacity-70 px-4 py-2.5">Can&apos;t open this message — the chat key changed.</p>;
   }
   return <p className="font-outfit text-[15px] leading-relaxed whitespace-pre-wrap break-words text-pretty">{message.text}</p>;
 };
