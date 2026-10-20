@@ -17,6 +17,7 @@ export const SITE_NAV = [
 
 // Everything else on the site lives in the menu
 const MENU_MORE = [
+  { href: "/blogs", label: "Read Our Blogs" },
   { href: "/contact", label: "Contact" },
 ] as const;
 const MENU_LEGAL = [
