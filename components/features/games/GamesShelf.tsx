@@ -9,6 +9,7 @@ import { useMailbox } from "@/context/MailboxContext";
 import { endGame, startGame } from "@/lib/firestore-helpers";
 import { DECKS, DECK_BY_ID, MAX_OPEN_GAMES, SECTIONS, slotFor, type DeckInfo } from "@/lib/games/decks";
 import { answeredCount } from "@/lib/games/engine";
+import { aboutPhase, pickedCount, guessedCount } from "@/lib/games/about";
 import type { ActiveGame } from "@/lib/types";
 import { useSensoryFeedback } from "@/hooks/useSensoryFeedback";
 import { cn, partnerLabel } from "@/lib/utils";
@@ -24,6 +25,14 @@ const openAny = (g: ActiveGame) => (slotFor(g.deck) === "questions" ? openQuesti
 /** One line on where a game stands, and what tapping it does */
 const describe = (g: ActiveGame, uid: string, partnerUid: string, partnerName: string) => {
   const invited = g.startedBy !== uid && !g.joined?.[uid];
+  if (DECK_BY_ID[g.deck].mechanic === "about") {
+    const phase = aboutPhase(g, uid, partnerUid);
+    const total = g.cards.length;
+    if (phase === "done") return { status: "You're both done. See how well you know each other", action: "Read" };
+    if (phase === "picking") return invited ? { status: `${partnerName} sent you ${total} questions`, action: "Answer" } : { status: `You've picked ${pickedCount(g, uid)} of ${total}`, action: "Answer" };
+    if (phase === "guessing") return { status: `Your turn to guess ${partnerName} · ${guessedCount(g, uid)}/${total}`, action: "Guess" };
+    return { status: `Waiting on ${partnerName}`, action: "Open" };
+  }
   if (slotFor(g.deck) === "questions") {
     const mine = answeredCount(g, uid), theirs = answeredCount(g, partnerUid), total = g.cards.length;
     if (mine === total && theirs === total) return { status: "You're both done. Read your answers", action: "Read" };
@@ -60,11 +69,11 @@ export const GamesShelf = () => {
           title={section.title}
           subtitle={section.subtitle}
           decks={DECKS.filter(d => d.section === section.id)}
-          active={section.id === "play" ? liveGames : section.id === "know" ? questionGames : []}
-          noun={section.id === "know" ? "deck" : "game"}
+          active={section.id === "play" ? liveGames : section.id === "about" ? questionGames.filter(g => DECK_BY_ID[g.deck].mechanic === "about") : section.id === "know" ? questionGames.filter(g => DECK_BY_ID[g.deck].mechanic !== "about") : []}
+          noun={section.id === "know" || section.id === "about" ? "deck" : "game"}
           showScore={section.id === "play"}
           onPick={setPicked}
-          onOpenPending={() => setPending(section.id === "know" ? "deck" : "game")}
+          onOpenPending={() => setPending(section.id === "know" || section.id === "about" ? "deck" : "game")}
         />
       ))}
       <button
@@ -119,7 +128,7 @@ const PendingRow = ({ games, noun, onOpen }: { games: ActiveGame[]; noun: string
   const { playTick, vibrateTick } = useSensoryFeedback();
   const uid = user?.uid || "";
   const partnerName = partnerLabel(user, partner, "your partner");
-  const waitingOnYou = games.filter(g => ["Join", "Answer", "Play"].includes(describe(g, uid, partner?.uid || "", partnerName).action)).length;
+  const waitingOnYou = games.filter(g => ["Join", "Answer", "Play", "Guess"].includes(describe(g, uid, partner?.uid || "", partnerName).action)).length;
   const newest = DECK_BY_ID[games[0].deck];
 
   return (
@@ -482,7 +491,7 @@ const GameLobby = ({ deck, onClose }: { deck: DeckInfo; onClose: () => void }) =
               <p className="text-center text-neutral-500 font-outfit text-xs">
                 {sameRunning
                   ? `You already have this one going.`
-                  : written ? `${partnerName} gets the same questions to answer.` : `${partnerName} gets a notification to join.`}
+                  : written ? (deck.mechanic === "about" ? `You each choose your own ten questions, then guess each other's answers.` : `${partnerName} gets the same questions to answer.`) : `${partnerName} gets a notification to join.`}
               </p>
             </div>
           </div>

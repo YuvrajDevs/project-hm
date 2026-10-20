@@ -1,0 +1,22 @@
+rules_version = '2';
+
+// Chat videos. The files are encrypted on the device before they are uploaded, so storage only ever holds
+// ciphertext. Only the two people in the couple can read, write or delete them, and nothing over 26 MB.
+service firebase.storage {
+  match /b/{bucket}/o {
+    function inCouple(coupleId) {
+      let couple = firestore.get(/databases/(default)/documents/couples/$(coupleId)).data;
+      return request.auth != null
+        && (couple.partnerA_uid == request.auth.uid || couple.partnerB_uid == request.auth.uid);
+    }
+
+    match /chat/{coupleId}/{file} {
+      allow read, delete: if inCouple(coupleId);
+      allow create: if inCouple(coupleId)
+        && request.resource.size > 0
+        && request.resource.size <= 26 * 1024 * 1024
+        && request.resource.contentType == 'application/octet-stream';
+      allow update: if false;
+    }
+  }
+}

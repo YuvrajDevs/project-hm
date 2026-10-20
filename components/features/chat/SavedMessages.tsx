@@ -8,13 +8,14 @@ import { setChatMessageSaved, subscribeToSavedChat } from "@/lib/firestore-helpe
 import type { ChatMessage } from "@/lib/types";
 import { MessageContent } from "./MessageContent";
 import { ImageViewer } from "./ImageViewer";
+import { VideoViewer } from "./MediaViewers";
 import { partnerLabel } from "@/lib/utils";
 
 const stamp = (iso: string) =>
   new Date(iso).toLocaleString(undefined, { day: "numeric", month: "short", year: "numeric", hour: "numeric", minute: "2-digit" });
 
-const SavedCard = ({ message, who, partnerName, onUnsave, onOpenImage }: {
-  message: ChatMessage; who: string; partnerName: string; onUnsave: () => void; onOpenImage: (m: ChatMessage) => void;
+const SavedCard = ({ message, who, partnerName, onUnsave, onOpenImage, onOpenVideo }: {
+  message: ChatMessage; who: string; partnerName: string; onUnsave: () => void; onOpenImage: (m: ChatMessage) => void; onOpenVideo: (m: ChatMessage) => void;
 }) => {
   const [copied, setCopied] = useState(false);
   const copy = async () => {
@@ -39,7 +40,7 @@ const SavedCard = ({ message, who, partnerName, onUnsave, onOpenImage }: {
         <time dateTime={message.createdAt} className="font-outfit text-xs tabular-nums text-neutral-500">{stamp(message.createdAt)}</time>
       </div>
       <div className="w-fit max-w-full rounded-2xl overflow-hidden">
-        <MessageContent message={message} tone="theirs" partnerName={partnerName} onOpenImage={onOpenImage} />
+        <MessageContent message={message} tone="theirs" partnerName={partnerName} onOpenImage={onOpenImage} onOpenVideo={onOpenVideo} />
       </div>
       <div className="flex gap-2 pt-1">
         <button
@@ -72,12 +73,13 @@ export const SavedMessages = ({ onOpenChat }: { onOpenChat: () => void }) => {
   const partnerUid = partner?.uid;
   const [items, setItems] = useState<ChatMessage[] | null>(null);
   const [viewing, setViewing] = useState<ChatMessage | null>(null);
+  const [watching, setWatching] = useState<ChatMessage | null>(null);
   const [error, setError] = useState("");
   const partnerName = partnerLabel(user, partner, "Your partner");
 
   useEffect(() => {
     if (!coupleId || !uid || !partnerUid) return;
-    return subscribeToSavedChat(coupleId, uid, partnerUid, setItems);
+    return subscribeToSavedChat(coupleId, uid, partnerUid, setItems, () => setError("Couldn't load saved messages. Check your connection and try again."));
   }, [coupleId, uid, partnerUid]);
 
   if (!coupleId || !uid || !partnerUid) return null;
@@ -115,6 +117,7 @@ export const SavedMessages = ({ onOpenChat }: { onOpenChat: () => void }) => {
                 who={m.senderUid === uid ? "You" : partnerName}
                 partnerName={partnerName}
                 onOpenImage={setViewing}
+                onOpenVideo={setWatching}
                 onUnsave={() => setChatMessageSaved(coupleId, m.id, uid, false).catch(() => setError("Couldn't remove that. Try again."))}
               />
             ))}
@@ -124,6 +127,7 @@ export const SavedMessages = ({ onOpenChat }: { onOpenChat: () => void }) => {
 
       <AnimatePresence>
         {viewing && <ImageViewer key="viewer" message={viewing} onClose={() => setViewing(null)} />}
+        {watching && <VideoViewer key="video" message={watching} onClose={() => setWatching(null)} />}
       </AnimatePresence>
     </div>
   );

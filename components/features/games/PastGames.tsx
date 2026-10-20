@@ -1,6 +1,7 @@
 "use client";
 
 import React, { useEffect, useState } from "react";
+import { aboutQuestion, guessOf, rightGuesses } from "@/lib/games/about";
 import { motion } from "framer-motion";
 import { ArrowLeft, ChevronRight, Trash2, X } from "lucide-react";
 import { useMailbox } from "@/context/MailboxContext";
@@ -178,6 +179,7 @@ export const PastGames = ({ onClose }: { onClose: () => void }) => {
 const summaryLine = (g: CoupleGame, uid: string, partnerUid: string, partnerName: string) => {
   const mechanic = DECK_BY_ID[g.deck].mechanic;
   if (mechanic === "open") return `${g.cards.length} questions`;
+  if (mechanic === "about") return `Guessed ${rightGuesses(g, uid, partnerUid)} of ${g.cards.length} · ${partnerName} ${rightGuesses(g, partnerUid, uid)}`;
   if (mechanic === "xo" || mechanic === "connect4") {
     const w = g.wins ?? {};
     return `Rounds won: you ${w[uid] ?? 0} · ${partnerName} ${w[partnerUid] ?? 0}`;
@@ -209,6 +211,27 @@ const GameReplay = ({ game, uid, partnerUid, partnerName }: { game: CoupleGame; 
       </p>
     );
   }
+  if (mechanic === "about") {
+    const sections = [uid, partnerUid].flatMap(owner => game.cards.map((_, r) => ({ owner, r })));
+    return (
+      <div className="divide-y divide-white/10">
+        {sections.map(({ owner, r }) => {
+          const guesser = owner === uid ? partnerUid : uid;
+          const c = aboutQuestion(game, owner, r);
+          const pick = game.answers?.[roundKey(r)]?.[owner]?.pick;
+          const guess = guessOf(game, r, guesser);
+          const opt = (k?: string) => (k === undefined ? "" : c.opts[Number(k)] ?? "");
+          return (
+            <div key={`${owner}-${r}`} className="py-4 space-y-2">
+              <p className="font-bebas text-lg uppercase tracking-wide leading-tight">{c.q}</p>
+              <p className="font-outfit text-sm text-white/85"><span className={cn("font-bebas tracking-widest uppercase mr-2", owner === uid ? "text-pink-300" : "text-blue-300")}>{nameOf(owner)} picked</span>{opt(pick)}</p>
+              <p className="font-outfit text-sm text-white/85"><span className={cn("font-bebas tracking-widest uppercase mr-2", guesser === uid ? "text-pink-300" : "text-blue-300")}>{nameOf(guesser)} guessed</span>{opt(guess)}{guess !== undefined ? (guess === pick ? " ✓" : " ✗") : ""}</p>
+            </div>
+          );
+        })}
+      </div>
+    );
+  }
   return (
     <div className="divide-y divide-white/10">
       {game.cards.map((_, r) => {
@@ -237,6 +260,7 @@ const GameReplay = ({ game, uid, partnerUid, partnerName }: { game: CoupleGame; 
         } else {
           const td = game.td?.[roundKey(r)];
           const player = truthDarePlayer(game, r);
+          if (card.kind !== "truthdare") return null;
           title = td?.choice === "dare" ? card.dare : card.truth;
           const by = player === uid ? "you" : "them";
           lines = [

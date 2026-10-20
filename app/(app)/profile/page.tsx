@@ -132,12 +132,14 @@ export default function ProfilePage() {
     if (await saveProfile({ ...current(), facts: cleaned })) close();
   };
 
-  const saveAbout = async ({ name, bio, gender }: { name: string; bio: string; gender: string }) => {
+  const saveAbout = async ({ name, bio, gender, avatarImage, birthday }: { name: string; bio: string; gender: string; avatarImage: string; birthday: string }) => {
     setError("");
     try {
       // An empty name would leave the partner looking at a blank profile
-      await updateDoc(doc(db, "users", user.uid), { displayName: name || user.displayName, gender });
-      await updateProfile(user.uid, { ...current(), bio });
+      await updateDoc(doc(db, "users", user.uid), { displayName: name || user.displayName, gender, avatarImage });
+      const facts = { ...(current().facts || {}) };
+      if (birthday) facts.birthday = birthday; else delete facts.birthday;
+      await updateProfile(user.uid, { ...current(), bio, facts });
       close();
     } catch (err) {
       console.error(err);
@@ -204,12 +206,11 @@ export default function ProfilePage() {
   const together = daysSince(couple?.anniversaryDate, now);
   const streak = metrics?.streak ?? 0;
 
-  const facts = FACTS.filter((f) => profile.facts?.[f.id]);
+  const facts = FACTS.filter((f) => f.id !== "birthday" && profile.facts?.[f.id]);
   const hasHard = isFilled(profile, "intent") || isFilled(profile, "howToShowUp") || isFilled(profile, "offSignals");
   const love = profile.loveLanguages || [];
   const likes = profile.interests || [];
   const dislikes = profile.dislikes || [];
-  const heroTone = isMe ? "tone-red" : "tone-blue";
   const nextUp = progress.missing[0];
 
   return (
@@ -222,7 +223,13 @@ export default function ProfilePage() {
             <ArrowLeft className="w-5 h-5" />
           </button>
           {isPaired ? (
-            <div role="tablist" aria-label="Whose profile" className="relative flex bg-[#161616] p-1.5 rounded-full border border-white/10 pointer-events-auto">
+            <div role="tablist" aria-label="Whose profile" className="relative grid grid-cols-2 bg-[#161616] p-1.5 rounded-full border border-white/10 pointer-events-auto">
+              {/* One sliding pill moved with a plain transform, so it glides the same at any scroll position */}
+              <span
+                aria-hidden="true"
+                className="absolute top-1.5 bottom-1.5 left-1.5 w-[calc(50%-0.375rem)] rounded-full bg-white transition-transform duration-300 ease-out"
+                style={{ transform: view === "me" ? "translateX(0)" : "translateX(100%)" }}
+              />
               {(["me", "partner"] as const).map((v) => {
                 const active = view === v;
                 return (
@@ -231,9 +238,8 @@ export default function ProfilePage() {
                     role="tab"
                     aria-selected={active}
                     onClick={() => { setView(v); setEditor(null); setError(""); }}
-                    className={cn("px-6 py-2 rounded-full font-bebas text-[11px] tracking-widest uppercase relative z-10 transition-colors duration-300 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/50", active ? "text-black" : "text-neutral-500 hover:text-white")}
+                    className={cn("px-6 py-2 rounded-full font-bebas text-[11px] tracking-widest uppercase relative z-10 transition-colors duration-300 truncate max-w-[7.5rem] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/50", active ? "text-black" : "text-neutral-500 hover:text-white")}
                   >
-                    {active && <motion.div layoutId="profileTabActive" className="absolute inset-0 bg-white rounded-full z-[-1]" />}
                     {v === "me" ? "You" : partnerFirst}
                   </button>
                 );
@@ -253,56 +259,55 @@ export default function ProfilePage() {
             key={view}
             initial={{ opacity: 0, y: 12 }}
             animate={{ opacity: 1, y: 0 }}
-            className={cn("relative overflow-hidden rounded-[1.5rem] p-8 text-center", heroTone)}
+            className="relative overflow-hidden rounded-[1.5rem] bg-[#161616] border border-[#232323] p-6 sm:p-8"
           >
-            <div className="flex flex-col items-center gap-5">
-              <Avatar user={shown} size="lg" className="shadow-2xl" />
-              <div className="space-y-2 max-w-full">
-                <h1 className="text-5xl font-bebas tracking-wider uppercase leading-none text-balance break-words">{shown?.displayName?.trim() || (isMe ? "You" : "Partner")}</h1>
-                {!isMe && nickname && <p className="font-bebas text-sm tracking-[0.3em] uppercase text-neutral-400">{`“${nickname}”`}</p>}
-                {profile.bio?.trim() ? (
-                  <p className="font-outfit text-sm text-neutral-300 leading-relaxed text-pretty max-w-xs mx-auto">{profile.bio}</p>
-                ) : isMe ? (
-                  <button type="button" onClick={() => open({ kind: "about" })} className="font-outfit text-sm text-neutral-500 hover:text-white transition-colors">Add a line about you</button>
-                ) : null}
-              </div>
+            <div className="flex flex-col sm:flex-row items-center sm:items-start gap-6 text-center sm:text-left">
+              <Avatar user={shown} size="lg" className="!w-28 !h-28 sm:!w-32 sm:!h-32 !rounded-full shadow-2xl" />
+              <div className="min-w-0 flex-1 space-y-4">
+                <div className="space-y-2">
+                  <h1 className="text-5xl font-bebas tracking-wider uppercase leading-none text-balance break-words">{shown?.displayName?.trim() || (isMe ? "You" : "Partner")}</h1>
+                  {!isMe && nickname && <p className="font-bebas text-sm tracking-[0.3em] uppercase text-neutral-400">{`“${nickname}”`}</p>}
+                  {profile.bio?.trim() ? (
+                    <p className="font-outfit text-sm text-neutral-300 leading-relaxed text-pretty max-w-md mx-auto sm:mx-0">{profile.bio}</p>
+                  ) : isMe ? (
+                    <button type="button" onClick={() => open({ kind: "about" })} className="font-outfit text-sm text-neutral-500 hover:text-white transition-colors">Add a line about you</button>
+                  ) : null}
+                </div>
 
-              <div className="flex flex-wrap items-center justify-center gap-2">
-                {!isMe && partner?.currentMood && (
-                  <Chip>
-                    {moodIcon && (
-                      // eslint-disable-next-line @next/next/no-img-element
-                      <img src={moodIcon} alt="" className="w-4 h-4" />
-                    )}
-                    {`Feeling ${partner.currentMood}`}
-                  </Chip>
-                )}
-                {theirTime && !sameZone && (
-                  <Chip>
-                    {theirTime.night ? <Moon className="w-3.5 h-3.5 text-neutral-300" /> : <Sun className="w-3.5 h-3.5 text-yellow-400" />}
-                    <span className="tabular-nums">{`${theirTime.label} there`}</span>
-                  </Chip>
-                )}
-                {birthday !== null && (
-                  <Chip><Cake className="w-3.5 h-3.5 text-pink-400" />{birthdayText(birthday)}</Chip>
+                <div className="flex flex-wrap items-center justify-center sm:justify-start gap-2">
+                  {!isMe && partner?.currentMood && (
+                    <Chip>
+                      {moodIcon && (
+                        // eslint-disable-next-line @next/next/no-img-element
+                        <img src={moodIcon} alt="" className="w-4 h-4" />
+                      )}
+                      {`Feeling ${partner.currentMood}`}
+                    </Chip>
+                  )}
+                  {theirTime && !sameZone && (
+                    <Chip>
+                      {theirTime.night ? <Moon className="w-3.5 h-3.5 text-neutral-300" /> : <Sun className="w-3.5 h-3.5 text-yellow-400" />}
+                      <span className="tabular-nums">{`${theirTime.label} there`}</span>
+                    </Chip>
+                  )}
+                </div>
+
+                {isMe ? (
+                  <button type="button" onClick={() => open({ kind: "about" })} className="px-5 py-2.5 rounded-full bg-white text-black flex items-center gap-2 mx-auto sm:mx-0 font-bebas text-xs tracking-widest uppercase hover:bg-neutral-200 active:scale-95 transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/50">
+                    <Pencil className="w-3.5 h-3.5" /> Edit profile
+                  </button>
+                ) : (
+                  <button type="button" onClick={() => open({ kind: "nickname" })} className="px-5 py-2.5 rounded-full bg-white/10 border border-white/10 flex items-center gap-2 mx-auto sm:mx-0 font-bebas text-xs tracking-widest uppercase hover:bg-white/20 active:scale-95 transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/50">
+                    <Pencil className="w-3.5 h-3.5" /> {nickname ? "Change nickname" : "Give a nickname"}
+                  </button>
                 )}
               </div>
-
-              {isMe ? (
-                <button type="button" onClick={() => open({ kind: "about" })} className="px-5 py-2.5 rounded-full bg-white/10 border border-white/10 flex items-center gap-2 font-bebas text-xs tracking-widest uppercase hover:bg-white/20 active:scale-95 transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/50">
-                  <Pencil className="w-3.5 h-3.5" /> Edit profile
-                </button>
-              ) : (
-                <button type="button" onClick={() => open({ kind: "nickname" })} className="px-5 py-2.5 rounded-full bg-white/10 border border-white/10 flex items-center gap-2 font-bebas text-xs tracking-widest uppercase hover:bg-white/20 active:scale-95 transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/50">
-                  <Pencil className="w-3.5 h-3.5" /> {nickname ? "Change nickname" : "Give a nickname"}
-                </button>
-              )}
             </div>
           </motion.section>
 
-          {/* ─── The two of you ─── */}
-          {isPaired && (
-            <div className="grid grid-cols-2 gap-3">
+          {/* ─── At a glance: how long together, the streak, the birthday ─── */}
+          <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
+            {isPaired && (
               <button
                 type="button"
                 onClick={() => open({ kind: "date" })}
@@ -321,6 +326,8 @@ export default function ProfilePage() {
                   </>
                 )}
               </button>
+            )}
+            {isPaired && (
               <div className="rounded-[1.5rem] tone-amber p-5 space-y-1">
                 <p className="font-bebas text-[10px] tracking-[0.3em] uppercase text-white/55">Check-in streak</p>
                 <p className="font-bebas text-5xl leading-none tabular-nums flex items-center gap-2">
@@ -329,8 +336,28 @@ export default function ProfilePage() {
                 </p>
                 <p className="font-outfit text-xs text-white/55 pt-1">{streak > 0 ? "Both of you, in a row" : "Check in together to start"}</p>
               </div>
-            </div>
-          )}
+            )}
+            {(() => {
+              const bday = profile.facts?.birthday;
+              const inner = (
+                <>
+                  <p className="font-bebas text-[10px] tracking-[0.3em] uppercase text-white/55">Birthday</p>
+                  {bday ? (
+                    <>
+                      <p className="font-bebas text-4xl leading-none pt-1">{formatDate(bday)}</p>
+                      <p className="font-outfit text-xs text-white/55 pt-1">{birthday !== null ? birthdayText(birthday) : ""}</p>
+                    </>
+                  ) : (
+                    <p className="font-bebas text-2xl leading-tight pt-1">{isMe ? "Add your birthday" : "Not added yet"}</p>
+                  )}
+                </>
+              );
+              const cls = cn("text-left rounded-[1.5rem] tone-violet p-5 space-y-1 col-span-2 md:col-span-1", !isPaired && "md:col-span-3");
+              return isMe ? (
+                <button type="button" onClick={() => open({ kind: "about" })} className={cn(cls, "hover:brightness-110 active:scale-[0.98] transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/50")}>{inner}</button>
+              ) : <div className={cls}>{inner}</div>;
+            })()}
+          </div>
 
           {/* ─── For the owner: who sees this and what's left to add ─── */}
           {isMe && (
@@ -540,7 +567,7 @@ export default function ProfilePage() {
           {editor?.kind === "intent" && <IntentDialog key="intent" selected={mine.defaultIntent} onSelect={setIntent} onClose={close} />}
           {editor?.kind === "facts" && <FactsDialog key="facts" facts={mine.facts || {}} onSave={saveFacts} onClose={close} />}
           {editor?.kind === "about" && (
-            <AboutDialog key="about" name={user.displayName} bio={mine.bio || ""} gender={user.gender} onSave={saveAbout} onClose={close} />
+            <AboutDialog key="about" name={user.displayName} bio={mine.bio || ""} gender={user.gender} avatarImage={user.avatarImage} birthday={mine.facts?.birthday} onSave={saveAbout} onClose={close} />
           )}
           {editor?.kind === "nickname" && (
             <NicknameDialog key="nickname" firstName={partnerFirst} nickname={nickname} onSave={saveNickname} onClose={close} />

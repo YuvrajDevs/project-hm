@@ -25,8 +25,9 @@ Limits, stated plainly:
   every message encrypted with it, past or future, until the key is rotated.
 - **Metadata is still visible** to anyone with Firebase project access: who sent a message, when, its
   kind (text/image/voice/sticker), and how often you talk - just not the content.
-- **Losing the backup passphrase (or skipping backup) means chat history on that device is gone for
-  good.** There is no recovery path beyond the optional passphrase backup in Settings; resetting
+- **A backup passphrase is required at first use.** The key is only published once it has been backed
+  up (passphrase-wrapped) to Firestore, so a second device can always recover it instead of dead-ending.
+  Losing the passphrase means chat history can't be recovered on a new device; "start fresh" still
   generates a new key and makes every earlier message permanently unreadable, by design.
 - **Re-pairing or a partner leaving rotates the key** (`rotateKeys` in `lib/e2ee.ts`) - the old shared
   key is discarded and anything still encrypted with it becomes unreadable. In practice the couple's
@@ -35,6 +36,20 @@ Limits, stated plainly:
 - **Mailbox, notes and check-ins are not end-to-end encrypted yet** - they're protected by access rules
   and Google's encryption in transit and at rest, but readable by anyone with access to the Firebase
   project. That's a separate piece of work.
+
+### Videos, view once and wallpapers
+
+- **Videos** (up to 2 minutes, under 25 MB) are too big for a message document, so they are encrypted on the
+  device with the same shared key (`encryptBytes`, bound to the couple and sender) and uploaded to Firebase
+  Storage at `chat/{coupleId}/{id}`. Storage only ever holds ciphertext; the message carries the path. `storage.rules`
+  lets only the two partners touch that folder and caps a file at 26 MB. Playing one in a browser needs the bucket's
+  CORS set once: `gsutil cors set storage.cors.json gs://<bucket>`.
+- **View once** messages carry a plain `once: true` flag. Opening one is a single rules-checked update by the
+  recipient that sets `openedAt` and wipes `ct`, so the content is gone from the server the moment it is opened.
+  The recipient's device keeps it in memory only while it is on screen (a text for 60 seconds), and a
+  view-once video's file is deleted from Storage. This stops it being kept in the app, not a screenshot or a camera.
+- **Wallpapers** are encrypted like messages and stored one document per person in `chat_wallpaper`; each person
+  writes only their own.
 
 ## Switch these on (cannot be done from code)
 
