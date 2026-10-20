@@ -90,9 +90,9 @@ export const ensureChatKeys = async (uid: string): Promise<KeyStatus> => {
 // Finishes first-time setup on a device returning "needs-setup": wraps the local key with
 // `passphrase` and saves the backup, then publishes the public key. Publishing only after the
 // backup exists is what guarantees every published key is recoverable.
-export const completeKeySetup = async (uid: string, passphrase: string): Promise<void> => {
+export const completeKeySetup = async (uid: string, passphrase: string, hint: string = ""): Promise<void> => {
   setKeyScope(uid);
-  await backupLocalKey(uid, passphrase);
+  await backupLocalKey(uid, passphrase, hint);
   const publicJwk = (await getKey("publicKeyJwk")) as JsonWebKey | undefined;
   if (publicJwk) await updateDoc(doc(db, "users", uid), { chatPublicKey: publicJwk });
 };
@@ -142,13 +142,24 @@ export const backupKeyExists = async (uid: string): Promise<boolean> => {
   return snap.exists();
 };
 
-// Wraps this device's private key with `passphrase` and saves it to Firestore (owner-only).
-export const backupLocalKey = async (uid: string, passphrase: string): Promise<void> => {
+// Wraps this device's private key with `passphrase` and saves it to Firestore (owner-only). `hint`
+// is a plaintext reminder of the passphrase, never the passphrase itself - it's stored alongside
+// the wrapped key (not inside it) so it can be shown before the key is unlocked. This call fully
+// overwrites the backup doc, so an update that doesn't change the hint must still pass its
+// current value along (see getKeyHint) or it will be silently cleared.
+export const backupLocalKey = async (uid: string, passphrase: string, hint: string = ""): Promise<void> => {
   setKeyScope(uid);
   const jwk = (await getKey("privateKeyJwk")) as JsonWebKey | undefined;
   if (!jwk) throw new Error("No local chat key to back up.");
   const blob = await wrapPrivateKeyJwk(jwk, passphrase);
-  await setDoc(doc(db, "users", uid, "keys", "chat"), blob);
+  await setDoc(doc(db, "users", uid, "keys", "chat"), { ...blob, hint });
+};
+
+// The passphrase hint, or "" if none was set. Safe to read before the key is unlocked - it's
+// stored outside the wrapped blob specifically so this doesn't need the passphrase.
+export const getKeyHint = async (uid: string): Promise<string> => {
+  const snap = await getDoc(doc(db, "users", uid, "keys", "chat"));
+  return (snap.data()?.hint as string | undefined) || "";
 };
 
 // Restores this device's private key from the Firestore backup. Throws on a wrong passphrase.

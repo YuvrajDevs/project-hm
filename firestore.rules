@@ -393,6 +393,14 @@ service cloud.firestore {
       }
     }
 
+    // ─── Chat-key reset codes ────────────────────────────────────────────────
+    // Written only by the server (Firebase Admin, which bypasses these rules) after it verifies
+    // the caller's ID token - see app/api/chat/reset/route.ts. The client must never read or write
+    // this directly, or it could read its own code's hash or forge a "verified" state.
+    match /chatResetCodes/{uid} {
+      allow read, write: if false;
+    }
+
     // ─── Contact form ────────────────────────────────────────────────────────
     // Write-only from the app; read in the Firebase console
     match /contactMessages/{messageId} {

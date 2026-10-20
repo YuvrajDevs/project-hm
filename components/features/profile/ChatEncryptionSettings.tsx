@@ -6,8 +6,10 @@ import { doc, getDoc } from "firebase/firestore";
 import { db } from "@/lib/firebase";
 import { useMailbox } from "@/context/MailboxContext";
 import {
-  backupKeyExists, backupLocalKey, fingerprint, hasLocalPrivateKey, restoreFromBackup, rotateKeys,
+  backupKeyExists, backupLocalKey, fingerprint, getKeyHint, hasLocalPrivateKey, restoreFromBackup,
 } from "@/lib/e2ee";
+import { resetChatKey } from "@/lib/firestore-helpers";
+import { requestResetCode, verifyResetCode } from "@/lib/chatReset";
 import { partnerLabel } from "@/lib/utils";
 
 // Lets each person verify the pairing (a safety number, from each side's public key) and optionally
@@ -23,15 +25,21 @@ export const ChatEncryptionSettings = () => {
   const [partnerFingerprint, setPartnerFingerprint] = useState<string | null>(null);
   const [passphrase, setPassphrase] = useState("");
   const [confirm, setConfirm] = useState("");
+  const [hint, setHint] = useState("");
   const [busy, setBusy] = useState(false);
   const [message, setMessage] = useState("");
   const [hasBackup, setHasBackup] = useState(false);
+  // Forgotten-passphrase reset: "idle" -> "warn" (irreversible-action confirmation) -> "code"
+  // (6-digit code emailed to this account, then resetChatKey destroys the old key).
+  const [resetStage, setResetStage] = useState<"idle" | "warn" | "code">("idle");
+  const [resetCode, setResetCode] = useState("");
 
   useEffect(() => {
     if (!uid) return;
     (async () => {
-      const [hasLocal, backup] = await Promise.all([hasLocalPrivateKey(uid), backupKeyExists(uid)]);
+      const [hasLocal, backup, savedHint] = await Promise.all([hasLocalPrivateKey(uid), backupKeyExists(uid), getKeyHint(uid)]);
       setHasBackup(backup);
+      setHint(savedHint);
       setStatus(!hasLocal && backup ? "needsRestore" : "ready");
 
       const mySnap = await getDoc(doc(db, "users", uid));
@@ -54,7 +62,7 @@ export const ChatEncryptionSettings = () => {
     if (passphrase !== confirm) return setMessage("Those don't match.");
     setBusy(true);
     try {
-      await backupLocalKey(uid, passphrase);
+      await backupLocalKey(uid, passphrase, hint.trim());
       setHasBackup(true);
       setPassphrase("");
       setConfirm("");
@@ -81,13 +89,25 @@ export const ChatEncryptionSettings = () => {
     }
   };
 
-  const skipRestore = async () => {
-    setMessage("");
-    setBusy(true);
+  const sendResetCode = async () => {
+    setMessage(""); setBusy(true);
+    try { await requestResetCode(); setResetStage("code"); }
+    catch (err) { setMessage(err instanceof Error ? err.message : "Couldn't send the code. Try again."); }
+    finally { setBusy(false); }
+  };
+
+  const confirmReset = async () => {
+    setMessage(""); setBusy(true);
     try {
-      await rotateKeys(uid);
+      await verifyResetCode(resetCode);
+      await resetChatKey(uid, couple.id);
       setHasBackup(false);
+      setHint("");
+      setResetStage("idle");
+      setResetCode("");
       setStatus("ready");
+    } catch (err) {
+      setMessage(err instanceof Error ? err.message : "That code didn't work.");
     } finally {
       setBusy(false);
     }
@@ -134,32 +154,76 @@ export const ChatEncryptionSettings = () => {
             <>
               <p className="font-bebas text-[10px] tracking-[0.3em] uppercase text-neutral-500">Restore on this device</p>
               <p className="text-xs text-neutral-400 leading-relaxed">
-                This device doesn&apos;t have your chat key yet. Enter your backup passphrase to restore it, or
-                skip and start fresh (older chat messages on other devices will no longer be readable here).
+                This device doesn&apos;t have your chat key yet. Enter your backup passphrase to restore it.
               </p>
-              <input
-                type="password"
-                value={passphrase}
-                onChange={(e) => setPassphrase(e.target.value)}
-                placeholder="Backup passphrase"
-                className="w-full px-4 py-3 rounded-xl bg-[#1c1c1c] border border-[#2a2a2a] text-sm font-outfit text-white placeholder:text-neutral-600 focus:outline-none focus:ring-2 focus:ring-white/30"
-              />
-              <button
-                type="button"
-                onClick={submitRestore}
-                disabled={busy || !passphrase}
-                className="w-full py-3 bg-white text-black rounded-xl font-bebas tracking-widest uppercase hover:bg-neutral-200 active:scale-[0.98] transition-all disabled:opacity-50"
-              >
-                {busy ? "Restoring..." : "Restore"}
-              </button>
-              <button
-                type="button"
-                onClick={skipRestore}
-                disabled={busy}
-                className="w-full text-xs font-outfit text-neutral-500 underline disabled:opacity-50"
-              >
-                Start fresh instead
-              </button>
+              {hint && resetStage === "idle" && <p className="text-xs text-neutral-500 font-outfit">Hint: {hint}</p>}
+              {resetStage === "idle" && (
+                <>
+                  <input
+                    type="password"
+                    value={passphrase}
+                    onChange={(e) => setPassphrase(e.target.value)}
+                    placeholder="Backup passphrase"
+                    className="w-full px-4 py-3 rounded-xl bg-[#1c1c1c] border border-[#2a2a2a] text-sm font-outfit text-white placeholder:text-neutral-600 focus:outline-none focus:ring-2 focus:ring-white/30"
+                  />
+                  <button
+                    type="button"
+                    onClick={submitRestore}
+                    disabled={busy || !passphrase}
+                    className="w-full py-3 bg-white text-black rounded-xl font-bebas tracking-widest uppercase hover:bg-neutral-200 active:scale-[0.98] transition-all disabled:opacity-50"
+                  >
+                    {busy ? "Restoring..." : "Restore"}
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setResetStage("warn")}
+                    disabled={busy}
+                    className="w-full text-xs font-outfit text-neutral-500 underline disabled:opacity-50"
+                  >
+                    Forgot your passphrase? Reset it
+                  </button>
+                </>
+              )}
+              {resetStage === "warn" && (
+                <>
+                  <p className="text-xs text-rose-400 font-outfit leading-relaxed">
+                    Resetting makes this device your chat key and permanently erases every chat message
+                    you&apos;ve sent, on every device. This cannot be undone. We&apos;ll email a 6-digit
+                    code to confirm it&apos;s really you first.
+                  </p>
+                  <button
+                    type="button"
+                    onClick={sendResetCode}
+                    disabled={busy}
+                    className="w-full py-3 bg-[#1c1c1c] border border-[#2a2a2a] text-white rounded-xl font-bebas tracking-widest uppercase active:scale-[0.98] transition-all disabled:opacity-50"
+                  >
+                    {busy ? "Sending..." : "Email me a reset code"}
+                  </button>
+                  <button type="button" onClick={() => setResetStage("idle")} className="w-full text-xs font-outfit text-neutral-500 underline">Cancel</button>
+                </>
+              )}
+              {resetStage === "code" && (
+                <>
+                  <p className="text-xs text-neutral-400 font-outfit leading-relaxed">Enter the 6-digit code we emailed you. It expires in 10 minutes.</p>
+                  <input
+                    type="text"
+                    inputMode="numeric"
+                    value={resetCode}
+                    onChange={(e) => setResetCode(e.target.value.replace(/\D/g, "").slice(0, 6))}
+                    placeholder="000000"
+                    className="w-full px-4 py-3 rounded-xl bg-[#1c1c1c] border border-[#2a2a2a] text-sm font-outfit text-white text-center tracking-[0.5em] placeholder:text-neutral-600 focus:outline-none focus:ring-2 focus:ring-white/30"
+                  />
+                  <button
+                    type="button"
+                    onClick={confirmReset}
+                    disabled={busy || resetCode.length !== 6}
+                    className="w-full py-3 bg-rose-500 text-white rounded-xl font-bebas tracking-widest uppercase active:scale-[0.98] transition-all disabled:opacity-50"
+                  >
+                    {busy ? "Resetting..." : "Confirm reset - erase chat history"}
+                  </button>
+                  <button type="button" onClick={() => setResetStage("idle")} className="w-full text-xs font-outfit text-neutral-500 underline">Cancel</button>
+                </>
+              )}
             </>
           ) : (
             <>
@@ -168,6 +232,10 @@ export const ChatEncryptionSettings = () => {
               </p>
               <p className="text-xs text-neutral-400 leading-relaxed">
                 Lets you restore chat on a new device. We never store the passphrase itself.
+              </p>
+              <p className="text-xs text-rose-400 font-outfit leading-relaxed">
+                Remember this passphrase. If you forget it, resetting it is the only way back in -
+                and that erases every chat message you&apos;ve sent, forever.
               </p>
               <input
                 type="password"
@@ -181,6 +249,14 @@ export const ChatEncryptionSettings = () => {
                 value={confirm}
                 onChange={(e) => setConfirm(e.target.value)}
                 placeholder="Confirm passphrase"
+                className="w-full px-4 py-3 rounded-xl bg-[#1c1c1c] border border-[#2a2a2a] text-sm font-outfit text-white placeholder:text-neutral-600 focus:outline-none focus:ring-2 focus:ring-white/30"
+              />
+              <input
+                type="text"
+                value={hint}
+                onChange={(e) => setHint(e.target.value)}
+                placeholder="Optional hint to help you remember it"
+                maxLength={120}
                 className="w-full px-4 py-3 rounded-xl bg-[#1c1c1c] border border-[#2a2a2a] text-sm font-outfit text-white placeholder:text-neutral-600 focus:outline-none focus:ring-2 focus:ring-white/30"
               />
               <button

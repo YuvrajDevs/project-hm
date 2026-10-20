@@ -608,6 +608,15 @@ test("only the owner can read or write their chat key backup", async () => {
   await assertFails(setDoc(doc(db(MALLORY), "users", ALICE, "keys", "chat"), blob));
 });
 
+// ─── Chat-key reset codes (server/admin only, never the client) ────────────
+test("nobody can read or write a chat reset code directly", async () => {
+  const codeDoc = { codeHash: "x".repeat(64), expiresAt: Date.now() + 600000, attempts: 0 };
+  await assertFails(setDoc(doc(db(ALICE), "chatResetCodes", ALICE), codeDoc));
+  await assertFails(getDoc(doc(db(ALICE), "chatResetCodes", ALICE)));
+  await assertFails(setDoc(doc(db(MALLORY), "chatResetCodes", ALICE), codeDoc));
+  await assertFails(getDoc(doc(db(MALLORY), "chatResetCodes", ALICE)));
+});
+
 // ─── Saving thoughts ───────────────────────────────────────────────────────
 test("either partner can save a thought for themselves, and only themselves", async () => {
   await seedCouple();

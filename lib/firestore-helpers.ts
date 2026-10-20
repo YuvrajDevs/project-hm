@@ -29,7 +29,7 @@ import {
   serverTimestamp
 } from "firebase/firestore";
 import { db, auth, storage } from "./firebase";
-import { ref as storageRef, uploadBytes, getBytes, deleteObject } from "firebase/storage";
+import { ref as storageRef, uploadBytes, getBytes, deleteObject, listAll, getMetadata } from "firebase/storage";
 import { 
   SafeSpaceMessage,
   EmotionalProfile,
@@ -1401,6 +1401,50 @@ export const downloadChatVideo = async (coupleId: string, uid: string, partnerUi
 };
 
 export const removeChatVideo = (path: string) => deleteObject(storageRef(storage, path)).catch(() => {});
+
+/**
+ * Deletes every message this person sent in this couple's chat, plus their own video blobs in
+ * Storage. Video blobs are matched by the `sender` tag set at upload time (see uploadChatVideo),
+ * not by decrypting anything - that's what lets this run even from a device that can't unlock the
+ * current key, which is exactly the device a forgotten-passphrase reset happens on. Never touches
+ * the partner's messages: this app requires mutual consent to delete someone else's content (see
+ * firestore.rules canDeleteCoupleItem), and a one-sided passphrase reset doesn't have that.
+ */
+export const purgeChatHistory = async (coupleId: string, uid: string) => {
+  const q = query(collection(db, "couples", coupleId, "chat"), where("senderUid", "==", uid));
+  const snap = await getDocs(q);
+  for (let i = 0; i < snap.docs.length; i += 500) {
+    const batch = writeBatch(db);
+    for (const d of snap.docs.slice(i, i + 500)) batch.delete(d.ref);
+    await batch.commit();
+  }
+
+  try {
+    const { items } = await listAll(storageRef(storage, `chat/${coupleId}`));
+    await Promise.all(items.map(async (item) => {
+      try {
+        const meta = await getMetadata(item);
+        if (meta.customMetadata?.sender === uid) await deleteObject(item);
+      } catch {
+        // already gone - e.g. a view-once video that was already wiped on open
+      }
+    }));
+  } catch {
+    // no video folder yet for this couple - nothing to purge
+  }
+};
+
+/**
+ * Forgotten-passphrase reset: generates a fresh key (the old one is unrecoverable by design, see
+ * rotateKeys) and purges this person's own chat history so they aren't left staring at "can't
+ * open this message" for everything they sent under the old key. The caller must have already
+ * verified the emailed 6-digit code - see app/api/chat/reset/route.ts - before calling this.
+ */
+export const resetChatKey = async (uid: string, coupleId: string) => {
+  const publicJwk = await rotateKeys(uid);
+  await purgeChatHistory(coupleId, uid);
+  return publicJwk;
+};
 
 /**
  * Chat wallpaper. Each person has one document describing how THEIR chat looks: where the picture comes from
