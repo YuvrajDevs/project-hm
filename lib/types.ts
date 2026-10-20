@@ -272,6 +272,9 @@ export interface CoupleGame {
   level?: string;       // only on games from the older version
   cards: number[];      // card positions in the deck, in play order (empty for board games)
   dareCards?: number[]; // truth or dare: dares are dealt separately from truths
+  about?: { q: string; opts: string[] }[]; // Everything About Us: the questions themselves, so a customised one travels with the game
+  aboutSets?: Record<string, { q: string; opts: string[] }[]>; // each person's own questions, with any changes they made while answering
+  guess?: Record<string, Record<string, string>>; // Everything About Us: round key -> guesser uid -> the option they think the other picked
   round: number;        // the card on the table, equal to cards.length once finished. Unused by question and board games.
   players: [string, string]; // [who started, their partner]
   startedBy: string;

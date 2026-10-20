@@ -53,6 +53,7 @@ import type { User as FirebaseUser } from "firebase/auth";
 import { REACTION_ICONS } from "./constants";
 import { getAesKeyForCouple, encryptDraft, decryptMessage, encryptBytes, decryptBytes, rotateKeys } from "./e2ee.ts";
 import { ChatMediaError } from "./chatMedia.ts";
+import { aboutDone, likeKey } from "./games/about.ts";
 
 /**
  * Generic converter for Firestore to maintain type safety
@@ -437,6 +438,7 @@ const isFinished = (g: CoupleGame) => {
   if (!DECK_BY_ID[g.deck]) return false;
   const mechanic = DECK_BY_ID[g.deck].mechanic;
   if (mechanic === "xo" || mechanic === "connect4") return Object.values(g.wins ?? {}).some(n => n > 0);
+  if (mechanic === "about") return aboutDone(g);
   if (mechanic === "open") return g.players.every(u => g.cards.every((_, r) => !!g.answers?.[`r${r}`]?.[u]?.text));
   return g.round >= g.cards.length;
 };
@@ -548,6 +550,44 @@ export const submitQuestionAnswer = async (coupleId: string, gameId: string, rou
   }
 };
 
+/**
+ * Everything About Us, step one: your own answer to a question, on your own set of questions (which you can change as you go). It is also kept with the couple as one of your preferences
+ * (just the question and what you picked), which is what later suggestions are built from.
+ */
+export const submitAboutPick = async (
+  coupleId: string, gameId: string, round: number, uid: string, pick: number,
+  question: { deck: string; q: string; answer: string }, finished: boolean, partnerUid: string, name?: string,
+  set?: { q: string; opts: string[] }[]
+) => {
+  await updateDoc(gameRef(coupleId, gameId), { [`answers.r${round}.${uid}`]: { pick: String(pick) }, ...(set ? { [`aboutSets.${uid}`]: set } : {}) });
+  setDoc(doc(db, "couples", coupleId, "preferences", `${uid}_${likeKey(question.deck, question.q)}`), {
+    uid, deck: question.deck, question: question.q, answer: question.answer, at: new Date().toISOString(),
+  }).catch(console.error);
+  if (finished) {
+    await notifyPartner(partnerUid, {
+      uid: partnerUid,
+      type: "GAME",
+      title: "Your Turn to Guess",
+      body: `${name || "Your partner"} picked all their answers. Tap to pick yours, then guess theirs.`,
+      gameId,
+    });
+  }
+};
+
+/** Everything About Us, step two: what you think your partner picked */
+export const submitAboutGuess = async (coupleId: string, gameId: string, round: number, uid: string, pick: number, finished: boolean, partnerUid: string, name?: string) => {
+  await updateDoc(gameRef(coupleId, gameId), { [`guess.r${round}.${uid}`]: String(pick) });
+  if (finished) {
+    await notifyPartner(partnerUid, {
+      uid: partnerUid,
+      type: "GAME",
+      title: "Guesses Are In",
+      body: `${name || "Your partner"} finished guessing. See how well you know each other.`,
+      gameId,
+    });
+  }
+};
+
 export const joinGame = (coupleId: string, gameId: string, uid: string) =>
   updateDoc(gameRef(coupleId, gameId), { [`joined.${uid}`]: true });
 
@@ -640,7 +680,7 @@ export const skipScribble = (coupleId: string, gameId: string, round: number) =>
  * If both tap at once, the second tap opens the game the first one made instead of making another.
  * Returns the new game's id, or null if the finished game is already gone.
  */
-export const replayGame = async (coupleId: string, oldId: string, uid: string, partnerUid: string, starterName?: string) => {
+export const replayGame = async (coupleId: string, oldId: string, uid: string, partnerUid: string, starterName?: string, nextDeck?: DeckId) => {
   const { dealGame } = await import("./games/engine");
   const newRef = doc(collection(db, "couples", coupleId, "games"));
   let deck: DeckId | null = null;
@@ -649,11 +689,12 @@ export const replayGame = async (coupleId: string, oldId: string, uid: string, p
     if (!snap.exists()) return null;
     const old = snap.data() as CoupleGame & { replacedBy?: string };
     if (old.replacedBy) return old.replacedBy;
-    deck = old.deck;
+    // Some decks move on to a different one instead of repeating (Everything About Us)
+    deck = nextDeck && DECK_BY_ID[nextDeck] ? nextDeck : old.deck;
     const game: CoupleGame = {
-      deck: old.deck,
+      deck,
       cards: [],
-      ...dealGame(old.deck, uid),
+      ...dealGame(deck, uid),
       round: 0,
       players: [uid, partnerUid],
       startedBy: uid,
@@ -750,7 +791,7 @@ export const respondToMessage = async (coupleId: string, messageId: string, resp
   });
 };
 
-const COUPLE_SUBCOLLECTIONS = ["mailbox", "checkins", "reactions", "safe_space_sessions", "events", "games", "game_history", "bucket_list", "chat"];
+const COUPLE_SUBCOLLECTIONS = ["mailbox", "checkins", "reactions", "safe_space_sessions", "events", "games", "game_history", "bucket_list", "chat", "preferences"];
 
 /**
  * Delete documents in chunks that fit inside a single batch

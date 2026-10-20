@@ -321,6 +321,21 @@ service cloud.firestore {
         allow delete: if isPartOfCouple(coupleId) && uid == request.auth.uid;
       }
 
+      // What each of you likes, kept from the questions you answered about yourself (never from guesses):
+      // the question and the answer picked, saved with the couple. Both can read; each writes only their own.
+      match /preferences/{prefId} {
+        allow read: if isPartOfCouple(coupleId);
+        allow create, update: if isPartOfCouple(coupleId)
+          && request.resource.data.keys().hasOnly(['uid', 'deck', 'question', 'answer', 'at'])
+          && request.resource.data.uid == request.auth.uid
+          && prefId.matches('^' + request.auth.uid + '_.*')
+          && request.resource.data.deck is string && request.resource.data.deck.size() <= 40
+          && request.resource.data.question is string && request.resource.data.question.size() > 0 && request.resource.data.question.size() <= 140
+          && request.resource.data.answer is string && request.resource.data.answer.size() > 0 && request.resource.data.answer.size() <= 60
+          && request.resource.data.at is string;
+        allow delete: if isPartOfCouple(coupleId) && resource.data.uid == request.auth.uid;
+      }
+
       // Finished games, kept so the two of them can look back at them
       match /game_history/{entryId} {
         allow read, create, delete: if isPartOfCouple(coupleId);

@@ -1,3 +1,4 @@
+import { ABOUT_CONTENT, type AboutQ } from "./aboutContent.ts";
 import {
   WOULD_YOU_RATHER, THIS_OR_THAT, NEVER_HAVE_I_EVER, MORE_LIKELY, TRUTH_OR_DARE,
   SPICY_QUESTIONS, INTIMACY_QUESTIONS, DEEP_QUESTIONS,
@@ -14,6 +15,7 @@ export type DeckContent =
   | { kind: "open"; items: string[] }                         // written answers
   | { kind: "td"; truth: string[]; dare: string[] }           // truth or dare
   | { kind: "words"; items: string[] }                        // scribble
+  | { kind: "about"; items: AboutQ[] }                       // Everything About Us
   | { kind: "board" };                                        // XO and four in a row: no cards
 
 // ─── Would you rather ───────────────────────────────────────────────────────
@@ -384,6 +386,7 @@ const merge = <T,>(...lists: T[][]) => lists.flat();
 
 export const CONTENT: Record<string, DeckContent> = {
   // Play games
+  ...Object.fromEntries(Object.entries(ABOUT_CONTENT).map(([id, items]) => [id, { kind: "about" as const, items }])),
   scribble: { kind: "words", items: SCRIBBLE_WORDS },
   xo: { kind: "board" },
   connect4: { kind: "board" },

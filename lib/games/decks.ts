@@ -6,14 +6,15 @@
 // choice    – both pick one of two; the same pick is a point each
 // who       – point at yourself or your partner; agreeing is a point each
 // truthdare – take turns; the partner decides if it was done
+// about     – pick your own answer from four, then guess your partner's
 // open      – written answers at each person's own pace, all read together at the end
 // scribble  – one draws, the other guesses
 // xo / connect4 – turn-based board games
-export type GameMechanic = "choice" | "who" | "truthdare" | "open" | "scribble" | "xo" | "connect4";
+export type GameMechanic = "about" | "choice" | "who" | "truthdare" | "open" | "scribble" | "xo" | "connect4";
 
 export type DeckId = string;
 
-export type SectionId = "play" | "know" | "spicy" | "wyr" | "tod" | "connect";
+export type SectionId = "play" | "about" | "know" | "spicy" | "wyr" | "tod" | "connect";
 
 // Tailwind only ships classes it can see written out, so every colour is spelled in full here
 const HUES = {
@@ -53,6 +54,7 @@ const deck = (
 ): DeckInfo => ({ id, section, title, blurb, howTo, mechanic, options, gradient: HUES[hue].tint, cards: [HUES[hue].card, HUES[second].card] });
 
 const MATCH = "You both pick. Pick the same and you each get a point.";
+const ABOUT = "Pick the answer that is most you. Then guess what your partner picked. You both see how well you know each other.";
 const WRITTEN = "Answer at your own pace. Once you've both finished, you'll see every question with both answers.";
 const TOD = "Take turns choosing truth or dare. Your partner decides if you really did it, and every one done is a point.";
 const NHIE = { a: "I have", b: "I haven't", prefix: "Never have I ever ", suffix: "." };
@@ -71,7 +73,15 @@ export const DECKS: DeckInfo[] = [
   deck("likely_after_dark", "play", "Who's More Likely 🌶️", "Point, then blush", WHO_HOW, "who", "rose", "pink"),
   deck("yay_or_nay", "play", "Yay or Nay", "Kinks and things to try", "Yay or nay on things you might want to try. Matches are a point, and a hint.", "choice", "red", "rose", { a: "Yay", b: "Nay", suffix: "?" }),
 
-  // Getting to know
+  // Everything about us
+  deck("about_food", "about", "Food & Drinks", "What you actually love to eat", ABOUT, "about", "orange", "amber"),
+  deck("about_lifestyle", "about", "Lifestyle", "Mornings, money, home", ABOUT, "about", "teal", "emerald"),
+  deck("about_vibes", "about", "Vibes & Favourites", "Colours, beaches, cafés", ABOUT, "about", "violet", "fuchsia"),
+  deck("about_travel", "about", "Travel & Adventure", "Where and how you roam", ABOUT, "about", "sky", "cyan"),
+  deck("about_screen", "about", "Movies, Music & Play", "What you watch and hum", ABOUT, "about", "indigo", "purple"),
+  deck("about_dates", "about", "Dates & Little Gestures", "How you like to be loved", ABOUT, "about", "pink", "rose"),
+
+  // Chit chat
   deck("icebreakers", "know", "Icebreakers", "Easy ones to start", WRITTEN, "open", "sky", "blue"),
   deck("know_better", "know", "Getting to Know Better", "The story behind you", WRITTEN, "open", "teal", "emerald"),
   deck("date_night", "know", "Date Night", "Plan the next one", WRITTEN, "open", "amber", "orange"),
@@ -116,7 +126,8 @@ export const DECKS: DeckInfo[] = [
 
 export const SECTIONS: { id: SectionId; title: string; subtitle: string }[] = [
   { id: "play", title: "Play Together", subtitle: "Little games for the two of you" },
-  { id: "know", title: "Getting to Know", subtitle: "Answer at your own pace, read them together" },
+  { id: "about", title: "Everything About Us", subtitle: "Pick yours, then guess theirs" },
+  { id: "know", title: "Chit Chat", subtitle: "Answer at your own pace, read them together" },
   { id: "spicy", title: "I Like It Spicy", subtitle: "Just for the two of you" },
   { id: "wyr", title: "Would You Rather", subtitle: "Pick one, hope you match" },
   { id: "tod", title: "Truth or Dare", subtitle: "Take turns, be brave" },
@@ -130,7 +141,7 @@ export const isKnownDeck = (id: string) => !!DECK_BY_ID[id];
 
 // Live games are played together card by card; question decks are answered separately and read together
 export type GameSlot = "current" | "questions";
-export const slotFor = (id: DeckId): GameSlot => (DECK_BY_ID[id]?.mechanic === "open" ? "questions" : "current");
+export const slotFor = (id: DeckId): GameSlot => (DECK_BY_ID[id]?.mechanic === "open" || DECK_BY_ID[id]?.mechanic === "about" ? "questions" : "current");
 
 // How many of each kind can be open at once
 export const MAX_OPEN_GAMES = 3;
