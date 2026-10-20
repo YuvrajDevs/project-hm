@@ -15,6 +15,7 @@ import { AmbientBackground } from "@/components/ui/AmbientBackground";
 import { NotificationToastManager } from "@/components/features/notifications/NotificationToastManager";
 import { NotificationCenter } from "@/components/features/notifications/NotificationCenter";
 import { Bell } from "lucide-react";
+import { DECK_BY_ID } from "@/lib/games/decks";
 import { PENDING_INVITE_KEY } from "@/lib/constants";
 import dynamic from "next/dynamic";
 import { useScrollLock } from "@/hooks/useScrollLock";
@@ -38,6 +39,7 @@ const ChatScreen = dynamic(() => loadChat().then(m => m.ChatScreen));
 const ArchiveDashboard = dynamic(() => loadArchive().then(m => m.ArchiveDashboard));
 const SafeSpaceSession = dynamic(() => loadSafeSpace().then(m => m.SafeSpaceSession));
 const GameScreen = dynamic(() => loadGame().then(m => m.GameScreen));
+const AboutScreen = dynamic(() => import("@/components/features/games/AboutScreen").then(m => m.AboutScreen));
 const QuestionDeckScreen = dynamic(() => loadQuestions().then(m => m.QuestionDeckScreen));
 const PartnerLeftOverlay = dynamic(() => import("@/components/features/mailbox/PartnerLeftOverlay").then(m => m.PartnerLeftOverlay));
 const WhiteFlagOverlay = dynamic(() => import("@/components/features/mailbox/WhiteFlagOverlay").then(m => m.WhiteFlagOverlay));
@@ -488,7 +490,9 @@ export function HomeClient() {
             <GameScreen key="game-screen" gameId={openGameId!} onLeave={() => setOpenGameId(null)} />
         ) : null}
         {inQuestions ? (
-            <QuestionDeckScreen key="question-deck" gameId={openQuestionsId!} onLeave={() => setOpenQuestionsId(null)} />
+            DECK_BY_ID[questionGames.find(g => g.id === openQuestionsId)?.deck ?? ""]?.mechanic === "about"
+                ? <AboutScreen key="about-deck" gameId={openQuestionsId!} onLeave={() => setOpenQuestionsId(null)} />
+                : <QuestionDeckScreen key="question-deck" gameId={openQuestionsId!} onLeave={() => setOpenQuestionsId(null)} />
         ) : null}
 
         {/* After closing: a gentle nudge to put the outcome in writing */}

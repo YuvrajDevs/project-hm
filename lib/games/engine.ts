@@ -1,6 +1,7 @@
 import { C4_COLS, C4_ROWS, DECK_BY_ID, ROUND_SIZE, XO_CELLS, type DeckId } from "./decks.ts";
 import { CONTENT } from "./content.ts";
 import type { CoupleGame } from "@/lib/types";
+import { ABOUT_ROUND } from "./aboutContent.ts";
 
 // Pure game rules: which card is showing, when a card is finished, and who scored.
 
@@ -9,7 +10,8 @@ export type GameCard =
   | { kind: "who"; prompt: string }
   | { kind: "open"; text: string }
   | { kind: "truthdare"; truth: string; dare: string }
-  | { kind: "draw"; word: string };
+  | { kind: "draw"; word: string }
+  | { kind: "about"; q: string; opts: string[] };
 
 export const roundKey = (round: number) => `r${round}`;
 
@@ -28,6 +30,11 @@ export const dealGame = (deck: DeckId, starter: string): Partial<CoupleGame> => 
   switch (content.kind) {
     case "td":
       return { cards: shuffledIndices(content.truth.length, ROUND_SIZE), dareCards: shuffledIndices(content.dare.length, ROUND_SIZE) };
+    case "about": {
+      // A fresh set of questions from the deck, in a random order, copied into the game so they can be edited
+      const picked = shuffledIndices(content.items.length, ABOUT_ROUND).map(i => content.items[i]);
+      return { cards: picked.map((_, i) => i), about: picked };
+    }
     case "board":
       return {
         cards: [],
@@ -43,6 +50,10 @@ export const dealGame = (deck: DeckId, starter: string): Partial<CoupleGame> => 
 };
 
 export const getCard = (game: CoupleGame, round: number): GameCard | null => {
+  if (game.about && DECK_BY_ID[game.deck]?.mechanic === "about") {
+    const item = game.about[game.cards[round]];
+    return item ? { kind: "about", q: item.q, opts: item.opts } : null;
+  }
   const index = game.cards[round];
   const content = CONTENT[game.deck];
   const info = DECK_BY_ID[game.deck];

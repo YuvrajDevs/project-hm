@@ -55,6 +55,18 @@ service cloud.firestore {
         || isLinkChange(userId)
       );
 
+      // What this person likes, kept from the games they play: just the question and the answer they picked.
+      // Private to them. It is what suggestions are built from.
+      match /likes/{likeId} {
+        allow read, delete: if isOwner(userId);
+        allow create, update: if isOwner(userId)
+          && request.resource.data.keys().hasOnly(['deck', 'question', 'answer', 'at'])
+          && request.resource.data.deck is string && request.resource.data.deck.size() <= 40
+          && request.resource.data.question is string && request.resource.data.question.size() > 0 && request.resource.data.question.size() <= 140
+          && request.resource.data.answer is string && request.resource.data.answer.size() > 0 && request.resource.data.answer.size() <= 60
+          && request.resource.data.at is string;
+      }
+
       // The other person may only touch the pairing fields, and only to link or unlink
       allow update: if isAuthenticated() && request.auth.uid != userId
         && changedOnly(['coupleId', 'partnerId', 'role', 'leftByPartner'])

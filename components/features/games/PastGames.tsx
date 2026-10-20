@@ -1,6 +1,7 @@
 "use client";
 
 import React, { useEffect, useState } from "react";
+import { rightGuesses, guessOf } from "@/lib/games/about";
 import { motion } from "framer-motion";
 import { ArrowLeft, ChevronRight, Trash2, X } from "lucide-react";
 import { useMailbox } from "@/context/MailboxContext";
@@ -178,6 +179,7 @@ export const PastGames = ({ onClose }: { onClose: () => void }) => {
 const summaryLine = (g: CoupleGame, uid: string, partnerUid: string, partnerName: string) => {
   const mechanic = DECK_BY_ID[g.deck].mechanic;
   if (mechanic === "open") return `${g.cards.length} questions`;
+  if (mechanic === "about") return `Guessed ${rightGuesses(g, uid, partnerUid)} of ${g.cards.length} · ${partnerName} ${rightGuesses(g, partnerUid, uid)}`;
   if (mechanic === "xo" || mechanic === "connect4") {
     const w = g.wins ?? {};
     return `Rounds won: you ${w[uid] ?? 0} · ${partnerName} ${w[partnerUid] ?? 0}`;
@@ -226,6 +228,16 @@ const GameReplay = ({ game, uid, partnerUid, partnerName }: { game: CoupleGame; 
         } else if (card.kind === "who") {
           title = card.prompt;
           lines = [{ who: "them", text: nameOf(answers[partnerUid]?.pick) }, { who: "you", text: nameOf(answers[uid]?.pick) }];
+        } else if (card.kind === "about") {
+          title = card.q;
+          const opt = (k?: string) => (k === undefined ? "" : card.opts[Number(k)] ?? "");
+          const mark = (g?: string, t?: string) => (g === undefined ? "" : g === t ? " ✓" : " ✗");
+          lines = [
+            { who: "them", text: opt(answers[partnerUid]?.pick) ? `picked ${opt(answers[partnerUid]?.pick)}` : "" },
+            { who: "you", text: opt(guessOf(game, r, uid)) ? `guessed ${opt(guessOf(game, r, uid))}${mark(guessOf(game, r, uid), answers[partnerUid]?.pick)}` : "" },
+            { who: "you", text: opt(answers[uid]?.pick) ? `picked ${opt(answers[uid]?.pick)}` : "" },
+            { who: "them", text: opt(guessOf(game, r, partnerUid)) ? `guessed ${opt(guessOf(game, r, partnerUid))}${mark(guessOf(game, r, partnerUid), answers[uid]?.pick)}` : "" },
+          ];
         } else if (card.kind === "open") {
           title = card.text;
           lines = [{ who: "them", text: answers[partnerUid]?.text || "" }, { who: "you", text: answers[uid]?.text || "" }];
@@ -237,6 +249,7 @@ const GameReplay = ({ game, uid, partnerUid, partnerName }: { game: CoupleGame; 
         } else {
           const td = game.td?.[roundKey(r)];
           const player = truthDarePlayer(game, r);
+          if (card.kind !== "truthdare") return null;
           title = td?.choice === "dare" ? card.dare : card.truth;
           const by = player === uid ? "you" : "them";
           lines = [

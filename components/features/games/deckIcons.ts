@@ -1,6 +1,6 @@
 import {
   Brain, CalendarHeart, Candy, Dice5, Eye, Flame, Grid3x3, Hand, Heart, HeartHandshake, Lightbulb, Map, MessageCircle,
-  Moon, Pencil, Plane, Scale, Shield, Sparkles, Split, Sprout, Users, Wine, Zap, Circle, Snowflake, Skull, Lock,
+  Moon, Pencil, Utensils, Coffee, Palette, Mountain, Clapperboard, Plane, Scale, Shield, Sparkles, Split, Sprout, Users, Wine, Zap, Circle, Snowflake, Skull, Lock,
   type LucideIcon,
 } from "lucide-react";
 import { slotFor, type DeckId } from "@/lib/games/decks";
@@ -16,6 +16,12 @@ const ICONS: Record<string, LucideIcon> = {
   nhie_after_dark: Hand,
   likely_after_dark: Users,
   yay_or_nay: Flame,
+  about_food: Utensils,
+  about_lifestyle: Coffee,
+  about_vibes: Palette,
+  about_travel: Mountain,
+  about_screen: Clapperboard,
+  about_dates: HeartHandshake,
   icebreakers: Snowflake,
   know_better: Sparkles,
   date_night: Wine,

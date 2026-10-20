@@ -252,6 +252,20 @@ test("the sender can edit their note until it is answered, and either can hide i
   await assertFails(updateDoc(doc(db(ALICE), "couples", COUPLE, "mailbox", "m1"), { note: "changed after the answer" }));
 });
 
+test("likes are private to their owner and hold just a question and an answer", async () => {
+  await seedUsers();
+  const like = (uid, owner = uid) => doc(db(uid), "users", owner, "likes", "about_food_x");
+  const body = { deck: "about_food", question: "Pick a breakfast.", answer: "Eggs and toast", at: "2026-10-20T10:00:00Z" };
+  await assertSucceeds(setDoc(like(ALICE), body));
+  await assertSucceeds(getDoc(like(ALICE)));
+  await assertFails(getDoc(like(BOB, ALICE)));                                    // not even a partner can read them
+  await assertFails(setDoc(like(BOB, ALICE), body));
+  await assertFails(setDoc(like(ALICE), { ...body, extra: 1 }));
+  await assertFails(setDoc(like(ALICE), { ...body, answer: "" }));
+  await assertFails(setDoc(like(ALICE), { ...body, question: "x".repeat(141) }));
+  await assertSucceeds(deleteDoc(like(ALICE)));
+});
+
 test("a check-in can carry how the writer felt last, and only the writer can set it", async () => {
   await seedCouple();
   const ref = (uid) => doc(db(uid), "couples", COUPLE, "checkins", `2026-10-20_${uid}`);

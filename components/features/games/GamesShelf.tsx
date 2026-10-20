@@ -9,6 +9,9 @@ import { useMailbox } from "@/context/MailboxContext";
 import { endGame, startGame } from "@/lib/firestore-helpers";
 import { DECKS, DECK_BY_ID, MAX_OPEN_GAMES, SECTIONS, slotFor, type DeckInfo } from "@/lib/games/decks";
 import { answeredCount } from "@/lib/games/engine";
+import { aboutPhase, pickedCount, guessedCount } from "@/lib/games/about";
+import { AboutSetup } from "./AboutSetup";
+import type { AboutQ } from "@/lib/games/aboutContent";
 import type { ActiveGame } from "@/lib/types";
 import { useSensoryFeedback } from "@/hooks/useSensoryFeedback";
 import { cn, partnerLabel } from "@/lib/utils";
@@ -24,6 +27,14 @@ const openAny = (g: ActiveGame) => (slotFor(g.deck) === "questions" ? openQuesti
 /** One line on where a game stands, and what tapping it does */
 const describe = (g: ActiveGame, uid: string, partnerUid: string, partnerName: string) => {
   const invited = g.startedBy !== uid && !g.joined?.[uid];
+  if (DECK_BY_ID[g.deck].mechanic === "about") {
+    const phase = aboutPhase(g, uid, partnerUid);
+    const total = g.cards.length;
+    if (phase === "done") return { status: "You're both done. See how well you know each other", action: "Read" };
+    if (phase === "picking") return invited ? { status: `${partnerName} sent you ${total} questions`, action: "Answer" } : { status: `You've picked ${pickedCount(g, uid)} of ${total}`, action: "Answer" };
+    if (phase === "guessing") return { status: `Your turn to guess ${partnerName} · ${guessedCount(g, uid)}/${total}`, action: "Guess" };
+    return { status: `Waiting on ${partnerName}`, action: "Open" };
+  }
   if (slotFor(g.deck) === "questions") {
     const mine = answeredCount(g, uid), theirs = answeredCount(g, partnerUid), total = g.cards.length;
     if (mine === total && theirs === total) return { status: "You're both done. Read your answers", action: "Read" };
@@ -60,11 +71,11 @@ export const GamesShelf = () => {
           title={section.title}
           subtitle={section.subtitle}
           decks={DECKS.filter(d => d.section === section.id)}
-          active={section.id === "play" ? liveGames : section.id === "know" ? questionGames : []}
-          noun={section.id === "know" ? "deck" : "game"}
+          active={section.id === "play" ? liveGames : section.id === "about" ? questionGames.filter(g => DECK_BY_ID[g.deck].mechanic === "about") : section.id === "know" ? questionGames.filter(g => DECK_BY_ID[g.deck].mechanic !== "about") : []}
+          noun={section.id === "know" || section.id === "about" ? "deck" : "game"}
           showScore={section.id === "play"}
           onPick={setPicked}
-          onOpenPending={() => setPending(section.id === "know" ? "deck" : "game")}
+          onOpenPending={() => setPending(section.id === "know" || section.id === "about" ? "deck" : "game")}
         />
       ))}
       <button
@@ -119,7 +130,7 @@ const PendingRow = ({ games, noun, onOpen }: { games: ActiveGame[]; noun: string
   const { playTick, vibrateTick } = useSensoryFeedback();
   const uid = user?.uid || "";
   const partnerName = partnerLabel(user, partner, "your partner");
-  const waitingOnYou = games.filter(g => ["Join", "Answer", "Play"].includes(describe(g, uid, partner?.uid || "", partnerName).action)).length;
+  const waitingOnYou = games.filter(g => ["Join", "Answer", "Play", "Guess"].includes(describe(g, uid, partner?.uid || "", partnerName).action)).length;
   const newest = DECK_BY_ID[games[0].deck];
 
   return (
@@ -341,6 +352,10 @@ const GameLobby = ({ deck, onClose }: { deck: DeckInfo; onClose: () => void }) =
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState("");
   const [askToMakeRoom, setAskToMakeRoom] = useState(false);
+  const isAbout = deck.mechanic === "about";
+  const [editing, setEditing] = useState(false);
+  const [standard, setStandard] = useState<AboutQ[] | null>(null);
+  const [customQs, setCustomQs] = useState<AboutQ[] | null>(null);
   const { playPop } = useSensoryFeedback();
   const Icon = DECK_ICONS[deck.id];
   const uid = user?.uid || "";
@@ -377,15 +392,29 @@ const GameLobby = ({ deck, onClose }: { deck: DeckInfo; onClose: () => void }) =
     }
   };
 
-  const begin = async () => {
+  const begin = async (custom?: AboutQ[]) => {
     // Never leave the button on "Starting..." forever: give up after a while and say so
     const id = await Promise.race([
-      startGame(user!.coupleId!, uid, partnerUid, deck.id, user?.displayName?.split(" ")[0]),
+      startGame(user!.coupleId!, uid, partnerUid, deck.id, user?.displayName?.split(" ")[0], custom),
       new Promise<never>((_, reject) => setTimeout(() => reject(new Error("start-timeout")), 10000)),
     ]);
     playPop();
     onClose();
     (written ? openQuestions : openGame)(id);
+  };
+
+  const openEditor = async () => {
+    setEditing(true);
+    if (standard) return;
+    const { dealGame } = await import("@/lib/games/engine");
+    setStandard((dealGame(deck.id, uid).about as AboutQ[]) ?? []);
+  };
+
+  // Start with the questions as edited; if the limit is reached, the usual make-room step comes first
+  const startCustom = (qs: AboutQ[]) => {
+    setCustomQs(qs);
+    if (full) { setEditing(false); setAskToMakeRoom(true); return; }
+    guard(() => begin(qs), `Couldn't start the ${noun}. Check your connection and try again.`);
   };
 
   const handleStart = () => {
@@ -399,7 +428,7 @@ const GameLobby = ({ deck, onClose }: { deck: DeckInfo; onClose: () => void }) =
   const handleContinue = () => guard(async () => {
     const oldest = kindGames[kindGames.length - 1];
     await endGame(user!.coupleId!, oldest.id);
-    await begin();
+    await begin(customQs ?? undefined);
   }, `Couldn't start the ${noun}. Check your connection and try again.`);
 
   const handleCloseOne = (g: ActiveGame) =>
@@ -440,7 +469,9 @@ const GameLobby = ({ deck, onClose }: { deck: DeckInfo; onClose: () => void }) =
           </div>
         </div>
 
-        {showMakeRoom ? (
+        {editing && isAbout ? (
+          <AboutSetup initial={standard} busy={busy} partnerName={partnerName} onBack={() => setEditing(false)} onStart={startCustom} />
+        ) : showMakeRoom ? (
           // Already at the limit: close one, or let the oldest go
           <div className="p-8 pt-6 space-y-5">
             <div className="space-y-1">
@@ -479,6 +510,11 @@ const GameLobby = ({ deck, onClose }: { deck: DeckInfo; onClose: () => void }) =
               >
                 {busy ? "Starting..." : sameRunning ? (written ? "Open Deck" : "Resume Game") : (written ? "Start Deck" : "Start Game")}
               </button>
+              {isAbout && !sameRunning && (
+                <button onClick={openEditor} disabled={busy} className="w-full bg-[#1c1c1c] border border-[#2a2a2a] text-white font-bebas tracking-widest uppercase rounded-2xl py-3.5 hover:bg-[#242424] active:scale-95 disabled:opacity-30 transition-all">
+                  Change or add questions
+                </button>
+              )}
               <p className="text-center text-neutral-500 font-outfit text-xs">
                 {sameRunning
                   ? `You already have this one going.`

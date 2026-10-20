@@ -53,6 +53,7 @@ import type { User as FirebaseUser } from "firebase/auth";
 import { REACTION_ICONS } from "./constants";
 import { getAesKeyForCouple, encryptDraft, decryptMessage, encryptBytes, decryptBytes, rotateKeys } from "./e2ee.ts";
 import { ChatMediaError } from "./chatMedia.ts";
+import { aboutDone, likeKey } from "./games/about.ts";
 
 /**
  * Generic converter for Firestore to maintain type safety
@@ -437,6 +438,7 @@ const isFinished = (g: CoupleGame) => {
   if (!DECK_BY_ID[g.deck]) return false;
   const mechanic = DECK_BY_ID[g.deck].mechanic;
   if (mechanic === "xo" || mechanic === "connect4") return Object.values(g.wins ?? {}).some(n => n > 0);
+  if (mechanic === "about") return aboutDone(g);
   if (mechanic === "open") return g.players.every(u => g.cards.every((_, r) => !!g.answers?.[`r${r}`]?.[u]?.text));
   return g.round >= g.cards.length;
 };
@@ -504,13 +506,15 @@ export const getGameHistory = async (coupleId: string) => {
 };
 
 /** Deal a new game alongside the others. Returns its id. */
-export const startGame = async (coupleId: string, uid: string, partnerUid: string, deck: DeckId, starterName?: string) => {
+export const startGame = async (coupleId: string, uid: string, partnerUid: string, deck: DeckId, starterName?: string, customAbout?: { q: string; opts: string[] }[]) => {
   // The card lists are only downloaded when someone actually plays
   const { dealGame } = await import("./games/engine");
   const game: CoupleGame = {
     deck,
     cards: [],
     ...dealGame(deck, uid),
+    // Everything About Us: questions the two of them edited or wrote replace the standard set
+    ...(customAbout ? { about: customAbout, cards: customAbout.map((_, i) => i) } : {}),
     round: 0,
     players: [uid, partnerUid],
     startedBy: uid,
@@ -543,6 +547,43 @@ export const submitQuestionAnswer = async (coupleId: string, gameId: string, rou
       type: "GAME",
       title: "Answers Are In",
       body: `${name || "Your partner"} answered every question. Tap to finish yours and read them together.`,
+      gameId,
+    });
+  }
+};
+
+/**
+ * Everything About Us, step one: your own answer to a question. It also goes into your private likes
+ * (just the question and what you picked), which is what later suggestions are built from.
+ */
+export const submitAboutPick = async (
+  coupleId: string, gameId: string, round: number, uid: string, pick: number,
+  question: { deck: string; q: string; answer: string }, finished: boolean, partnerUid: string, name?: string
+) => {
+  await updateDoc(gameRef(coupleId, gameId), { [`answers.r${round}.${uid}`]: { pick: String(pick) } });
+  setDoc(doc(db, "users", uid, "likes", likeKey(question.deck, question.q)), {
+    deck: question.deck, question: question.q, answer: question.answer, at: new Date().toISOString(),
+  }).catch(console.error);
+  if (finished) {
+    await notifyPartner(partnerUid, {
+      uid: partnerUid,
+      type: "GAME",
+      title: "Your Turn to Guess",
+      body: `${name || "Your partner"} picked all their answers. Tap to pick yours, then guess theirs.`,
+      gameId,
+    });
+  }
+};
+
+/** Everything About Us, step two: what you think your partner picked */
+export const submitAboutGuess = async (coupleId: string, gameId: string, round: number, uid: string, pick: number, finished: boolean, partnerUid: string, name?: string) => {
+  await updateDoc(gameRef(coupleId, gameId), { [`guess.r${round}.${uid}`]: String(pick) });
+  if (finished) {
+    await notifyPartner(partnerUid, {
+      uid: partnerUid,
+      type: "GAME",
+      title: "Guesses Are In",
+      body: `${name || "Your partner"} finished guessing. See how well you know each other.`,
       gameId,
     });
   }
@@ -907,7 +948,7 @@ export const deleteUserAccount = async (uid: string, partnerUid: string | null) 
   // Any invite this person created goes too. Best effort: it must never block the deletion itself.
   const inviteCode = (await getDoc(doc(db, "users", uid))).data()?.inviteCode;
   if (inviteCode) await deleteDoc(doc(db, "invites", inviteCode)).catch(() => {});
-  for (const colName of ["notes", "notifications"]) {
+  for (const colName of ["notes", "notifications", "likes"]) {
     const snap = await getDocs(collection(db, "users", uid, colName));
     snap.docs.forEach((d) => refs.push(d.ref));
   }
