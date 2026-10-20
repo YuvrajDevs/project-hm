@@ -9,7 +9,7 @@ import { isAdminEmail, parseAdminEmails } from "@/lib/adminMetrics";
 export const dynamic = "force-dynamic";
 
 // Used when ADMIN_EMAILS isn't set; set ADMIN_EMAILS (comma-separated) to add people or replace this.
-const DEFAULT_ADMIN_EMAILS = "honestmailbox@gmail.com";
+const DEFAULT_ADMIN_EMAILS = "thehonestmailbox@gmail.com";
 
 // Counting every couple's activity is many reads, so a recent result is reused for a few minutes
 const CACHE_MS = 5 * 60_000;
