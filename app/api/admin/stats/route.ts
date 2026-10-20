@@ -54,7 +54,7 @@ export async function GET(req: NextRequest) {
     return NextResponse.json(cache.stats, { headers: { "Cache-Control": "no-store" } });
   }
   try {
-    const stats = await collectAdminStats();
+    const stats = await collectAdminStats(allowed);
     cache = { at: Date.now(), stats };
     return NextResponse.json(stats, { headers: { "Cache-Control": "no-store" } });
   } catch (err) {

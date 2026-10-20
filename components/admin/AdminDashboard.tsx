@@ -5,7 +5,8 @@ import { onAuthStateChanged, signInWithPopup, signOut, type User as FirebaseUser
 import { ChevronDown, ChevronRight, RefreshCw, Search } from "lucide-react";
 import { auth, googleProvider } from "@/lib/firebase";
 import type { AdminCouple, AdminPerson, AdminStats } from "@/lib/adminData";
-import type { ActivityStatus } from "@/lib/adminMetrics";
+import { ADMIN_TZ, dayKey, type ActivityStatus } from "@/lib/adminMetrics";
+import { activitySlice, dayEndMs, dayStartMs, inRange, joinedFunnel, periodNumbers, rangeFor, signupSeries, snapshot, type Preset, type Range } from "@/lib/adminView";
 import { Donut, FunnelBars, GrowthChart, SERIES_COLOURS, SplitBar, StackedBars } from "./Charts";
 
 const STATUS: Record<ActivityStatus, { label: string; colour: string }> = {
@@ -161,27 +162,37 @@ const CoupleDetail = ({ couple }: { couple: AdminCouple }) => {
   );
 };
 
-const PeopleTable = ({ people, query, statusFilter }: { people: AdminPerson[]; query: string; statusFilter: ActivityStatus | "all" }) => {
+const PeopleTable = ({ people, query, statusFilter, hideNoName }: { people: AdminPerson[]; query: string; statusFilter: ActivityStatus | "all"; hideNoName: boolean }) => {
+  const [sort, setSort] = useState<{ key: "joined" | "last"; dir: 1 | -1 }>({ key: "last", dir: -1 });
   const rows = useMemo(() => {
     const q = query.trim().toLowerCase();
     return people
+      .filter((p) => !hideNoName || p.name)
       .filter((p) => statusFilter === "all" || p.status === statusFilter)
-      .filter((p) => !q || p.name.toLowerCase().includes(q) || p.email.toLowerCase().includes(q));
-  }, [people, query, statusFilter]);
+      .filter((p) => !q || p.name.toLowerCase().includes(q) || p.email.toLowerCase().includes(q))
+      .sort((x, y) => (((sort.key === "joined" ? x.joinedAt : x.lastActiveAt) ?? 0) - ((sort.key === "joined" ? y.joinedAt : y.lastActiveAt) ?? 0)) * sort.dir);
+  }, [people, query, statusFilter, hideNoName, sort]);
   const th = "px-3 py-3 text-left font-bebas text-[11px] tracking-[0.2em] uppercase text-neutral-400";
+  const sortTh = (key: "joined" | "last", label: string) => (
+    <th className={th}>
+      <button type="button" onClick={() => setSort((v) => ({ key, dir: v.key === key ? (v.dir === 1 ? -1 : 1) : -1 }))} className="hover:text-white">
+        {label}{sort.key === key ? (sort.dir === 1 ? " ↑" : " ↓") : ""}
+      </button>
+    </th>
+  );
   return (
     <div className="overflow-x-auto">
       <table className="w-full min-w-[760px] border-collapse">
-        <thead><tr className="border-b border-[#262626]"><th className={th}>Name</th><th className={th}>Email</th><th className={th}>Joined</th><th className={th}>Last active</th><th className={th}>Status</th><th className={th}>Where they are</th></tr></thead>
+        <thead><tr className="border-b border-[#262626]"><th className={th}>Name</th><th className={th}>Email</th>{sortTh("joined", "Joined")}{sortTh("last", "Last active")}<th className={th}>Status</th><th className={th}>Where they are</th></tr></thead>
         <tbody>
           {rows.map((p) => (
             <tr key={p.uid} className="border-b border-[#1f1f1f] hover:bg-white/[0.03]">
-              <td className="px-3 py-3 font-outfit text-sm">{p.name}</td>
-              <td className="px-3 py-3 font-outfit text-sm text-neutral-400">{p.email || "–"}</td>
+              <td className="px-3 py-3 font-outfit text-sm">{p.name || <span className="text-neutral-500 italic">No name yet</span>}</td>
+              <td className="px-3 py-3 font-outfit text-sm text-neutral-300">{p.email || <span className="text-neutral-600">no email</span>}</td>
               <td className="px-3 py-3 font-outfit text-sm text-neutral-300">{dateOf(p.joinedAt)}</td>
               <td className="px-3 py-3 font-outfit text-sm text-neutral-300" title={p.lastActiveAt ? new Date(p.lastActiveAt).toLocaleString() : ""}>{ago(p.lastActiveAt)}</td>
               <td className="px-3 py-3"><StatusPill status={p.status} /></td>
-              <td className="px-3 py-3 font-outfit text-sm text-neutral-300">{p.coupleId ? "Paired" : p.onboarded ? "Single, not paired yet" : "Still setting up"}</td>
+              <td className="px-3 py-3 font-outfit text-sm text-neutral-300">{p.coupleId ? "Paired" : p.onboarded ? "Single, not paired yet" : "Signed in, hasn't set up a profile"}</td>
             </tr>
           ))}
           {rows.length === 0 && <tr><td colSpan={6} className="py-8 text-center font-outfit text-sm text-neutral-500">Nothing matches.</td></tr>}
@@ -199,6 +210,12 @@ export const AdminDashboard = () => {
   const [tab, setTab] = useState<"couples" | "people">("couples");
   const [query, setQuery] = useState("");
   const [statusFilter, setStatusFilter] = useState<ActivityStatus | "all">("all");
+  const [preset, setPreset] = useState<Preset>("30d");
+  const [fromDay, setFromDay] = useState(() => dayKey(Date.now() - 6 * 86_400_000, ADMIN_TZ));
+  const [toDay, setToDay] = useState(() => dayKey(Date.now(), ADMIN_TZ));
+  const [scope, setScope] = useState<"all" | "joined" | "seen">("all");
+  const [hideNoName, setHideNoName] = useState(false);
+  const [clock] = useState(() => Date.now());
 
   useEffect(() => onAuthStateChanged(auth, setUser), []);
 
@@ -224,6 +241,43 @@ export const AdminDashboard = () => {
     try { await signInWithPopup(auth, googleProvider); } catch { setError("Sign-in didn't finish. Try again."); }
   };
 
+  const sel = "h-10 px-3 rounded-xl bg-[#151515] border border-[#262626] text-sm text-neutral-200 focus:outline-none focus:border-white/30";
+  const now = stats?.generatedAt ?? clock;
+  const earliest = stats ? Math.min(...stats.people.map((p) => p.joinedAt ?? Infinity).filter(Number.isFinite), ...stats.couples.map((c) => c.createdAt ?? Infinity).filter(Number.isFinite)) : null;
+
+  const range: Range = (() => {
+    if (preset !== "custom") return rangeFor(preset, now, Number.isFinite(earliest as number) ? earliest : null);
+    const from = dayStartMs(fromDay), to = dayEndMs(toDay);
+    return from <= to ? { from, to } : { from: to - 86_399_999, to: from + 86_399_999 };
+  })();
+  const rangeLabel = (() => {
+    const a = dateOf(range.from), b = dateOf(range.to);
+    return a === b ? a : `${a} – ${b}`;
+  })();
+
+  const view = useMemo(() => {
+    if (!stats) return null;
+    return {
+      snap: snapshot(stats.people, stats.couples),
+      period: periodNumbers(stats.people, stats.couples, stats.activity, range),
+      funnel: joinedFunnel(stats.people, range),
+      signups: signupSeries(stats.people, range),
+      activity: activitySlice(stats.activity, range),
+    };
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [stats, range.from, range.to]);
+
+  const filteredCouples = useMemo(() => {
+    if (!stats) return [];
+    return stats.couples.filter((c) => scope === "all" || (scope === "joined" ? inRange(c.createdAt, range) : inRange(c.lastActivityAt, range)));
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [stats, scope, range.from, range.to]);
+  const filteredPeople = useMemo(() => {
+    if (!stats) return [];
+    return stats.people.filter((p) => scope === "all" || (scope === "joined" ? inRange(p.joinedAt, range) : inRange(p.lastActiveAt, range)));
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [stats, scope, range.from, range.to]);
+
   const shell = "min-h-screen bg-[#0e0e0e] text-[#fafafa] font-outfit";
 
   if (user === "loading") return <div className={`${shell} flex items-center justify-center text-neutral-500`}>Loading…</div>;
@@ -241,8 +295,8 @@ export const AdminDashboard = () => {
     );
   }
 
-  const t = stats?.totals;
-  const sel = "h-10 px-3 rounded-xl bg-[#151515] border border-[#262626] text-sm text-neutral-200 focus:outline-none focus:border-white/30";
+  const presets: [Preset, string][] = [["today", "Today"], ["7d", "7 days"], ["30d", "30 days"], ["90d", "90 days"], ["all", "All time"], ["custom", "Custom"]];
+  const historyStart = stats?.activity.days[0];
 
   return (
     <div className={shell}>
@@ -250,7 +304,7 @@ export const AdminDashboard = () => {
         <header className="flex flex-wrap items-center gap-4">
           <div className="mr-auto">
             <h1 className="font-bebas text-4xl tracking-widest uppercase leading-none">Owner view</h1>
-            <p className="text-xs text-neutral-500 mt-1.5">{stats ? `Numbers from ${new Date(stats.generatedAt).toLocaleString()} · days in ${stats.tz}` : "Honest Mailbox"} · Counts only, never anyone&apos;s messages</p>
+            <p className="text-xs text-neutral-500 mt-1.5">{stats ? `Numbers from ${new Date(stats.generatedAt).toLocaleString()} · days in ${stats.tz}` : "Honest Mailbox"} · Counts only, never anyone&apos;s messages · Your own owner account is left out</p>
           </div>
           <span className="text-xs text-neutral-500">{user.email}</span>
           <button type="button" onClick={() => load(true)} disabled={busy} className="h-10 px-4 rounded-xl bg-[#151515] border border-[#262626] flex items-center gap-2 text-sm hover:bg-[#1c1c1c] disabled:opacity-50">
@@ -262,65 +316,111 @@ export const AdminDashboard = () => {
         {error && <div role="alert" className={`${card} text-sm text-rose-300`}>{error}</div>}
         {busy && !stats && <div className={`${card} text-sm text-neutral-400`}>Gathering the numbers…</div>}
 
-        {stats && t && (
+        {stats && view && (
           <>
-            <section className="grid gap-4 grid-cols-2 md:grid-cols-4 xl:grid-cols-6">
-              <Kpi label="People" value={t.users} sub={`${t.newUsers7d} new this week · ${t.newUsers30d} this month`} />
-              <Kpi label="Couples" value={t.couples} sub={`${t.singles} single, waiting for a partner`} />
-              <Kpi label="Active couples" value={t.activeCouples7d} colour={STATUS.active.colour} sub="Active in the last 7 days" />
-              <Kpi label="Active today" value={t.activeUsers1d} sub={`${t.activeUsers7d} this week · ${t.activeUsers30d} this month`} />
-              <Kpi label="Dormant couples" value={t.dormantCouples} colour={t.dormantCouples ? STATUS.dormant.colour : undefined} sub="Nothing for over 30 days" />
-              <Kpi label="Still setting up" value={t.notOnboarded} sub="Signed in, haven't finished" />
+            <div className={`${card} !p-3 flex flex-wrap items-center gap-3 sticky top-2 z-20`}>
+              <span className="font-bebas text-[11px] tracking-[0.25em] uppercase text-neutral-400 pl-2">Period</span>
+              <div role="group" aria-label="Period" className="flex rounded-xl bg-[#0e0e0e] border border-[#262626] p-1">
+                {presets.map(([k, label]) => (
+                  <button key={k} type="button" aria-pressed={preset === k} onClick={() => setPreset(k)} className={`px-3.5 h-8 rounded-lg text-sm ${preset === k ? "bg-white text-black" : "text-neutral-400 hover:text-white"}`}>{label}</button>
+                ))}
+              </div>
+              {preset === "custom" && (
+                <div className="flex items-center gap-2 text-sm text-neutral-400">
+                  <input type="date" value={fromDay} max={toDay} onChange={(e) => e.target.value && setFromDay(e.target.value)} className={sel} aria-label="From" />
+                  to
+                  <input type="date" value={toDay} min={fromDay} max={dayKey(now, ADMIN_TZ)} onChange={(e) => e.target.value && setToDay(e.target.value)} className={sel} aria-label="To" />
+                </div>
+              )}
+              <span className="ml-auto pr-2 text-sm text-neutral-300">{rangeLabel}</span>
+            </div>
+
+            <section aria-label="Right now" className="space-y-3">
+              <h2 className="font-bebas text-sm tracking-[0.3em] uppercase text-neutral-500">Right now · not affected by the period</h2>
+              <div className="grid gap-4 grid-cols-2 xl:grid-cols-4">
+                <Kpi label="People" value={view.snap.total} sub={`${view.snap.paired} paired · ${view.snap.single} single · ${view.snap.notSetUp} not set up`} />
+                <Kpi label="Couples" value={view.snap.couples} sub={`${view.snap.couplesBy.active} active · ${view.snap.couplesBy.idle} idle · ${view.snap.couplesBy.dormant} dormant`} />
+                <Kpi label="Active people" value={view.snap.activePeople} colour={STATUS.active.colour} sub="Used the app in the last 7 days" />
+                <Kpi label="Dormant couples" value={view.snap.couplesBy.dormant} colour={view.snap.couplesBy.dormant ? STATUS.dormant.colour : undefined} sub="Nothing for over 30 days" />
+              </div>
+            </section>
+
+            <section aria-label="In this period" className="space-y-3">
+              <h2 className="font-bebas text-sm tracking-[0.3em] uppercase text-neutral-500">In this period · {rangeLabel}</h2>
+              <div className="grid gap-4 grid-cols-2 md:grid-cols-3 xl:grid-cols-6">
+                <Kpi label="New people" value={view.period.joined} sub={`${view.funnel.setUp} set up a profile · ${view.funnel.paired} paired`} />
+                <Kpi label="Last seen here" value={view.period.seen} sub="People whose latest visit fell in this period" />
+                <Kpi label="New couples" value={view.period.newCouples} sub={`${view.period.couplesActive} couples had activity`} />
+                <Kpi label="Thoughts" value={view.period.thoughts} sub="Sent between partners" colour={SERIES_COLOURS.thoughts} />
+                <Kpi label="Chat messages" value={view.period.chat} colour={SERIES_COLOURS.chat} sub="Sent in chat" />
+                <Kpi label="Check-ins & games" value={view.period.checkins + view.period.games} sub={`${view.period.checkins} check-ins · ${view.period.games} games`} colour={SERIES_COLOURS.checkins} />
+              </div>
+              {historyStart && range.from < dayStartMs(historyStart) && (
+                <p className="text-xs text-neutral-500">Activity counts only go back to {dateOf(dayStartMs(historyStart))}; earlier days in this period show as zero.</p>
+              )}
             </section>
 
             <section className="grid gap-4 lg:grid-cols-2">
-              <div className={card}><h3 className={`${h3} mb-3`}>People joining · last 90 days</h3><GrowthChart days={stats.signups.days} daily={stats.signups.daily} total={stats.signups.total} /></div>
+              <div className={card}><h3 className={`${h3} mb-3`}>People joining</h3><GrowthChart days={view.signups.days} daily={view.signups.daily} total={view.signups.total} /></div>
               <div className={card}>
-                <h3 className={`${h3} mb-3`}>What couples do · last 30 days</h3>
-                <StackedBars days={stats.activity.days} series={[
-                  { key: "thoughts", label: "Thoughts", colour: SERIES_COLOURS.thoughts, values: stats.activity.thoughts },
-                  { key: "chat", label: "Chat", colour: SERIES_COLOURS.chat, values: stats.activity.chat },
-                  { key: "checkins", label: "Check-ins", colour: SERIES_COLOURS.checkins, values: stats.activity.checkins },
-                  { key: "games", label: "Games", colour: SERIES_COLOURS.games, values: stats.activity.games },
+                <h3 className={`${h3} mb-3`}>What couples do</h3>
+                <StackedBars days={view.activity.days} series={[
+                  { key: "thoughts", label: "Thoughts", colour: SERIES_COLOURS.thoughts, values: view.activity.thoughts },
+                  { key: "chat", label: "Chat", colour: SERIES_COLOURS.chat, values: view.activity.chat },
+                  { key: "checkins", label: "Check-ins", colour: SERIES_COLOURS.checkins, values: view.activity.checkins },
+                  { key: "games", label: "Games", colour: SERIES_COLOURS.games, values: view.activity.games },
                 ]} />
               </div>
             </section>
 
             <section className="grid gap-4 lg:grid-cols-2">
               <div className={card}>
-                <h3 className={`${h3} mb-4`}>From signing up to coming back</h3>
+                <h3 className={`${h3} mb-1`}>People who joined in this period</h3>
+                <p className="font-outfit text-xs text-neutral-500 mb-4">Each step is part of the one above it.</p>
                 <FunnelBars steps={[
-                  { label: "Signed in", value: t.users, colour: "#7b6cff" },
-                  { label: "Finished setting up", value: t.onboarded, colour: "#5a8cff" },
-                  { label: "Paired with a partner", value: t.paired, colour: "#ffd91a" },
-                  { label: "Active in the last 7 days", value: t.activeUsers7d, colour: "#2fbf71" },
+                  { label: "Signed in", value: view.funnel.signedIn, colour: "#7b6cff" },
+                  { label: "Set up a profile", value: view.funnel.setUp, colour: "#5a8cff" },
+                  { label: "Paired with a partner", value: view.funnel.paired, colour: "#ffd91a" },
+                  { label: "Paired and active this week", value: view.funnel.activePaired, colour: "#2fbf71" },
                 ]} />
               </div>
               <div className={card}>
-                <h3 className={`${h3} mb-4`}>How couples are doing</h3>
-                <Donut caption="couples" centre={String(t.couples)} parts={(["active", "idle", "dormant", "never"] as ActivityStatus[]).map((s) => ({ label: `${STATUS[s].label}${s === "active" ? " (7d)" : s === "idle" ? " (8–30d)" : s === "dormant" ? " (30d+)" : ""}`, value: stats.statusCounts[s], colour: STATUS[s].colour }))} />
+                <h3 className={`${h3} mb-1`}>Couples right now</h3>
+                <p className="font-outfit text-xs text-neutral-500 mb-4">By their last activity of any kind.</p>
+                <Donut caption="couples" centre={String(view.snap.couples)} parts={(["active", "idle", "dormant", "never"] as ActivityStatus[]).map((st) => ({ label: `${STATUS[st].label}${st === "active" ? " (last 7 days)" : st === "idle" ? " (8–30 days)" : st === "dormant" ? " (over 30 days)" : ""}`, value: view.snap.couplesBy[st], colour: STATUS[st].colour }))} />
               </div>
             </section>
 
             <section className={card}>
               <div className="flex flex-wrap items-center gap-3 mb-4">
                 <div role="tablist" className="flex rounded-xl bg-[#0e0e0e] border border-[#262626] p-1 mr-auto">
-                  {([["couples", `Couples (${stats.couples.length})`], ["people", `People (${stats.people.length})`]] as const).map(([k, label]) => (
+                  {([["couples", `Couples (${filteredCouples.length})`], ["people", `People (${filteredPeople.length})`]] as const).map(([k, label]) => (
                     <button key={k} role="tab" aria-selected={tab === k} type="button" onClick={() => setTab(k)} className={`px-4 h-8 rounded-lg text-sm ${tab === k ? "bg-white text-black" : "text-neutral-400 hover:text-white"}`}>{label}</button>
                   ))}
                 </div>
+                {tab === "people" && (
+                  <label className="flex items-center gap-2 text-sm text-neutral-300 cursor-pointer select-none">
+                    <input type="checkbox" checked={hideNoName} onChange={(e) => setHideNoName(e.target.checked)} className="w-4 h-4 accent-white" />
+                    Hide sign-ins with no name
+                  </label>
+                )}
+                <select value={scope} onChange={(e) => setScope(e.target.value as "all" | "joined" | "seen")} className={sel} aria-label="Which people">
+                  <option value="all">Everyone</option>
+                  <option value="joined">Joined in this period</option>
+                  <option value="seen">Last active in this period</option>
+                </select>
                 <label className="relative">
                   <Search className="w-4 h-4 absolute left-3 top-3 text-neutral-500" />
                   <input value={query} onChange={(e) => setQuery(e.target.value)} placeholder="Search name or email" className={`${sel} pl-9 w-64`} />
                 </label>
                 <select value={statusFilter} onChange={(e) => setStatusFilter(e.target.value as ActivityStatus | "all")} className={sel} aria-label="Filter by status">
                   <option value="all">Every status</option>
-                  {(Object.keys(STATUS) as ActivityStatus[]).map((s) => <option key={s} value={s}>{STATUS[s].label}</option>)}
+                  {(Object.keys(STATUS) as ActivityStatus[]).map((st) => <option key={st} value={st}>{STATUS[st].label}</option>)}
                 </select>
               </div>
               {tab === "couples"
-                ? <CouplesTable couples={stats.couples} query={query} statusFilter={statusFilter} />
-                : <PeopleTable people={stats.people} query={query} statusFilter={statusFilter} />}
+                ? <CouplesTable couples={filteredCouples} query={query} statusFilter={statusFilter} />
+                : <PeopleTable people={filteredPeople} query={query} statusFilter={statusFilter} hideNoName={hideNoName} />}
             </section>
           </>
         )}

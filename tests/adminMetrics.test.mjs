@@ -61,3 +61,53 @@ test("only a verified email on the list gets in", () => {
   assert.equal(isAdminEmail(undefined, true, allowed), false);
   assert.equal(isAdminEmail("a@x.com", true, []), false);
 });
+
+import { dayStartMs, rangeFor, daysIn, snapshot, joinedFunnel, signupSeries, activitySlice, periodNumbers } from "../lib/adminView.ts";
+
+const P = (o) => ({ joinedAt: null, lastActiveAt: null, onboarded: false, coupleId: null, status: "never", name: "", ...o });
+
+test("a day starts at midnight India time", () => {
+  assert.equal(dayStartMs("2026-10-20"), Date.parse("2026-10-19T18:30:00Z"));
+});
+
+test("presets run from the start of a day to now", () => {
+  const r = rangeFor("7d", NOW, null);
+  assert.equal(daysIn(r).length, 7);
+  assert.equal(daysIn(rangeFor("today", NOW, null)).length, 1);
+});
+
+test("everyone is exactly one of paired, single or not set up", () => {
+  const people = [P({ coupleId: "c", onboarded: true }), P({ coupleId: "c", onboarded: true }), P({ onboarded: true }), P({}), P({})];
+  const s = snapshot(people, []);
+  assert.deepEqual([s.paired, s.single, s.notSetUp, s.total], [2, 1, 2, 5]);
+  assert.equal(s.paired + s.single + s.notSetUp, s.total);
+});
+
+test("the funnel only ever narrows", () => {
+  const r = { from: NOW - 5 * 86_400_000, to: NOW };
+  const t = NOW - 86_400_000;
+  const people = [
+    P({ joinedAt: t }), P({ joinedAt: t, onboarded: true }),
+    P({ joinedAt: t, onboarded: true, coupleId: "c", status: "active" }), P({ joinedAt: t, onboarded: true, coupleId: "c", status: "idle" }),
+    P({ joinedAt: NOW - 90 * 86_400_000, onboarded: true, coupleId: "d", status: "active" }),
+  ];
+  const f = joinedFunnel(people, r);
+  assert.deepEqual(f, { signedIn: 4, setUp: 3, paired: 2, activePaired: 1 });
+});
+
+test("signup series counts daily joins and a running total that includes earlier people", () => {
+  const r = { from: dayStartMs("2026-10-18"), to: dayEndMs20() };
+  function dayEndMs20() { return dayStartMs("2026-10-20") + 86_399_999; }
+  const people = [P({ joinedAt: dayStartMs("2026-10-18") + 1000 }), P({ joinedAt: dayStartMs("2026-10-20") + 1000 }), P({ joinedAt: dayStartMs("2026-10-20") + 2000 }), P({ joinedAt: dayStartMs("2026-09-01") })];
+  const s = signupSeries(people, r);
+  assert.deepEqual(s.days, ["2026-10-18", "2026-10-19", "2026-10-20"]);
+  assert.deepEqual(s.daily, [1, 0, 2]);
+  assert.deepEqual(s.total, [2, 2, 4]);
+});
+
+test("activity is cut to the chosen days", () => {
+  const a = { days: ["2026-10-18", "2026-10-19", "2026-10-20"], thoughts: [1, 2, 3], chat: [0, 0, 0], checkins: [0, 0, 0], games: [0, 0, 0] };
+  const r = { from: dayStartMs("2026-10-19"), to: dayStartMs("2026-10-20") + 1000 };
+  assert.deepEqual(activitySlice(a, r).thoughts, [2, 3]);
+  assert.equal(periodNumbers([], [], a, r).thoughts, 5);
+});

@@ -68,8 +68,8 @@ export const StackedBars = ({ days, series, height = 220 }: {
             </g>
           );
         })}
-        {[0, Math.floor(days.length / 2), days.length - 1].map((i) => (
-          <text key={i} x={padL + i * bw + bw / 2} y={H - 6} textAnchor={i === 0 ? "start" : i === days.length - 1 ? "end" : "middle"} fontSize="10" fill={AXIS}>{shortDay(days[i])}</text>
+        {[0, Math.floor(days.length / 2), days.length - 1].map((i, n) => (
+          <text key={n} x={padL + i * bw + bw / 2} y={H - 6} textAnchor={i === 0 ? "start" : i === days.length - 1 ? "end" : "middle"} fontSize="10" fill={AXIS}>{shortDay(days[i])}</text>
         ))}
       </svg>
       <div className="mt-2 flex flex-wrap gap-x-5 gap-y-1 font-outfit text-xs text-neutral-400">
@@ -110,8 +110,8 @@ export const GrowthChart = ({ days, daily, total, height = 220 }: { days: string
         <path d={line} fill="none" stroke="#ffd91a" strokeWidth="2.2" strokeLinejoin="round" />
         {days.map((d, i) => <rect key={d} x={x(i) - bw / 2} y={padT} width={bw} height={plotH} fill={hover === i ? "rgba(127,127,127,0.12)" : "transparent"} onMouseEnter={() => setHover(i)} />)}
         {hover !== null && <circle cx={x(hover)} cy={yT(total[hover])} r="4" fill="#ffd91a" />}
-        {[0, Math.floor(days.length / 2), days.length - 1].map((i) => (
-          <text key={i} x={x(i)} y={H - 6} textAnchor={i === 0 ? "start" : i === days.length - 1 ? "end" : "middle"} fontSize="10" fill={AXIS}>{shortDay(days[i])}</text>
+        {[0, Math.floor(days.length / 2), days.length - 1].map((i, n) => (
+          <text key={n} x={x(i)} y={H - 6} textAnchor={i === 0 ? "start" : i === days.length - 1 ? "end" : "middle"} fontSize="10" fill={AXIS}>{shortDay(days[i])}</text>
         ))}
       </svg>
       <div className="mt-2 flex gap-5 font-outfit text-xs text-neutral-400">
