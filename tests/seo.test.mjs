@@ -7,7 +7,7 @@ import { DECK_BY_ID } from "../lib/games/decks.ts";
 
 // Mirrors app/robots.ts's disallow list — kept in sync by hand since robots.ts
 // imports "@/lib/seo" and can't be loaded by plain node without a bundler.
-const PRIVATE_ROUTES = ["/settings", "/profile", "/pair", "/onboarding"];
+const PRIVATE_ROUTES = ["/settings", "/profile", "/pair", "/onboarding", "/admin", "/api"];
 
 test("no two public pages share a path, title, meta description or primary query", () => {
   const paths = new Set(), titles = new Set(), descriptions = new Set(), queries = new Set();

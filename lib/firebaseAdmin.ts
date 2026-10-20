@@ -14,6 +14,11 @@ const getAdminApp = (): App => {
     app = getApps()[0];
     return app;
   }
+  // Local emulators need no credential, only a project id (never used when a real key is set)
+  if (process.env.FIRESTORE_EMULATOR_HOST && !process.env.FIREBASE_SERVICE_ACCOUNT_KEY) {
+    app = initializeApp({ projectId: process.env.GCLOUD_PROJECT || "demo-honest-mailbox" });
+    return app;
+  }
   const raw = process.env.FIREBASE_SERVICE_ACCOUNT_KEY;
   if (!raw) throw new Error("FIREBASE_SERVICE_ACCOUNT_KEY is not set.");
   const serviceAccount = JSON.parse(Buffer.from(raw, "base64").toString("utf8"));
