@@ -34,7 +34,7 @@ export async function GET(req: NextRequest) {
     return NextResponse.json({
       error: notSet
         ? "FIREBASE_SERVICE_ACCOUNT_KEY isn't set on the server."
-        : "FIREBASE_SERVICE_ACCOUNT_KEY is set but isn't a valid base64 service account.",
+        : "FIREBASE_SERVICE_ACCOUNT_KEY is set but isn't a valid service account (paste the whole JSON file, or its base64).",
     }, { status: 500 });
   }
   let decoded;
