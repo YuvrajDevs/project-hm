@@ -24,11 +24,26 @@ export async function GET(req: NextRequest) {
   const token = header.startsWith("Bearer ") ? header.slice(7) : null;
   if (!token) return NextResponse.json({ error: "Sign in first." }, { status: 401 });
 
+  // Setting up the Admin SDK and checking the token fail for different reasons, so say which one
+  let auth;
+  try {
+    auth = adminAuth();
+  } catch (err) {
+    const notSet = (err as Error).message?.includes("not set");
+    console.error("admin sdk init failed", err);
+    return NextResponse.json({
+      error: notSet
+        ? "FIREBASE_SERVICE_ACCOUNT_KEY isn't set on the server."
+        : "FIREBASE_SERVICE_ACCOUNT_KEY is set but isn't a valid base64 service account.",
+    }, { status: 500 });
+  }
   let decoded;
   try {
-    decoded = await adminAuth().verifyIdToken(token);
-  } catch {
-    return NextResponse.json({ error: "Sign in first." }, { status: 401 });
+    decoded = await auth.verifyIdToken(token);
+  } catch (err) {
+    const code = (err as { code?: string }).code;
+    console.error("admin token check failed", code, (err as Error).message);
+    return NextResponse.json({ error: "Sign in first.", code: code || "unknown" }, { status: 401 });
   }
   if (!isAdminEmail(decoded.email, decoded.email_verified, allowed)) {
     return NextResponse.json({ error: "This account isn't allowed here." }, { status: 403 });

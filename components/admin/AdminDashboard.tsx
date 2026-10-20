@@ -209,7 +209,7 @@ export const AdminDashboard = () => {
       const token = await auth.currentUser.getIdToken();
       const res = await fetch(`/api/admin/stats${fresh ? "?fresh=1" : ""}`, { headers: { Authorization: `Bearer ${token}` }, cache: "no-store" });
       const body = await res.json().catch(() => ({}));
-      if (!res.ok) throw new Error(body.error || "Couldn't load the numbers.");
+      if (!res.ok) throw new Error(`${body.error || "Couldn't load the numbers."}${body.code ? ` (${body.code})` : ""}`);
       setStats(body as AdminStats);
     } catch (e) {
       setStats(null);
