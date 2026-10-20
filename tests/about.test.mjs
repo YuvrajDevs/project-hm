@@ -6,7 +6,7 @@ import { DECKS } from "../lib/games/decks.ts";
 
 const game = (answers = {}, guess = {}, extra = {}) => ({
   deck: "about_food", cards: [0, 1, 2], players: ["a", "b"], startedAt: "2026-10-20T10:00:00Z", answers, guess,
-  aboutReady: { a: true, b: true }, ...extra,
+  ...extra,
 });
 
 test("every Everything About Us deck has questions with four answers", () => {
@@ -46,11 +46,9 @@ test("the phase follows picking, then guessing, then done", () => {
   assert.equal(aboutPhase(game(both, merge(aGuessed, bGuessed)), "a", "b"), "done");
 });
 
-test("each person starts by looking through their own questions", () => {
-  assert.equal(aboutPhase(game({}, {}, { aboutReady: {} }), "a", "b"), "editing");
-  assert.equal(aboutPhase(game({}, {}, { aboutReady: { a: true } }), "a", "b"), "picking");
+test("each person answers their own set, with any change they made", () => {
   const g = game({}, {}, { about: [{ q: "Base?", opts: ["1", "2"] }, { q: "Base 2?", opts: ["1", "2"] }, { q: "Base 3?", opts: ["1", "2"] }], aboutSets: { b: [{ q: "Mine?", opts: ["x", "y"] }, { q: "M2?", opts: ["x", "y"] }, { q: "M3?", opts: ["x", "y"] }] } });
-  assert.equal(aboutQuestion(g, "a", 0).q, "Base?");   // a never edited, so a has the dealt set
+  assert.equal(aboutQuestion(g, "a", 0).q, "Base?");   // a never changed anything, so a has the dealt set
   assert.equal(aboutQuestion(g, "b", 0).q, "Mine?");   // b changed theirs
 });
 

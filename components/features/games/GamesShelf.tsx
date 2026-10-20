@@ -29,7 +29,6 @@ const describe = (g: ActiveGame, uid: string, partnerUid: string, partnerName: s
     const phase = aboutPhase(g, uid, partnerUid);
     const total = g.cards.length;
     if (phase === "done") return { status: "You're both done. See how well you know each other", action: "Read" };
-    if (phase === "editing") return invited ? { status: `${partnerName} sent you ${total} questions`, action: "Answer" } : { status: "Choose your questions", action: "Answer" };
     if (phase === "picking") return invited ? { status: `${partnerName} sent you ${total} questions`, action: "Answer" } : { status: `You've picked ${pickedCount(g, uid)} of ${total}`, action: "Answer" };
     if (phase === "guessing") return { status: `Your turn to guess ${partnerName} · ${guessedCount(g, uid)}/${total}`, action: "Guess" };
     return { status: `Waiting on ${partnerName}`, action: "Open" };

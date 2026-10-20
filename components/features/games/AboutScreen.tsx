@@ -2,11 +2,11 @@
 
 import React, { useEffect, useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { ArrowLeft, ArrowRight, Check, X } from "lucide-react";
+import { ArrowLeft, ArrowRight, Check, Pencil, X } from "lucide-react";
 import { useMailbox } from "@/context/MailboxContext";
-import { endGame, joinGame, replayGame, saveAboutSet, submitAboutGuess, submitAboutPick } from "@/lib/firestore-helpers";
+import { endGame, joinGame, replayGame, submitAboutGuess, submitAboutPick } from "@/lib/firestore-helpers";
 import { DECK_BY_ID } from "@/lib/games/decks";
-import { aboutPhase, aboutQuestion, cleanQuestion, guessOf, guessOrder, guessedCount, pickOf, pickedCount, questionsOf, rightGuesses } from "@/lib/games/about";
+import { aboutPhase, aboutQuestion, guessOf, guessOrder, guessedCount, pickOf, pickedCount, questionsOf, rightGuesses } from "@/lib/games/about";
 import type { AboutQ } from "@/lib/games/aboutContent";
 import { presence } from "@/lib/presence";
 import { useSensoryFeedback } from "@/hooks/useSensoryFeedback";
@@ -93,27 +93,24 @@ export const AboutScreen = ({ gameId, onLeave }: { gameId: string; onLeave: () =
           </div>
         )}
 
-        {phase === "editing" ? (
-          <Editor
-            key="editor"
-            initial={questionsOf(game, uid)}
-            gradient={deck.cards[0]}
-            busy={busy}
-            onDone={(set) => run(async () => { await saveAboutSet(coupleId, gameId, uid, set); playPop(); })}
-          />
-        ) : phase === "done" ? (
+        {phase === "done" ? (
           <Results game={game} uid={uid} partnerUid={partnerUid} partner={partner} partnerName={partnerName} gradient={deck.cards[0]} busy={busy} onFinish={handleEnd} onNext={handleNext} onChime={playChime} />
         ) : phase === "picking" ? (
           <Ask
             key={`pick-${nextPick}`}
             kicker={`Your answer · Question ${myPicks + 1} of ${total}`}
-            hint="Pick what is most you."
+            hint="Tap your answer, or the pencil to change it."
             card={aboutQuestion(game, uid, nextPick)}
             gradient={deck.cards[0]}
             busy={busy}
-            onPick={(i) => run(async () => {
-              const c = aboutQuestion(game, uid, nextPick);
-              await submitAboutPick(coupleId, gameId, nextPick, uid, i, { deck: game.deck, q: c.q, answer: c.opts[i] }, myPicks === total - 1, partnerUid, myName);
+            editable
+            onPick={(i, edited) => run(async () => {
+              // Whatever was changed on this card goes into your own set, which your partner then guesses
+              const base = questionsOf(game, uid).map(x => ({ q: x.q, opts: [...x.opts] }));
+              const slot = game.cards[nextPick] ?? nextPick;
+              const changed = edited.q !== base[slot]?.q || edited.opts.some((o, k) => o !== base[slot]?.opts[k]);
+              if (changed) base[slot] = edited;
+              await submitAboutPick(coupleId, gameId, nextPick, uid, i, { deck: game.deck, q: edited.q, answer: edited.opts[i] }, myPicks === total - 1, partnerUid, myName, changed ? base : undefined);
               playPop();
             })}
           />
@@ -132,7 +129,7 @@ export const AboutScreen = ({ gameId, onLeave }: { gameId: string; onLeave: () =
           />
         ) : (
           <Waiting gradient={deck.cards[0]} title={phase === "waiting-picks" ? `${partnerName} is still picking` : `${partnerName} is still guessing`}
-            body={phase === "waiting-picks" ? `Once ${partnerName} has chosen their questions and picked their answers, you'll guess theirs. We'll let you know.` : `You'll both see how well you know each other once ${partnerName} finishes. We'll let you know.`} />
+            body={phase === "waiting-picks" ? `Once ${partnerName} has picked their answers, you'll guess theirs. We'll let you know.` : `You'll both see how well you know each other once ${partnerName} finishes. We'll let you know.`} />
         )}
 
         {error && <p className="text-rose-300 font-outfit text-xs text-center shrink-0">{error}</p>}
@@ -161,8 +158,8 @@ export const AboutScreen = ({ gameId, onLeave }: { gameId: string; onLeave: () =
   );
 };
 
-// Every card is the same size, whatever it says
-const CARD = "h-[13.5rem] shrink-0 rounded-[1.5rem] bg-gradient-to-br px-7 py-6 flex flex-col justify-center gap-3 overflow-hidden";
+// Every card is the same size, whatever it says: the question sits in the middle, left-aligned
+const CARD = "relative h-[13.5rem] shrink-0 rounded-[1.5rem] bg-gradient-to-br px-7 overflow-hidden";
 const OPTION = "w-full h-14 shrink-0 rounded-2xl";
 
 const Progress = ({ label, done, total, tone }: { label: string; done: number; total: number; tone: string }) => (
@@ -187,91 +184,81 @@ const Waiting = ({ gradient, title, body }: { gradient: string; title: string; b
   </div>
 );
 
-// One question and its four answers. Tapping one saves it and moves on.
-const Ask = ({ kicker, hint, card, gradient, busy, onPick }: {
-  kicker: string; hint: string; card: AboutQ; gradient: string; busy: boolean; onPick: (index: number) => void;
-}) => (
-  <motion.div initial={{ opacity: 0, x: 40 }} animate={{ opacity: 1, x: 0 }} transition={{ duration: 0.25, ease: "easeOut" }} className="flex-1 min-h-0 flex flex-col gap-3">
-    <div className={cn(CARD, gradient)}>
-      <p className="text-[10px] text-white/80 font-bebas tracking-[0.4em] uppercase truncate">{kicker}</p>
-      <h2 className="font-bebas uppercase tracking-wide text-[1.9rem] leading-[1.08] line-clamp-4 break-words">{card.q}</h2>
-      <p className="font-outfit text-xs text-white/75 truncate">{hint}</p>
-    </div>
-    <div className="flex-1 min-h-0 overflow-y-auto no-scrollbar space-y-2.5 pb-1">
-      {card.opts.map((opt, i) => (
-        <button
-          key={i}
-          type="button"
-          disabled={busy}
-          onClick={() => onPick(i)}
-          className={cn(OPTION, "px-5 flex items-center text-left bg-[#161616] border border-[#2a2a2a] font-outfit text-[15px] leading-tight text-white hover:bg-[#242424] hover:border-white/30 active:scale-[0.98] disabled:opacity-50 transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/50")}
-        >
-          <span className="line-clamp-2 break-words">{opt}</span>
-        </button>
-      ))}
-    </div>
-  </motion.div>
-);
+const iconButton = "w-9 h-9 shrink-0 rounded-full flex items-center justify-center text-white/70 hover:text-white hover:bg-white/10 active:scale-90 transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/60";
 
-// Looking through your own ten questions, one at a time, in the same layout as answering. Change the question or any answer, or leave it.
-const Editor = ({ initial, gradient, busy, onDone }: { initial: AboutQ[]; gradient: string; busy: boolean; onDone: (set: AboutQ[]) => void }) => {
-  const [items, setItems] = useState<AboutQ[]>(() => initial.map(x => ({ q: x.q, opts: [0, 1, 2, 3].map(i => x.opts[i] ?? "") })));
-  const [index, setIndex] = useState(0);
-  const total = items.length;
-  const it = items[index];
-  const valid = !!cleanQuestion(it);
-  const last = index === total - 1;
-  const change = (next: AboutQ) => setItems(list => list.map((x, k) => (k === index ? next : x)));
-  const field = "w-full bg-black/25 border border-white/15 rounded-xl px-3.5 text-white font-outfit placeholder:text-white/40 focus:outline-none focus:border-white/50";
-
-  const finish = () => {
-    const cleaned = items.map(cleanQuestion);
-    if (cleaned.some(c => !c)) return;
-    onDone(cleaned as AboutQ[]);
+// One question and its four answers. Tapping an answer saves it and moves on. On your own questions a pencil
+// on the question and on every answer lets you change the words first.
+const Ask = ({ kicker, hint, card, gradient, busy, editable, onPick }: {
+  kicker: string; hint: string; card: AboutQ; gradient: string; busy: boolean; editable?: boolean; onPick: (index: number, edited: AboutQ) => void;
+}) => {
+  const [draft, setDraft] = useState<AboutQ>({ q: card.q, opts: [...card.opts] });
+  const [editing, setEditing] = useState<"q" | number | null>(null);
+  const setOpt = (k: number, v: string) => setDraft(d => ({ ...d, opts: d.opts.map((o, n) => (n === k ? v : o)) }));
+  // Leaving a field with nothing in it puts the old words back
+  const settle = (what: "q" | number) => {
+    if (what === "q" && !draft.q.trim()) setDraft(d => ({ ...d, q: card.q }));
+    if (typeof what === "number" && !draft.opts[what].trim()) setOpt(what, card.opts[what]);
+    setEditing(null);
   };
+  const clean = (d: AboutQ): AboutQ => ({ q: d.q.trim(), opts: d.opts.map((o, k) => o.trim() || card.opts[k]) });
 
   return (
-    <div className="flex-1 min-h-0 flex flex-col gap-3">
+    <motion.div initial={{ opacity: 0, x: 40 }} animate={{ opacity: 1, x: 0 }} transition={{ duration: 0.25, ease: "easeOut" }} className="flex-1 min-h-0 flex flex-col gap-3">
       <div className={cn(CARD, gradient)}>
-        <p className="text-[10px] text-white/80 font-bebas tracking-[0.4em] uppercase truncate">{`Your questions · ${index + 1} of ${total}`}</p>
-        <textarea
-          value={it.q}
-          onChange={(e) => change({ ...it, q: e.target.value })}
-          maxLength={140}
-          aria-label={`Question ${index + 1}`}
-          placeholder="Your question"
-          className={cn(field, "h-[6.75rem] resize-none py-2.5 font-bebas uppercase tracking-wide text-[1.6rem] leading-[1.1] text-[16px]")}
-          style={{ fontSize: "1.6rem" }}
-        />
-        <p className="font-outfit text-xs text-white/75 truncate">Change the question or any answer, or leave it as it is.</p>
+        <p className="absolute top-5 left-7 right-14 text-[10px] text-white/80 font-bebas tracking-[0.4em] uppercase truncate">{kicker}</p>
+        {editable && (
+          <button type="button" aria-label={editing === "q" ? "Done editing the question" : "Edit the question"} onClick={() => (editing === "q" ? settle("q") : setEditing("q"))} className={cn(iconButton, "absolute top-3 right-3")}>
+            {editing === "q" ? <Check className="w-4 h-4" /> : <Pencil className="w-4 h-4" />}
+          </button>
+        )}
+        <div className="absolute inset-x-7 top-[3.25rem] bottom-[3rem] flex items-center">
+          {editing === "q" ? (
+            <textarea
+              autoFocus
+              value={draft.q}
+              maxLength={140}
+              onChange={(e) => setDraft(d => ({ ...d, q: e.target.value }))}
+              aria-label="Question"
+              className="w-full h-full resize-none bg-black/25 border border-white/20 rounded-xl px-3 py-2 text-white font-bebas uppercase tracking-wide text-[1.5rem] leading-[1.1] focus:outline-none focus:border-white/50"
+            />
+          ) : (
+            <h2 className="font-bebas uppercase tracking-wide text-[1.9rem] leading-[1.08] line-clamp-4 break-words text-left w-full">{draft.q}</h2>
+          )}
+        </div>
+        <p className="absolute bottom-5 left-7 right-7 font-outfit text-xs text-white/75 truncate">{hint}</p>
       </div>
       <div className="flex-1 min-h-0 overflow-y-auto no-scrollbar space-y-2.5 pb-1">
-        {[0, 1, 2, 3].map(k => (
-          <input
-            key={`${index}-${k}`}
-            value={it.opts[k] ?? ""}
-            maxLength={60}
-            onChange={(e) => change({ ...it, opts: [0, 1, 2, 3].map(n => (n === k ? e.target.value : it.opts[n] ?? "")) })}
-            aria-label={`Question ${index + 1}, answer ${k + 1}`}
-            placeholder={k > 1 ? "Optional answer" : "Answer"}
-            className={cn(OPTION, "px-5 bg-[#161616] border border-[#2a2a2a] text-white font-outfit text-[16px] focus:outline-none focus:border-white/40 placeholder:text-neutral-600")}
-          />
+        {draft.opts.map((opt, i) => (
+          <div key={i} className={cn(OPTION, "flex items-center bg-[#161616] border border-[#2a2a2a] focus-within:border-white/40 hover:border-white/30 transition-colors")}>
+            {editing === i ? (
+              <input
+                autoFocus
+                value={opt}
+                maxLength={60}
+                onChange={(e) => setOpt(i, e.target.value)}
+                onKeyDown={(e) => { if (e.key === "Enter") settle(i); }}
+                aria-label={`Answer ${i + 1}`}
+                className="flex-1 min-w-0 h-full bg-transparent pl-5 pr-2 text-white font-outfit text-[16px] focus:outline-none"
+              />
+            ) : (
+              <button
+                type="button"
+                disabled={busy}
+                onClick={() => onPick(i, clean(draft))}
+                className="flex-1 min-w-0 h-full pl-5 pr-2 flex items-center text-left font-outfit text-[15px] leading-tight text-white rounded-2xl hover:bg-[#242424] active:scale-[0.99] disabled:opacity-50 transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/50"
+              >
+                <span className="line-clamp-2 break-words">{opt}</span>
+              </button>
+            )}
+            {editable && (
+              <button type="button" aria-label={editing === i ? `Done editing answer ${i + 1}` : `Edit answer ${i + 1}`} onClick={() => (editing === i ? settle(i) : setEditing(i))} className={cn(iconButton, "mr-2")}>
+                {editing === i ? <Check className="w-4 h-4" /> : <Pencil className="w-4 h-4" />}
+              </button>
+            )}
+          </div>
         ))}
       </div>
-      {!valid && <p className="text-amber-300/90 font-outfit text-xs text-center shrink-0">A question needs some words and at least two answers.</p>}
-      <nav className="shrink-0 grid grid-cols-[3.5rem_1fr] gap-3" aria-label="Your questions">
-        <button onClick={() => setIndex(i => Math.max(0, i - 1))} disabled={index === 0} aria-label="Previous question" className="h-14 w-14 rounded-2xl bg-[#1c1c1c] border border-[#2a2a2a] text-white flex items-center justify-center hover:bg-[#242424] active:scale-90 disabled:opacity-25 transition-all">
-          <ArrowLeft className="w-5 h-5" />
-        </button>
-        <button
-          onClick={() => (last ? finish() : setIndex(index + 1))}
-          disabled={!valid || busy}
-          className="h-14 rounded-2xl bg-white text-black font-bebas tracking-widest uppercase hover:bg-neutral-200 active:scale-95 disabled:opacity-30 transition-all"
-        >
-          {busy ? "Saving..." : last ? "Done, start answering" : "Next"}
-        </button>
-      </nav>
-    </div>
+    </motion.div>
   );
 };
 

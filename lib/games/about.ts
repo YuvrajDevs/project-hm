@@ -36,7 +36,7 @@ export const guessOf = (game: CoupleGame, round: number, uid: string) => game.gu
 export const pickedCount = (game: CoupleGame, uid: string) => game.cards.filter((_, r) => pickOf(game, r, uid) !== undefined).length;
 export const guessedCount = (game: CoupleGame, uid: string) => game.cards.filter((_, r) => guessOf(game, r, uid) !== undefined).length;
 
-export type AboutPhase = "editing" | "picking" | "waiting-picks" | "guessing" | "waiting-guesses" | "done";
+export type AboutPhase = "picking" | "waiting-picks" | "guessing" | "waiting-guesses" | "done";
 
 /** Whose questions these are: each person answers their own set, and their partner guesses it. */
 export const questionsOf = (game: CoupleGame, owner: string): AboutQ[] => game.aboutSets?.[owner] ?? game.about ?? [];
@@ -47,7 +47,6 @@ export const aboutQuestion = (game: CoupleGame, owner: string, round: number): A
 
 export function aboutPhase(game: CoupleGame, me: string, them: string): AboutPhase {
   const n = game.cards.length;
-  if (!game.aboutReady?.[me]) return "editing";
   if (pickedCount(game, me) < n) return "picking";
   if (pickedCount(game, them) < n) return "waiting-picks";
   if (guessedCount(game, me) < n) return "guessing";
