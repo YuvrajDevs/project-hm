@@ -21,7 +21,9 @@ const getAdminApp = (): App => {
   }
   const raw = process.env.FIREBASE_SERVICE_ACCOUNT_KEY;
   if (!raw) throw new Error("FIREBASE_SERVICE_ACCOUNT_KEY is not set.");
-  const serviceAccount = JSON.parse(Buffer.from(raw, "base64").toString("utf8"));
+  // Either the downloaded JSON pasted as it is, or that JSON base64-encoded
+  const text = raw.trim().startsWith("{") ? raw.trim() : Buffer.from(raw, "base64").toString("utf8");
+  const serviceAccount = JSON.parse(text);
   app = initializeApp({ credential: cert(serviceAccount) });
   return app;
 };
