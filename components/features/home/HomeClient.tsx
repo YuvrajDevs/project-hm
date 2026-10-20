@@ -8,6 +8,7 @@ import { BottomDock } from "@/components/layout/BottomDock";
 import { QuickReact, IncomingReactionIndicator } from "@/components/features/reactions/QuickReact";
 import { ResetRequestOverlay } from "@/components/features/mailbox/ResetRequestOverlay";
 import { useRouter } from "next/navigation";
+import { isOwnerEmail } from "@/lib/adminMetrics";
 import { motion, AnimatePresence } from "framer-motion";
 import { useTabObserver } from "@/hooks/useTabObserver";
 import { Loader2, MessageSquareHeart, Settings } from "lucide-react";
@@ -283,11 +284,15 @@ export function HomeClient() {
     }
   }, [fbUser]);
 
+  // The owner account is only for the dashboard, so it goes straight there
+  const isOwner = fbUser !== "loading" && fbUser !== null && isOwnerEmail(fbUser.email);
+  useEffect(() => { if (isOwner) router.replace("/admin"); }, [isOwner, router]);
+
   // 1. Auth is still determining (initial check) OR server-side hydration guard.
   // An opaque, full-screen cover over the server-rendered landing page underneath
   // — not a DOM replacement, so crawlers and no-JS clients still get the landing
   // content, and a signed-in visitor sees only this (no flash of the landing copy).
-  if (!mounted || fbUser === "loading") {
+  if (!mounted || fbUser === "loading" || isOwner) {
     return (
       <div aria-hidden="true" className={`${COVER} bg-[var(--page)] flex items-center justify-center`}>
         <motion.div
