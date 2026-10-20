@@ -8,12 +8,15 @@ import { isAdminEmail, parseAdminEmails } from "@/lib/adminMetrics";
 
 export const dynamic = "force-dynamic";
 
+// Used when ADMIN_EMAILS isn't set; set ADMIN_EMAILS (comma-separated) to add people or replace this.
+const DEFAULT_ADMIN_EMAILS = "honestmailbox@gmail.com";
+
 // Counting every couple's activity is many reads, so a recent result is reused for a few minutes
 const CACHE_MS = 5 * 60_000;
 let cache: { at: number; stats: AdminStats } | null = null;
 
 export async function GET(req: NextRequest) {
-  const allowed = parseAdminEmails(process.env.ADMIN_EMAILS);
+  const allowed = parseAdminEmails(process.env.ADMIN_EMAILS ?? DEFAULT_ADMIN_EMAILS);
   if (allowed.length === 0) {
     return NextResponse.json({ error: "ADMIN_EMAILS is not set on the server." }, { status: 503 });
   }
