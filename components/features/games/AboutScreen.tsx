@@ -5,7 +5,7 @@ import { motion, AnimatePresence } from "framer-motion";
 import { ArrowLeft, ArrowRight, Check, Pencil, X } from "lucide-react";
 import { useMailbox } from "@/context/MailboxContext";
 import { endGame, joinGame, replayGame, submitAboutGuess, submitAboutPick } from "@/lib/firestore-helpers";
-import { DECK_BY_ID } from "@/lib/games/decks";
+import { DECKS, DECK_BY_ID } from "@/lib/games/decks";
 import { aboutPhase, aboutQuestion, guessOf, guessOrder, guessedCount, pickOf, pickedCount, questionsOf, rightGuesses } from "@/lib/games/about";
 import type { AboutQ } from "@/lib/games/aboutContent";
 import { presence } from "@/lib/presence";
@@ -81,7 +81,10 @@ export const AboutScreen = ({ gameId, onLeave }: { gameId: string; onLeave: () =
 
   const handleEnd = () => { onLeave(); endGame(coupleId, gameId).catch(console.error); };
   const handleNext = () => run(async () => {
-    const newId = await replayGame(coupleId, gameId, uid, partnerUid, myName);
+    // The next deck in Everything About Us, wrapping round to the first after the last
+    const about = DECKS.filter(d => d.mechanic === "about");
+    const next = about[(about.findIndex(d => d.id === game.deck) + 1) % about.length];
+    const newId = await replayGame(coupleId, gameId, uid, partnerUid, myName, next?.id);
     if (newId) openQuestions(newId);
     playPop();
   });

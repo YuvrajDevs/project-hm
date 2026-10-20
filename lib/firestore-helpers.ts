@@ -680,7 +680,7 @@ export const skipScribble = (coupleId: string, gameId: string, round: number) =>
  * If both tap at once, the second tap opens the game the first one made instead of making another.
  * Returns the new game's id, or null if the finished game is already gone.
  */
-export const replayGame = async (coupleId: string, oldId: string, uid: string, partnerUid: string, starterName?: string) => {
+export const replayGame = async (coupleId: string, oldId: string, uid: string, partnerUid: string, starterName?: string, nextDeck?: DeckId) => {
   const { dealGame } = await import("./games/engine");
   const newRef = doc(collection(db, "couples", coupleId, "games"));
   let deck: DeckId | null = null;
@@ -689,11 +689,12 @@ export const replayGame = async (coupleId: string, oldId: string, uid: string, p
     if (!snap.exists()) return null;
     const old = snap.data() as CoupleGame & { replacedBy?: string };
     if (old.replacedBy) return old.replacedBy;
-    deck = old.deck;
+    // Some decks move on to a different one instead of repeating (Everything About Us)
+    deck = nextDeck && DECK_BY_ID[nextDeck] ? nextDeck : old.deck;
     const game: CoupleGame = {
-      deck: old.deck,
+      deck,
       cards: [],
-      ...dealGame(old.deck, uid),
+      ...dealGame(deck, uid),
       round: 0,
       players: [uid, partnerUid],
       startedBy: uid,
