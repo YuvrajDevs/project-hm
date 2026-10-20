@@ -40,5 +40,8 @@
     "firebase-tools": "^15.33.0",
     "tailwindcss": "^4",
     "typescript": "^5"
+  },
+  "overrides": {
+    "jwks-rsa": "3.2.2"
   }
 }
