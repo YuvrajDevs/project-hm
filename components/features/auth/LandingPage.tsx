@@ -2,6 +2,7 @@
 
 import React, { useState, useEffect, useRef, useCallback } from "react";
 import { auth, googleProvider } from "@/lib/firebase";
+import { isOwnerEmail } from "@/lib/adminMetrics";
 import { signInWithPopup, signInWithRedirect, getRedirectResult } from "firebase/auth";
 import { ensureUserDoc } from "@/lib/firestore-helpers";
 import { motion } from "framer-motion";
@@ -311,7 +312,7 @@ export const LandingPage = () => {
 
     // Coming back from a full-page Google sign-in (used when the popup is blocked)
     getRedirectResult(auth)
-      .then(result => { if (result?.user) return ensureUserDoc(result.user); })
+      .then(result => { if (result?.user && !isOwnerEmail(result.user.email)) return ensureUserDoc(result.user); })
       .catch(err => {
         console.error(err);
         setError("Sign-in didn't complete. Please try again.");
@@ -334,7 +335,8 @@ export const LandingPage = () => {
     try {
       const result = await signInWithPopup(auth, googleProvider);
       // The home page routes to onboarding or the app once the profile is loaded
-      await ensureUserDoc(result.user);
+      // The owner account has no couple profile; the home page sends it on to the dashboard
+      if (!isOwnerEmail(result.user.email)) await ensureUserDoc(result.user);
     } catch (err) {
       const code = (err as { code?: string }).code;
       if (code === "auth/popup-blocked" || code === "auth/operation-not-supported-in-this-environment") {

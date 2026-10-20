@@ -4,6 +4,10 @@
 export const ADMIN_TZ = "Asia/Kolkata";
 const DAY = 86_400_000;
 
+/** The owner account: signing in with it goes straight to the dashboard and never makes a couple profile. */
+export const OWNER_EMAIL = "thehonestmailbox@gmail.com";
+export const isOwnerEmail = (email?: string | null): boolean => !!email && email.toLowerCase() === OWNER_EMAIL;
+
 export type ActivityStatus = "active" | "idle" | "dormant" | "never";
 
 /** The calendar day (YYYY-MM-DD) a moment falls on in the given timezone. */
