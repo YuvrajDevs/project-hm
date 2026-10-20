@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useCallback, useEffect, useMemo, useState } from "react";
+import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { onAuthStateChanged, signInWithPopup, signOut, type User as FirebaseUser } from "firebase/auth";
 import { ChevronDown, ChevronRight, RefreshCw, Search } from "lucide-react";
 import { auth, googleProvider } from "@/lib/firebase";
@@ -37,12 +37,18 @@ const first = (name?: string) => (name || "").trim().split(" ")[0] || "?";
 const card = "rounded-[1.5rem] bg-[#151515] border border-[#262626] p-5";
 const h3 = "font-bebas text-xl tracking-widest uppercase text-neutral-100";
 
-const Kpi = ({ label, value, sub, colour }: { label: string; value: number | string; sub?: string; colour?: string }) => (
-  <div className={`${card} flex flex-col gap-1.5`}>
+const Kpi = ({ label, value, sub, colour, selected, onSelect }: { label: string; value: number | string; sub?: string; colour?: string; selected?: boolean; onSelect?: () => void }) => (
+  <button
+    type="button"
+    onClick={onSelect}
+    aria-pressed={selected}
+    title="Show these in the table below"
+    className={`${card} flex flex-col gap-1.5 text-left transition-all hover:bg-[#1a1a1a] active:scale-[0.98] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/60 ${selected ? "!border-white/70 ring-1 ring-white/40" : ""}`}
+  >
     <span className="font-bebas text-[11px] tracking-[0.25em] uppercase text-neutral-400">{label}</span>
     <span className="font-bebas text-5xl leading-none tabular-nums" style={colour ? { color: colour } : undefined}>{value}</span>
     {sub && <span className="font-outfit text-xs text-neutral-500">{sub}</span>}
-  </div>
+  </button>
 );
 
 const StatusPill = ({ status }: { status: ActivityStatus }) => (
@@ -50,6 +56,8 @@ const StatusPill = ({ status }: { status: ActivityStatus }) => (
     <i className="w-2 h-2 rounded-full" style={{ background: STATUS[status].colour }} />{STATUS[status].label}
   </span>
 );
+
+type Scope = "period" | "all" | "joined" | "seen";
 
 type SortKey = "last" | "joined" | "streak" | "thoughts" | "chat" | "checkins" | "games" | "total";
 
@@ -213,7 +221,9 @@ export const AdminDashboard = () => {
   const [preset, setPreset] = useState<Preset>("30d");
   const [fromDay, setFromDay] = useState(() => dayKey(Date.now() - 6 * 86_400_000, ADMIN_TZ));
   const [toDay, setToDay] = useState(() => dayKey(Date.now(), ADMIN_TZ));
-  const [scope, setScope] = useState<"all" | "joined" | "seen">("all");
+  const [scope, setScope] = useState<Scope>("period");
+  const [kpi, setKpi] = useState<string | null>(null);
+  const tableRef = useRef<HTMLElement>(null);
   const [hideNoName, setHideNoName] = useState(false);
   const [clock] = useState(() => Date.now());
 
@@ -267,16 +277,36 @@ export const AdminDashboard = () => {
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [stats, range.from, range.to]);
 
+  const inScope = (joined: number | null, seen: number | null) =>
+    scope === "all" || (scope === "joined" ? inRange(joined, range) : scope === "seen" ? inRange(seen, range) : inRange(joined, range) || inRange(seen, range));
   const filteredCouples = useMemo(() => {
     if (!stats) return [];
-    return stats.couples.filter((c) => scope === "all" || (scope === "joined" ? inRange(c.createdAt, range) : inRange(c.lastActivityAt, range)));
+    const q = query.trim().toLowerCase();
+    return stats.couples
+      .filter((c) => inScope(c.createdAt, c.lastActivityAt))
+      .filter((c) => statusFilter === "all" || c.status === statusFilter)
+      .filter((c) => !q || c.partners.some((p) => p && (p.name.toLowerCase().includes(q) || p.email.toLowerCase().includes(q))));
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [stats, scope, range.from, range.to]);
+  }, [stats, scope, statusFilter, query, range.from, range.to]);
   const filteredPeople = useMemo(() => {
     if (!stats) return [];
-    return stats.people.filter((p) => scope === "all" || (scope === "joined" ? inRange(p.joinedAt, range) : inRange(p.lastActiveAt, range)));
+    const q = query.trim().toLowerCase();
+    return stats.people
+      .filter((p) => inScope(p.joinedAt, p.lastActiveAt))
+      .filter((p) => !hideNoName || p.name)
+      .filter((p) => statusFilter === "all" || p.status === statusFilter)
+      .filter((p) => !q || p.name.toLowerCase().includes(q) || p.email.toLowerCase().includes(q));
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [stats, scope, range.from, range.to]);
+  }, [stats, scope, statusFilter, query, hideNoName, range.from, range.to]);
+
+  // Clicking a card shows exactly the people or couples it counts, in the table below
+  const pick = (id: string, t: "couples" | "people", sc: Scope, st: ActivityStatus | "all" = "all") => {
+    setKpi(id); setTab(t); setScope(sc); setStatusFilter(st); setQuery("");
+    tableRef.current?.scrollIntoView({ behavior: "smooth", block: "start" });
+  };
+  const resetTable = () => { setKpi(null); setScope("period"); setStatusFilter("all"); setQuery(""); };
+  const scopeText = scope === "all" ? "everyone" : scope === "joined" ? `joined in ${rangeLabel}` : scope === "seen" ? `last active in ${rangeLabel}` : `joined or active in ${rangeLabel}`;
+  const filterText = `${scopeText}${statusFilter !== "all" ? ` · ${STATUS[statusFilter].label.toLowerCase()}` : ""}${query.trim() ? ` · matching "${query.trim()}"` : ""}`;
 
   const shell = "min-h-screen bg-[#0e0e0e] text-[#fafafa] font-outfit";
 
@@ -338,22 +368,22 @@ export const AdminDashboard = () => {
             <section aria-label="Right now" className="space-y-3">
               <h2 className="font-bebas text-sm tracking-[0.3em] uppercase text-neutral-500">Right now · not affected by the period</h2>
               <div className="grid gap-4 grid-cols-2 xl:grid-cols-4">
-                <Kpi label="People" value={view.snap.total} sub={`${view.snap.paired} paired · ${view.snap.single} single · ${view.snap.notSetUp} not set up`} />
-                <Kpi label="Couples" value={view.snap.couples} sub={`${view.snap.couplesBy.active} active · ${view.snap.couplesBy.idle} idle · ${view.snap.couplesBy.dormant} dormant`} />
-                <Kpi label="Active people" value={view.snap.activePeople} colour={STATUS.active.colour} sub="Used the app in the last 7 days" />
-                <Kpi label="Dormant couples" value={view.snap.couplesBy.dormant} colour={view.snap.couplesBy.dormant ? STATUS.dormant.colour : undefined} sub="Nothing for over 30 days" />
+                <Kpi label="People" selected={kpi === "people"} onSelect={() => pick("people", "people", "all")} value={view.snap.total} sub={`${view.snap.paired} paired · ${view.snap.single} single · ${view.snap.notSetUp} not set up`} />
+                <Kpi label="Couples" selected={kpi === "couples"} onSelect={() => pick("couples", "couples", "all")} value={view.snap.couples} sub={`${view.snap.couplesBy.active} active · ${view.snap.couplesBy.idle} idle · ${view.snap.couplesBy.dormant} dormant`} />
+                <Kpi label="Active people" selected={kpi === "active"} onSelect={() => pick("active", "people", "all", "active")} value={view.snap.activePeople} colour={STATUS.active.colour} sub="Used the app in the last 7 days" />
+                <Kpi label="Dormant couples" selected={kpi === "dormant"} onSelect={() => pick("dormant", "couples", "all", "dormant")} value={view.snap.couplesBy.dormant} colour={view.snap.couplesBy.dormant ? STATUS.dormant.colour : undefined} sub="Nothing for over 30 days" />
               </div>
             </section>
 
             <section aria-label="In this period" className="space-y-3">
               <h2 className="font-bebas text-sm tracking-[0.3em] uppercase text-neutral-500">In this period · {rangeLabel}</h2>
               <div className="grid gap-4 grid-cols-2 md:grid-cols-3 xl:grid-cols-6">
-                <Kpi label="New people" value={view.period.joined} sub={`${view.funnel.setUp} set up a profile · ${view.funnel.paired} paired`} />
-                <Kpi label="Last seen here" value={view.period.seen} sub="People whose latest visit fell in this period" />
-                <Kpi label="New couples" value={view.period.newCouples} sub={`${view.period.couplesActive} couples had activity`} />
-                <Kpi label="Thoughts" value={view.period.thoughts} sub="Sent between partners" colour={SERIES_COLOURS.thoughts} />
-                <Kpi label="Chat messages" value={view.period.chat} colour={SERIES_COLOURS.chat} sub="Sent in chat" />
-                <Kpi label="Check-ins & games" value={view.period.checkins + view.period.games} sub={`${view.period.checkins} check-ins · ${view.period.games} games`} colour={SERIES_COLOURS.checkins} />
+                <Kpi label="New people" selected={kpi === "newp"} onSelect={() => pick("newp", "people", "joined")} value={view.period.joined} sub={`${view.funnel.setUp} set up a profile · ${view.funnel.paired} paired`} />
+                <Kpi label="Last seen here" selected={kpi === "seen"} onSelect={() => pick("seen", "people", "seen")} value={view.period.seen} sub="People whose latest visit fell in this period" />
+                <Kpi label="New couples" selected={kpi === "newc"} onSelect={() => pick("newc", "couples", "joined")} value={view.period.newCouples} sub={`${view.period.couplesActive} couples had activity`} />
+                <Kpi label="Thoughts" selected={kpi === "th"} onSelect={() => pick("th", "couples", "seen")} value={view.period.thoughts} sub="Sent between partners" colour={SERIES_COLOURS.thoughts} />
+                <Kpi label="Chat messages" selected={kpi === "chat"} onSelect={() => pick("chat", "couples", "seen")} value={view.period.chat} colour={SERIES_COLOURS.chat} sub="Sent in chat" />
+                <Kpi label="Check-ins & games" selected={kpi === "cg"} onSelect={() => pick("cg", "couples", "seen")} value={view.period.checkins + view.period.games} sub={`${view.period.checkins} check-ins · ${view.period.games} games`} colour={SERIES_COLOURS.checkins} />
               </div>
               {historyStart && range.from < dayStartMs(historyStart) && (
                 <p className="text-xs text-neutral-500">Activity counts only go back to {dateOf(dayStartMs(historyStart))}; earlier days in this period show as zero.</p>
@@ -391,11 +421,11 @@ export const AdminDashboard = () => {
               </div>
             </section>
 
-            <section className={card}>
-              <div className="flex flex-wrap items-center gap-3 mb-4">
+            <section ref={tableRef} className={`${card} scroll-mt-20`}>
+              <div className="flex flex-wrap items-center gap-3 mb-2">
                 <div role="tablist" className="flex rounded-xl bg-[#0e0e0e] border border-[#262626] p-1 mr-auto">
                   {([["couples", `Couples (${filteredCouples.length})`], ["people", `People (${filteredPeople.length})`]] as const).map(([k, label]) => (
-                    <button key={k} role="tab" aria-selected={tab === k} type="button" onClick={() => setTab(k)} className={`px-4 h-8 rounded-lg text-sm ${tab === k ? "bg-white text-black" : "text-neutral-400 hover:text-white"}`}>{label}</button>
+                    <button key={k} role="tab" aria-selected={tab === k} type="button" onClick={() => { setTab(k); setKpi(null); }} className={`px-4 h-8 rounded-lg text-sm ${tab === k ? "bg-white text-black" : "text-neutral-400 hover:text-white"}`}>{label}</button>
                   ))}
                 </div>
                 {tab === "people" && (
@@ -404,20 +434,25 @@ export const AdminDashboard = () => {
                     Hide sign-ins with no name
                   </label>
                 )}
-                <select value={scope} onChange={(e) => setScope(e.target.value as "all" | "joined" | "seen")} className={sel} aria-label="Which people">
-                  <option value="all">Everyone</option>
+                <select value={scope} onChange={(e) => { setScope(e.target.value as Scope); setKpi(null); }} className={sel} aria-label="Which people">
+                  <option value="period">Joined or active in this period</option>
                   <option value="joined">Joined in this period</option>
                   <option value="seen">Last active in this period</option>
+                  <option value="all">Everyone, any time</option>
                 </select>
                 <label className="relative">
                   <Search className="w-4 h-4 absolute left-3 top-3 text-neutral-500" />
                   <input value={query} onChange={(e) => setQuery(e.target.value)} placeholder="Search name or email" className={`${sel} pl-9 w-64`} />
                 </label>
-                <select value={statusFilter} onChange={(e) => setStatusFilter(e.target.value as ActivityStatus | "all")} className={sel} aria-label="Filter by status">
+                <select value={statusFilter} onChange={(e) => { setStatusFilter(e.target.value as ActivityStatus | "all"); setKpi(null); }} className={sel} aria-label="Filter by status">
                   <option value="all">Every status</option>
                   {(Object.keys(STATUS) as ActivityStatus[]).map((st) => <option key={st} value={st}>{STATUS[st].label}</option>)}
                 </select>
               </div>
+              <p className="font-outfit text-xs text-neutral-400 mb-4 flex flex-wrap items-center gap-x-2">
+                <span>Showing <b className="text-neutral-200">{tab === "couples" ? filteredCouples.length : filteredPeople.length}</b> {tab === "couples" ? "couples" : "people"} · {filterText}</span>
+                {(kpi || scope !== "period" || statusFilter !== "all" || query.trim()) && <button type="button" onClick={resetTable} className="underline underline-offset-4 hover:text-white">Reset</button>}
+              </p>
               {tab === "couples"
                 ? <CouplesTable couples={filteredCouples} query={query} statusFilter={statusFilter} />
                 : <PeopleTable people={filteredPeople} query={query} statusFilter={statusFilter} hideNoName={hideNoName} />}
