@@ -551,7 +551,7 @@ export const submitQuestionAnswer = async (coupleId: string, gameId: string, rou
 };
 
 /**
- * Everything About Us, step one: your own answer to a question, on your own set of questions (which you can change as you go). It also goes into your private likes
+ * Everything About Us, step one: your own answer to a question, on your own set of questions (which you can change as you go). It is also kept with the couple as one of your preferences
  * (just the question and what you picked), which is what later suggestions are built from.
  */
 export const submitAboutPick = async (
@@ -560,8 +560,8 @@ export const submitAboutPick = async (
   set?: { q: string; opts: string[] }[]
 ) => {
   await updateDoc(gameRef(coupleId, gameId), { [`answers.r${round}.${uid}`]: { pick: String(pick) }, ...(set ? { [`aboutSets.${uid}`]: set } : {}) });
-  setDoc(doc(db, "users", uid, "likes", likeKey(question.deck, question.q)), {
-    deck: question.deck, question: question.q, answer: question.answer, at: new Date().toISOString(),
+  setDoc(doc(db, "couples", coupleId, "preferences", `${uid}_${likeKey(question.deck, question.q)}`), {
+    uid, deck: question.deck, question: question.q, answer: question.answer, at: new Date().toISOString(),
   }).catch(console.error);
   if (finished) {
     await notifyPartner(partnerUid, {
@@ -790,7 +790,7 @@ export const respondToMessage = async (coupleId: string, messageId: string, resp
   });
 };
 
-const COUPLE_SUBCOLLECTIONS = ["mailbox", "checkins", "reactions", "safe_space_sessions", "events", "games", "game_history", "bucket_list", "chat"];
+const COUPLE_SUBCOLLECTIONS = ["mailbox", "checkins", "reactions", "safe_space_sessions", "events", "games", "game_history", "bucket_list", "chat", "preferences"];
 
 /**
  * Delete documents in chunks that fit inside a single batch
@@ -947,7 +947,7 @@ export const deleteUserAccount = async (uid: string, partnerUid: string | null) 
   // Any invite this person created goes too. Best effort: it must never block the deletion itself.
   const inviteCode = (await getDoc(doc(db, "users", uid))).data()?.inviteCode;
   if (inviteCode) await deleteDoc(doc(db, "invites", inviteCode)).catch(() => {});
-  for (const colName of ["notes", "notifications", "likes"]) {
+  for (const colName of ["notes", "notifications"]) {
     const snap = await getDocs(collection(db, "users", uid, colName));
     snap.docs.forEach((d) => refs.push(d.ref));
   }

@@ -252,18 +252,20 @@ test("the sender can edit their note until it is answered, and either can hide i
   await assertFails(updateDoc(doc(db(ALICE), "couples", COUPLE, "mailbox", "m1"), { note: "changed after the answer" }));
 });
 
-test("likes are private to their owner and hold just a question and an answer", async () => {
-  await seedUsers();
-  const like = (uid, owner = uid) => doc(db(uid), "users", owner, "likes", "about_food_x");
-  const body = { deck: "about_food", question: "Pick a breakfast.", answer: "Eggs and toast", at: "2026-10-20T10:00:00Z" };
-  await assertSucceeds(setDoc(like(ALICE), body));
-  await assertSucceeds(getDoc(like(ALICE)));
-  await assertFails(getDoc(like(BOB, ALICE)));                                    // not even a partner can read them
-  await assertFails(setDoc(like(BOB, ALICE), body));
-  await assertFails(setDoc(like(ALICE), { ...body, extra: 1 }));
-  await assertFails(setDoc(like(ALICE), { ...body, answer: "" }));
-  await assertFails(setDoc(like(ALICE), { ...body, question: "x".repeat(141) }));
-  await assertSucceeds(deleteDoc(like(ALICE)));
+test("preferences are kept with the couple: both can read, each writes only their own", async () => {
+  await seedCouple();
+  const pref = (uid, id) => doc(db(uid), "couples", COUPLE, "preferences", id);
+  const body = (uid) => ({ uid, deck: "about_food", question: "Pick a breakfast.", answer: "Eggs and toast", at: "2026-10-20T10:00:00Z" });
+  await assertSucceeds(setDoc(pref(ALICE, `${ALICE}_about_food_x`), body(ALICE)));
+  await assertSucceeds(getDoc(pref(BOB, `${ALICE}_about_food_x`)));
+  await assertFails(getDoc(pref(MALLORY, `${ALICE}_about_food_x`)));
+  await assertFails(setDoc(pref(BOB, `${ALICE}_about_food_y`), body(ALICE)));          // not Bob's to write as Alice
+  await assertFails(setDoc(pref(BOB, `${ALICE}_about_food_z`), body(BOB)));            // the id must be the writer's own
+  await assertFails(setDoc(pref(ALICE, `${ALICE}_a`), { ...body(ALICE), extra: 1 }));
+  await assertFails(setDoc(pref(ALICE, `${ALICE}_b`), { ...body(ALICE), answer: "" }));
+  await assertFails(setDoc(pref(ALICE, `${ALICE}_c`), { ...body(ALICE), question: "x".repeat(141) }));
+  await assertFails(deleteDoc(pref(BOB, `${ALICE}_about_food_x`)));
+  await assertSucceeds(deleteDoc(pref(ALICE, `${ALICE}_about_food_x`)));
 });
 
 test("a check-in can carry how the writer felt last, and only the writer can set it", async () => {

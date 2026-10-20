@@ -29,6 +29,8 @@ export const AboutScreen = ({ gameId, onLeave }: { gameId: string; onLeave: () =
   const [confirmEnd, setConfirmEnd] = useState(false);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState("");
+  const [pickCursor, setPickCursor] = useState<number | null>(null);
+  const [guessCursor, setGuessCursor] = useState<number | null>(null);
   const { playPop, playChime } = useSensoryFeedback();
 
   const uid = user?.uid || "";
@@ -51,8 +53,13 @@ export const AboutScreen = ({ gameId, onLeave }: { gameId: string; onLeave: () =
   const phase = aboutPhase(game, uid, partnerUid);
   const myPicks = pickedCount(game, uid);
   const myGuesses = guessedCount(game, uid);
-  const nextPick = game.cards.findIndex((_, r) => pickOf(game, r, uid) === undefined);
-  const nextGuess = guessOrder(game, uid).find(r => guessOf(game, r, uid) === undefined) ?? -1;
+  // Where you are is the first card still open, unless you've stepped back to look at an earlier one
+  const order = guessOrder(game, uid);
+  const pickOpen = Math.max(0, game.cards.findIndex((_, r) => pickOf(game, r, uid) === undefined));
+  const guessOpen = Math.max(0, order.findIndex(r => guessOf(game, r, uid) === undefined));
+  const pickAt = Math.min(pickCursor ?? pickOpen, pickOpen);
+  const guessAt = Math.min(guessCursor ?? guessOpen, guessOpen);
+  const guessRound = order[guessAt];
   // The bars only show up once you're guessing
   const showProgress = phase === "guessing" || phase === "waiting-guesses" || phase === "done";
 
@@ -63,6 +70,13 @@ export const AboutScreen = ({ gameId, onLeave }: { gameId: string; onLeave: () =
     try { await action(); }
     catch (err) { console.error(err); setError("That didn't save. Check your connection and try again."); }
     finally { setBusy(false); }
+  };
+
+  // Saving never holds up the next card: it goes out in the background, and a failure shows up underneath
+  const fire = (action: () => Promise<unknown>) => {
+    setError("");
+    playPop();
+    action().catch((err) => { console.error(err); setError("That didn't save. Check your connection and try again."); });
   };
 
   const handleEnd = () => { onLeave(); endGame(coupleId, gameId).catch(console.error); };
@@ -97,35 +111,47 @@ export const AboutScreen = ({ gameId, onLeave }: { gameId: string; onLeave: () =
           <Results game={game} uid={uid} partnerUid={partnerUid} partner={partner} partnerName={partnerName} gradient={deck.cards[0]} busy={busy} onFinish={handleEnd} onNext={handleNext} onChime={playChime} />
         ) : phase === "picking" ? (
           <Ask
-            key={`pick-${nextPick}`}
-            kicker={`Your answer · Question ${myPicks + 1} of ${total}`}
+            key={`pick-${pickAt}`}
+            kicker={`Your answer · Question ${pickAt + 1} of ${total}`}
             hint="Tap your answer, or the pencil to change it."
-            card={aboutQuestion(game, uid, nextPick)}
+            card={aboutQuestion(game, uid, pickAt)}
             gradient={deck.cards[0]}
-            busy={busy}
             editable
-            onPick={(i, edited) => run(async () => {
+            selected={pickOf(game, pickAt, uid) === undefined ? undefined : Number(pickOf(game, pickAt, uid))}
+            position={pickAt}
+            total={total}
+            canNext={pickAt < pickOpen}
+            onPrev={() => setPickCursor(Math.max(0, pickAt - 1))}
+            onNext={() => setPickCursor(pickAt + 1)}
+            onPick={(i, edited) => {
               // Whatever was changed on this card goes into your own set, which your partner then guesses
               const base = questionsOf(game, uid).map(x => ({ q: x.q, opts: [...x.opts] }));
-              const slot = game.cards[nextPick] ?? nextPick;
+              const slot = game.cards[pickAt] ?? pickAt;
               const changed = edited.q !== base[slot]?.q || edited.opts.some((o, k) => o !== base[slot]?.opts[k]);
               if (changed) base[slot] = edited;
-              await submitAboutPick(coupleId, gameId, nextPick, uid, i, { deck: game.deck, q: edited.q, answer: edited.opts[i] }, myPicks === total - 1, partnerUid, myName, changed ? base : undefined);
-              playPop();
-            })}
+              const last = pickOf(game, pickAt, uid) === undefined && myPicks === total - 1;
+              setPickCursor(pickAt + 1);
+              fire(() => submitAboutPick(coupleId, gameId, pickAt, uid, i, { deck: game.deck, q: edited.q, answer: edited.opts[i] }, last, partnerUid, myName, changed ? base : undefined));
+            }}
           />
         ) : phase === "guessing" ? (
           <Ask
-            key={`guess-${nextGuess}`}
-            kicker={`Guess ${partnerName} · ${myGuesses + 1} of ${total}`}
+            key={`guess-${guessAt}`}
+            kicker={`Guess ${partnerName} · ${guessAt + 1} of ${total}`}
             hint={`What did ${partnerName} pick?`}
-            card={aboutQuestion(game, partnerUid, nextGuess)}
+            card={aboutQuestion(game, partnerUid, guessRound)}
             gradient={deck.cards[1]}
-            busy={busy}
-            onPick={(i) => run(async () => {
-              await submitAboutGuess(coupleId, gameId, nextGuess, uid, i, myGuesses === total - 1, partnerUid, myName);
-              playPop();
-            })}
+            selected={guessOf(game, guessRound, uid) === undefined ? undefined : Number(guessOf(game, guessRound, uid))}
+            position={guessAt}
+            total={total}
+            canNext={guessAt < guessOpen}
+            onPrev={() => setGuessCursor(Math.max(0, guessAt - 1))}
+            onNext={() => setGuessCursor(guessAt + 1)}
+            onPick={(i) => {
+              const last = guessOf(game, guessRound, uid) === undefined && myGuesses === total - 1;
+              setGuessCursor(guessAt + 1);
+              fire(() => submitAboutGuess(coupleId, gameId, guessRound, uid, i, last, partnerUid, myName));
+            }}
           />
         ) : (
           <Waiting gradient={deck.cards[0]} title={phase === "waiting-picks" ? `${partnerName} is still picking` : `${partnerName} is still guessing`}
@@ -144,7 +170,7 @@ export const AboutScreen = ({ gameId, onLeave }: { gameId: string; onLeave: () =
             <div onClick={(e) => e.stopPropagation()} className="w-full max-w-sm overlay-panel rounded-[1.5rem] p-8 text-center space-y-6">
               <div className="space-y-2">
                 <h3 className="text-3xl font-bebas tracking-widest uppercase leading-none">End This Deck?</h3>
-                <p className="text-neutral-400 font-outfit text-sm leading-relaxed">{`It ends for ${partnerName} too. Your answers stay saved as your likes.`}</p>
+                <p className="text-neutral-400 font-outfit text-sm leading-relaxed">{`It ends for ${partnerName} too. Your answers stay saved as your preferences.`}</p>
               </div>
               <div className="flex flex-col gap-3">
                 <button onClick={handleEnd} disabled={busy} className="w-full bg-white text-black font-bebas tracking-widest uppercase rounded-2xl py-4 hover:bg-neutral-200 active:scale-95 disabled:opacity-30 transition-all">End for Both</button>
@@ -158,8 +184,6 @@ export const AboutScreen = ({ gameId, onLeave }: { gameId: string; onLeave: () =
   );
 };
 
-// Every card is the same size, whatever it says: the question sits in the middle, left-aligned
-const CARD = "relative h-[13.5rem] shrink-0 rounded-[1.5rem] bg-gradient-to-br px-7 overflow-hidden";
 const OPTION = "w-full h-14 shrink-0 rounded-2xl";
 
 const Progress = ({ label, done, total, tone }: { label: string; done: number; total: number; tone: string }) => (
@@ -185,11 +209,14 @@ const Waiting = ({ gradient, title, body }: { gradient: string; title: string; b
 );
 
 const iconButton = "w-9 h-9 shrink-0 rounded-full flex items-center justify-center text-white/70 hover:text-white hover:bg-white/10 active:scale-90 transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/60";
+const stepButton = "h-14 w-14 shrink-0 rounded-2xl flex items-center justify-center active:scale-90 disabled:opacity-25 transition-all";
 
-// One question and its four answers. Tapping an answer saves it and moves on. On your own questions a pencil
-// on the question and on every answer lets you change the words first.
-const Ask = ({ kicker, hint, card, gradient, busy, editable, onPick }: {
-  kicker: string; hint: string; card: AboutQ; gradient: string; busy: boolean; editable?: boolean; onPick: (index: number, edited: AboutQ) => void;
+// One question and its four answers, filling the screen like the other decks. Tapping an answer saves it and moves on;
+// the arrows at the bottom step back to an earlier card or forward again. On your own questions a pencil on the
+// question and on every answer lets you change the words first.
+const Ask = ({ kicker, hint, card, gradient, editable, selected, position, total, canNext, onPrev, onNext, onPick }: {
+  kicker: string; hint: string; card: AboutQ; gradient: string; editable?: boolean; selected?: number; position: number; total: number; canNext: boolean;
+  onPrev: () => void; onNext: () => void; onPick: (index: number, edited: AboutQ) => void;
 }) => {
   const [draft, setDraft] = useState<AboutQ>({ q: card.q, opts: [...card.opts] });
   const [editing, setEditing] = useState<"q" | number | null>(null);
@@ -204,7 +231,7 @@ const Ask = ({ kicker, hint, card, gradient, busy, editable, onPick }: {
 
   return (
     <motion.div initial={{ opacity: 0, x: 40 }} animate={{ opacity: 1, x: 0 }} transition={{ duration: 0.25, ease: "easeOut" }} className="flex-1 min-h-0 flex flex-col gap-3">
-      <div className={cn(CARD, gradient)}>
+      <div className={cn("relative flex-1 min-h-[12rem] rounded-[1.5rem] bg-gradient-to-br px-7 overflow-hidden", gradient)}>
         <p className="absolute top-5 left-7 right-14 text-[10px] text-white/80 font-bebas tracking-[0.4em] uppercase truncate">{kicker}</p>
         {editable && (
           <button type="button" aria-label={editing === "q" ? "Done editing the question" : "Edit the question"} onClick={() => (editing === "q" ? settle("q") : setEditing("q"))} className={cn(iconButton, "absolute top-3 right-3")}>
@@ -219,7 +246,7 @@ const Ask = ({ kicker, hint, card, gradient, busy, editable, onPick }: {
               maxLength={140}
               onChange={(e) => setDraft(d => ({ ...d, q: e.target.value }))}
               aria-label="Question"
-              className="w-full h-full resize-none bg-black/25 border border-white/20 rounded-xl px-3 py-2 text-white font-bebas uppercase tracking-wide text-[1.5rem] leading-[1.1] focus:outline-none focus:border-white/50"
+              className="w-full h-full max-h-[9rem] resize-none bg-black/25 border border-white/20 rounded-xl px-3 py-2 text-white font-bebas uppercase tracking-wide text-[1.5rem] leading-[1.1] focus:outline-none focus:border-white/50"
             />
           ) : (
             <h2 className="font-bebas uppercase tracking-wide text-[1.9rem] leading-[1.08] line-clamp-4 break-words text-left w-full">{draft.q}</h2>
@@ -227,9 +254,9 @@ const Ask = ({ kicker, hint, card, gradient, busy, editable, onPick }: {
         </div>
         <p className="absolute bottom-5 left-7 right-7 font-outfit text-xs text-white/75 truncate">{hint}</p>
       </div>
-      <div className="flex-1 min-h-0 overflow-y-auto no-scrollbar space-y-2.5 pb-1">
+      <div className="shrink-0 space-y-2.5">
         {draft.opts.map((opt, i) => (
-          <div key={i} className={cn(OPTION, "flex items-center bg-[#161616] border border-[#2a2a2a] focus-within:border-white/40 hover:border-white/30 transition-colors")}>
+          <div key={i} className={cn(OPTION, "flex items-center bg-[#161616] border transition-colors", selected === i ? "border-white/70 bg-[#242424]" : "border-[#2a2a2a] hover:border-white/30 focus-within:border-white/40")}>
             {editing === i ? (
               <input
                 autoFocus
@@ -243,11 +270,11 @@ const Ask = ({ kicker, hint, card, gradient, busy, editable, onPick }: {
             ) : (
               <button
                 type="button"
-                disabled={busy}
                 onClick={() => onPick(i, clean(draft))}
-                className="flex-1 min-w-0 h-full pl-5 pr-2 flex items-center text-left font-outfit text-[15px] leading-tight text-white rounded-2xl hover:bg-[#242424] active:scale-[0.99] disabled:opacity-50 transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/50"
+                className="flex-1 min-w-0 h-full pl-5 pr-2 flex items-center gap-2 text-left font-outfit text-[15px] leading-tight text-white rounded-2xl hover:bg-[#242424] active:scale-[0.99] transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/50"
               >
-                <span className="line-clamp-2 break-words">{opt}</span>
+                <span className="line-clamp-2 break-words flex-1">{opt}</span>
+                {selected === i && <Check className="w-4 h-4 shrink-0 text-emerald-300" aria-label="Your pick" />}
               </button>
             )}
             {editable && (
@@ -258,6 +285,11 @@ const Ask = ({ kicker, hint, card, gradient, busy, editable, onPick }: {
           </div>
         ))}
       </div>
+      <nav aria-label="Questions" className="shrink-0 grid grid-cols-[3.5rem_1fr_3.5rem] gap-3">
+        <button onClick={onPrev} disabled={position === 0} aria-label="Previous question" className={cn(stepButton, "bg-[#1c1c1c] border border-[#2a2a2a] text-white hover:bg-[#242424]")}><ArrowLeft className="w-5 h-5" /></button>
+        <p className="self-center text-center font-bebas text-lg tracking-widest text-white/80 tabular-nums">{`${position + 1} / ${total}`}</p>
+        <button onClick={onNext} disabled={!canNext} aria-label="Next question" className={cn(stepButton, "bg-white text-black hover:bg-neutral-200")}><ArrowRight className="w-5 h-5" /></button>
+      </nav>
     </motion.div>
   );
 };
