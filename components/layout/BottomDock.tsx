@@ -70,11 +70,11 @@ export const BottomDock: React.FC<BottomDockProps> = ({
                 aria-label="Home"
                 onClick={() => handleNav("mailbox")}
                 className={cn(
-                    "w-16 h-16 rounded-full flex items-center justify-center transition-all group p-1.5",
-                    activeView === "mailbox" ? "bg-pink-500 text-white shadow-[0_0_30px_rgba(236,72,153,0.4)]" : "bg-[#1c1c1c] border border-[#2a2a2a] text-white"
+                    "w-16 h-16 rounded-full overflow-hidden transition-all group",
+                    activeView === "mailbox" ? "ring-2 ring-pink-400 shadow-[0_0_30px_rgba(236,72,153,0.45)]" : "ring-1 ring-white/10 opacity-80 hover:opacity-100"
                 )}
             >
-                <img src="/mascot.webp" alt="HM Logo" className="w-10 h-auto group-hover:scale-110 transition-transform" />
+                <img src="/home-icon.png" alt="HM Logo" width={64} height={64} className="w-full h-full object-cover group-hover:scale-110 transition-transform" />
             </button>
             <span className="absolute -top-14 left-1/2 -translate-x-1/2 px-4 py-1.5 bg-white text-black text-[10px] font-bebas tracking-widest uppercase rounded-lg opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none whitespace-nowrap">
                 Home
