@@ -153,6 +153,6 @@ export const ABOUT_CONTENT: Record<string, AboutQ[]> = {
   about_dates: rows(DATES),
 };
 
-export const ABOUT_ROUND = 8; // questions in a new game
+export const ABOUT_ROUND = 10; // questions each person gets; the number never changes
 export const ABOUT_MIN = 3;
 export const ABOUT_MAX = 12;

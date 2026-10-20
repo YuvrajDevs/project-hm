@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useEffect, useState } from "react";
-import { rightGuesses, guessOf } from "@/lib/games/about";
+import { aboutQuestion, guessOf, rightGuesses } from "@/lib/games/about";
 import { motion } from "framer-motion";
 import { ArrowLeft, ChevronRight, Trash2, X } from "lucide-react";
 import { useMailbox } from "@/context/MailboxContext";
@@ -211,6 +211,27 @@ const GameReplay = ({ game, uid, partnerUid, partnerName }: { game: CoupleGame; 
       </p>
     );
   }
+  if (mechanic === "about") {
+    const sections = [uid, partnerUid].flatMap(owner => game.cards.map((_, r) => ({ owner, r })));
+    return (
+      <div className="divide-y divide-white/10">
+        {sections.map(({ owner, r }) => {
+          const guesser = owner === uid ? partnerUid : uid;
+          const c = aboutQuestion(game, owner, r);
+          const pick = game.answers?.[roundKey(r)]?.[owner]?.pick;
+          const guess = guessOf(game, r, guesser);
+          const opt = (k?: string) => (k === undefined ? "" : c.opts[Number(k)] ?? "");
+          return (
+            <div key={`${owner}-${r}`} className="py-4 space-y-2">
+              <p className="font-bebas text-lg uppercase tracking-wide leading-tight">{c.q}</p>
+              <p className="font-outfit text-sm text-white/85"><span className={cn("font-bebas tracking-widest uppercase mr-2", owner === uid ? "text-pink-300" : "text-blue-300")}>{nameOf(owner)} picked</span>{opt(pick)}</p>
+              <p className="font-outfit text-sm text-white/85"><span className={cn("font-bebas tracking-widest uppercase mr-2", guesser === uid ? "text-pink-300" : "text-blue-300")}>{nameOf(guesser)} guessed</span>{opt(guess)}{guess !== undefined ? (guess === pick ? " ✓" : " ✗") : ""}</p>
+            </div>
+          );
+        })}
+      </div>
+    );
+  }
   return (
     <div className="divide-y divide-white/10">
       {game.cards.map((_, r) => {
@@ -228,16 +249,6 @@ const GameReplay = ({ game, uid, partnerUid, partnerName }: { game: CoupleGame; 
         } else if (card.kind === "who") {
           title = card.prompt;
           lines = [{ who: "them", text: nameOf(answers[partnerUid]?.pick) }, { who: "you", text: nameOf(answers[uid]?.pick) }];
-        } else if (card.kind === "about") {
-          title = card.q;
-          const opt = (k?: string) => (k === undefined ? "" : card.opts[Number(k)] ?? "");
-          const mark = (g?: string, t?: string) => (g === undefined ? "" : g === t ? " ✓" : " ✗");
-          lines = [
-            { who: "them", text: opt(answers[partnerUid]?.pick) ? `picked ${opt(answers[partnerUid]?.pick)}` : "" },
-            { who: "you", text: opt(guessOf(game, r, uid)) ? `guessed ${opt(guessOf(game, r, uid))}${mark(guessOf(game, r, uid), answers[partnerUid]?.pick)}` : "" },
-            { who: "you", text: opt(answers[uid]?.pick) ? `picked ${opt(answers[uid]?.pick)}` : "" },
-            { who: "them", text: opt(guessOf(game, r, partnerUid)) ? `guessed ${opt(guessOf(game, r, partnerUid))}${mark(guessOf(game, r, partnerUid), answers[uid]?.pick)}` : "" },
-          ];
         } else if (card.kind === "open") {
           title = card.text;
           lines = [{ who: "them", text: answers[partnerUid]?.text || "" }, { who: "you", text: answers[uid]?.text || "" }];

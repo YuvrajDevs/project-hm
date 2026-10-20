@@ -506,15 +506,13 @@ export const getGameHistory = async (coupleId: string) => {
 };
 
 /** Deal a new game alongside the others. Returns its id. */
-export const startGame = async (coupleId: string, uid: string, partnerUid: string, deck: DeckId, starterName?: string, customAbout?: { q: string; opts: string[] }[]) => {
+export const startGame = async (coupleId: string, uid: string, partnerUid: string, deck: DeckId, starterName?: string) => {
   // The card lists are only downloaded when someone actually plays
   const { dealGame } = await import("./games/engine");
   const game: CoupleGame = {
     deck,
     cards: [],
     ...dealGame(deck, uid),
-    // Everything About Us: questions the two of them edited or wrote replace the standard set
-    ...(customAbout ? { about: customAbout, cards: customAbout.map((_, i) => i) } : {}),
     round: 0,
     players: [uid, partnerUid],
     startedBy: uid,
@@ -553,7 +551,7 @@ export const submitQuestionAnswer = async (coupleId: string, gameId: string, rou
 };
 
 /**
- * Everything About Us, step one: your own answer to a question. It also goes into your private likes
+ * Everything About Us, step two: your own answer to a question. It also goes into your private likes
  * (just the question and what you picked), which is what later suggestions are built from.
  */
 export const submitAboutPick = async (
@@ -575,7 +573,11 @@ export const submitAboutPick = async (
   }
 };
 
-/** Everything About Us, step two: what you think your partner picked */
+/** Everything About Us, step one: your own set of questions, as you left them after looking through them. */
+export const saveAboutSet = (coupleId: string, gameId: string, uid: string, set: { q: string; opts: string[] }[]) =>
+  updateDoc(gameRef(coupleId, gameId), { [`aboutSets.${uid}`]: set, [`aboutReady.${uid}`]: true });
+
+/** Everything About Us, step three: what you think your partner picked */
 export const submitAboutGuess = async (coupleId: string, gameId: string, round: number, uid: string, pick: number, finished: boolean, partnerUid: string, name?: string) => {
   await updateDoc(gameRef(coupleId, gameId), { [`guess.r${round}.${uid}`]: String(pick) });
   if (finished) {

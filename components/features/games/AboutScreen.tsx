@@ -4,10 +4,10 @@ import React, { useEffect, useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { ArrowLeft, ArrowRight, Check, X } from "lucide-react";
 import { useMailbox } from "@/context/MailboxContext";
-import { endGame, joinGame, replayGame, submitAboutGuess, submitAboutPick } from "@/lib/firestore-helpers";
+import { endGame, joinGame, replayGame, saveAboutSet, submitAboutGuess, submitAboutPick } from "@/lib/firestore-helpers";
 import { DECK_BY_ID } from "@/lib/games/decks";
-import { aboutPhase, guessOf, guessOrder, guessedCount, pickOf, pickedCount, rightGuesses } from "@/lib/games/about";
-import { getCard } from "@/lib/games/engine";
+import { aboutPhase, aboutQuestion, cleanQuestion, guessOf, guessOrder, guessedCount, pickOf, pickedCount, questionsOf, rightGuesses } from "@/lib/games/about";
+import type { AboutQ } from "@/lib/games/aboutContent";
 import { presence } from "@/lib/presence";
 import { useSensoryFeedback } from "@/hooks/useSensoryFeedback";
 import { useScrollLock } from "@/hooks/useScrollLock";
@@ -17,10 +17,8 @@ import { DECK_ICONS, openQuestions, titleFont } from "./deckIcons";
 import { DeckTitle } from "./DeckTitle";
 import type { ActiveGame } from "@/lib/types";
 
-type About = { q: string; opts: string[] };
-const cardOf = (g: ActiveGame, r: number) => getCard(g, r) as unknown as { q: string; opts: string[] };
-
-// Everything About Us. First you pick your own answer to every question, then you guess your partner's.
+// Everything About Us. Each of you first looks through your own ten questions (and can change any of them),
+// then picks your answers, then guesses your partner's.
 export const AboutScreen = ({ gameId, onLeave }: { gameId: string; onLeave: () => void }) => {
   const { user, partner, questionGames } = useMailbox();
   useEffect(() => { presence.gameId = gameId; return () => { if (presence.gameId === gameId) presence.gameId = null; }; }, [gameId]);
@@ -53,9 +51,10 @@ export const AboutScreen = ({ gameId, onLeave }: { gameId: string; onLeave: () =
   const phase = aboutPhase(game, uid, partnerUid);
   const myPicks = pickedCount(game, uid);
   const myGuesses = guessedCount(game, uid);
-  const order = guessOrder(game, uid);
   const nextPick = game.cards.findIndex((_, r) => pickOf(game, r, uid) === undefined);
-  const nextGuess = order.find(r => guessOf(game, r, uid) === undefined) ?? -1;
+  const nextGuess = guessOrder(game, uid).find(r => guessOf(game, r, uid) === undefined) ?? -1;
+  // The bars only show up once you're guessing
+  const showProgress = phase === "guessing" || phase === "waiting-guesses" || phase === "done";
 
   const run = async (action: () => Promise<unknown>) => {
     if (busy) return;
@@ -67,7 +66,7 @@ export const AboutScreen = ({ gameId, onLeave }: { gameId: string; onLeave: () =
   };
 
   const handleEnd = () => { onLeave(); endGame(coupleId, gameId).catch(console.error); };
-  const handleNewDeck = () => run(async () => {
+  const handleNext = () => run(async () => {
     const newId = await replayGame(coupleId, gameId, uid, partnerUid, myName);
     if (newId) openQuestions(newId);
     playPop();
@@ -87,24 +86,33 @@ export const AboutScreen = ({ gameId, onLeave }: { gameId: string; onLeave: () =
           <button onClick={() => setConfirmEnd(true)} className="text-white/60 font-bebas text-xs tracking-widest uppercase hover:text-white transition-all">End</button>
         </div>
 
-        <div className="grid grid-cols-2 gap-3 shrink-0">
-          <Progress label="You" done={myPicks + myGuesses} total={total * 2} tone="text-pink-300" />
-          <Progress label={partnerName} done={pickedCount(game, partnerUid) + guessedCount(game, partnerUid)} total={total * 2} tone="text-blue-300" />
-        </div>
+        {showProgress && (
+          <div className="grid grid-cols-2 gap-3 shrink-0">
+            <Progress label="You" done={myGuesses} total={total} tone="text-pink-300" />
+            <Progress label={partnerName} done={guessedCount(game, partnerUid)} total={total} tone="text-blue-300" />
+          </div>
+        )}
 
-        {phase === "done" ? (
-          <Results game={game} uid={uid} partnerUid={partnerUid} partner={partner} partnerName={partnerName} gradient={deck.cards[0]} busy={busy} onFinish={handleEnd} onNewDeck={handleNewDeck} onChime={playChime} />
+        {phase === "editing" ? (
+          <Editor
+            key="editor"
+            initial={questionsOf(game, uid)}
+            gradient={deck.cards[0]}
+            busy={busy}
+            onDone={(set) => run(async () => { await saveAboutSet(coupleId, gameId, uid, set); playPop(); })}
+          />
+        ) : phase === "done" ? (
+          <Results game={game} uid={uid} partnerUid={partnerUid} partner={partner} partnerName={partnerName} gradient={deck.cards[0]} busy={busy} onFinish={handleEnd} onNext={handleNext} onChime={playChime} />
         ) : phase === "picking" ? (
           <Ask
             key={`pick-${nextPick}`}
-            step="Your answer"
-            kicker={`Question ${myPicks + 1} of ${total}`}
+            kicker={`Your answer · Question ${myPicks + 1} of ${total}`}
             hint="Pick what is most you."
-            card={cardOf(game, nextPick)}
+            card={aboutQuestion(game, uid, nextPick)}
             gradient={deck.cards[0]}
             busy={busy}
             onPick={(i) => run(async () => {
-              const c = cardOf(game, nextPick);
+              const c = aboutQuestion(game, uid, nextPick);
               await submitAboutPick(coupleId, gameId, nextPick, uid, i, { deck: game.deck, q: c.q, answer: c.opts[i] }, myPicks === total - 1, partnerUid, myName);
               playPop();
             })}
@@ -112,10 +120,9 @@ export const AboutScreen = ({ gameId, onLeave }: { gameId: string; onLeave: () =
         ) : phase === "guessing" ? (
           <Ask
             key={`guess-${nextGuess}`}
-            step={`Guess ${partnerName}`}
-            kicker={`Guess ${myGuesses + 1} of ${total}`}
+            kicker={`Guess ${partnerName} · ${myGuesses + 1} of ${total}`}
             hint={`What did ${partnerName} pick?`}
-            card={cardOf(game, nextGuess)}
+            card={aboutQuestion(game, partnerUid, nextGuess)}
             gradient={deck.cards[1]}
             busy={busy}
             onPick={(i) => run(async () => {
@@ -125,7 +132,7 @@ export const AboutScreen = ({ gameId, onLeave }: { gameId: string; onLeave: () =
           />
         ) : (
           <Waiting gradient={deck.cards[0]} title={phase === "waiting-picks" ? `${partnerName} is still picking` : `${partnerName} is still guessing`}
-            body={phase === "waiting-picks" ? `Once ${partnerName} has picked every answer, you'll guess theirs. We'll let you know.` : `You'll both see how well you know each other once ${partnerName} finishes. We'll let you know.`} />
+            body={phase === "waiting-picks" ? `Once ${partnerName} has chosen their questions and picked their answers, you'll guess theirs. We'll let you know.` : `You'll both see how well you know each other once ${partnerName} finishes. We'll let you know.`} />
         )}
 
         {error && <p className="text-rose-300 font-outfit text-xs text-center shrink-0">{error}</p>}
@@ -154,6 +161,10 @@ export const AboutScreen = ({ gameId, onLeave }: { gameId: string; onLeave: () =
   );
 };
 
+// Every card is the same size, whatever it says
+const CARD = "h-[13.5rem] shrink-0 rounded-[1.5rem] bg-gradient-to-br px-7 py-6 flex flex-col justify-center gap-3 overflow-hidden";
+const OPTION = "w-full h-14 shrink-0 rounded-2xl";
+
 const Progress = ({ label, done, total, tone }: { label: string; done: number; total: number; tone: string }) => (
   <div className="rounded-2xl bg-black/25 border border-white/10 px-4 py-2.5 space-y-2">
     <div className="flex items-center justify-between">
@@ -177,14 +188,14 @@ const Waiting = ({ gradient, title, body }: { gradient: string; title: string; b
 );
 
 // One question and its four answers. Tapping one saves it and moves on.
-const Ask = ({ step, kicker, hint, card, gradient, busy, onPick }: {
-  step: string; kicker: string; hint: string; card: About; gradient: string; busy: boolean; onPick: (index: number) => void;
+const Ask = ({ kicker, hint, card, gradient, busy, onPick }: {
+  kicker: string; hint: string; card: AboutQ; gradient: string; busy: boolean; onPick: (index: number) => void;
 }) => (
   <motion.div initial={{ opacity: 0, x: 40 }} animate={{ opacity: 1, x: 0 }} transition={{ duration: 0.25, ease: "easeOut" }} className="flex-1 min-h-0 flex flex-col gap-3">
-    <div className={cn("rounded-[1.5rem] bg-gradient-to-br px-7 py-8 flex flex-col justify-center gap-3 min-h-[11rem]", gradient)}>
-      <p className="text-[10px] text-white/80 font-bebas tracking-[0.4em] uppercase">{`${step} · ${kicker}`}</p>
-      <h2 className={cn("font-bebas uppercase tracking-wide leading-[1.05] text-balance", card.q.length > 60 ? "text-[1.9rem]" : "text-[2.3rem]")}>{card.q}</h2>
-      <p className="font-outfit text-xs text-white/75">{hint}</p>
+    <div className={cn(CARD, gradient)}>
+      <p className="text-[10px] text-white/80 font-bebas tracking-[0.4em] uppercase truncate">{kicker}</p>
+      <h2 className="font-bebas uppercase tracking-wide text-[1.9rem] leading-[1.08] line-clamp-4 break-words">{card.q}</h2>
+      <p className="font-outfit text-xs text-white/75 truncate">{hint}</p>
     </div>
     <div className="flex-1 min-h-0 overflow-y-auto no-scrollbar space-y-2.5 pb-1">
       {card.opts.map((opt, i) => (
@@ -193,21 +204,85 @@ const Ask = ({ step, kicker, hint, card, gradient, busy, onPick }: {
           type="button"
           disabled={busy}
           onClick={() => onPick(i)}
-          className="w-full text-left rounded-2xl bg-[#161616] border border-[#2a2a2a] px-5 py-4 font-outfit text-base text-white hover:bg-[#242424] hover:border-white/30 active:scale-[0.98] disabled:opacity-50 transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/50"
+          className={cn(OPTION, "px-5 flex items-center text-left bg-[#161616] border border-[#2a2a2a] font-outfit text-[15px] leading-tight text-white hover:bg-[#242424] hover:border-white/30 active:scale-[0.98] disabled:opacity-50 transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/50")}
         >
-          {opt}
+          <span className="line-clamp-2 break-words">{opt}</span>
         </button>
       ))}
     </div>
   </motion.div>
 );
 
-// Everyone's done: each question with what you each picked and guessed
-const Results = ({ game, uid, partnerUid, partner, partnerName, gradient, busy, onFinish, onNewDeck, onChime }: {
+// Looking through your own ten questions, one at a time, in the same layout as answering. Change the question or any answer, or leave it.
+const Editor = ({ initial, gradient, busy, onDone }: { initial: AboutQ[]; gradient: string; busy: boolean; onDone: (set: AboutQ[]) => void }) => {
+  const [items, setItems] = useState<AboutQ[]>(() => initial.map(x => ({ q: x.q, opts: [0, 1, 2, 3].map(i => x.opts[i] ?? "") })));
+  const [index, setIndex] = useState(0);
+  const total = items.length;
+  const it = items[index];
+  const valid = !!cleanQuestion(it);
+  const last = index === total - 1;
+  const change = (next: AboutQ) => setItems(list => list.map((x, k) => (k === index ? next : x)));
+  const field = "w-full bg-black/25 border border-white/15 rounded-xl px-3.5 text-white font-outfit placeholder:text-white/40 focus:outline-none focus:border-white/50";
+
+  const finish = () => {
+    const cleaned = items.map(cleanQuestion);
+    if (cleaned.some(c => !c)) return;
+    onDone(cleaned as AboutQ[]);
+  };
+
+  return (
+    <div className="flex-1 min-h-0 flex flex-col gap-3">
+      <div className={cn(CARD, gradient)}>
+        <p className="text-[10px] text-white/80 font-bebas tracking-[0.4em] uppercase truncate">{`Your questions · ${index + 1} of ${total}`}</p>
+        <textarea
+          value={it.q}
+          onChange={(e) => change({ ...it, q: e.target.value })}
+          maxLength={140}
+          aria-label={`Question ${index + 1}`}
+          placeholder="Your question"
+          className={cn(field, "h-[6.75rem] resize-none py-2.5 font-bebas uppercase tracking-wide text-[1.6rem] leading-[1.1] text-[16px]")}
+          style={{ fontSize: "1.6rem" }}
+        />
+        <p className="font-outfit text-xs text-white/75 truncate">Change the question or any answer, or leave it as it is.</p>
+      </div>
+      <div className="flex-1 min-h-0 overflow-y-auto no-scrollbar space-y-2.5 pb-1">
+        {[0, 1, 2, 3].map(k => (
+          <input
+            key={`${index}-${k}`}
+            value={it.opts[k] ?? ""}
+            maxLength={60}
+            onChange={(e) => change({ ...it, opts: [0, 1, 2, 3].map(n => (n === k ? e.target.value : it.opts[n] ?? "")) })}
+            aria-label={`Question ${index + 1}, answer ${k + 1}`}
+            placeholder={k > 1 ? "Optional answer" : "Answer"}
+            className={cn(OPTION, "px-5 bg-[#161616] border border-[#2a2a2a] text-white font-outfit text-[16px] focus:outline-none focus:border-white/40 placeholder:text-neutral-600")}
+          />
+        ))}
+      </div>
+      {!valid && <p className="text-amber-300/90 font-outfit text-xs text-center shrink-0">A question needs some words and at least two answers.</p>}
+      <nav className="shrink-0 grid grid-cols-[3.5rem_1fr] gap-3" aria-label="Your questions">
+        <button onClick={() => setIndex(i => Math.max(0, i - 1))} disabled={index === 0} aria-label="Previous question" className="h-14 w-14 rounded-2xl bg-[#1c1c1c] border border-[#2a2a2a] text-white flex items-center justify-center hover:bg-[#242424] active:scale-90 disabled:opacity-25 transition-all">
+          <ArrowLeft className="w-5 h-5" />
+        </button>
+        <button
+          onClick={() => (last ? finish() : setIndex(index + 1))}
+          disabled={!valid || busy}
+          className="h-14 rounded-2xl bg-white text-black font-bebas tracking-widest uppercase hover:bg-neutral-200 active:scale-95 disabled:opacity-30 transition-all"
+        >
+          {busy ? "Saving..." : last ? "Done, start answering" : "Next"}
+        </button>
+      </nav>
+    </div>
+  );
+};
+
+// Everyone's done: first the score, then your questions (what you picked, what they guessed), then theirs
+const Results = ({ game, uid, partnerUid, partner, partnerName, gradient, busy, onFinish, onNext, onChime }: {
   game: ActiveGame; uid: string; partnerUid: string; partner: ReturnType<typeof useMailbox>["partner"]; partnerName: string; gradient: string; busy: boolean;
-  onFinish: () => void; onNewDeck: () => void; onChime: () => void;
+  onFinish: () => void; onNext: () => void; onChime: () => void;
 }) => {
-  const total = game.cards.length;
+  const { user } = useMailbox();
+  const n = game.cards.length;
+  const total = n * 2;
   const [index, setIndex] = useState(-1); // -1 is the score card
   useEffect(() => { onChime(); }, [onChime]);
   const mine = rightGuesses(game, uid, partnerUid);
@@ -215,46 +290,47 @@ const Results = ({ game, uid, partnerUid, partner, partnerName, gradient, busy, 
   const go = (to: number) => { if (to >= -1 && to < total) setIndex(to); };
   const arrow = "h-14 w-14 shrink-0 rounded-2xl flex items-center justify-center active:scale-90 disabled:opacity-25 transition-all";
 
+  const owner = index < n ? uid : partnerUid;
+  const guesser = owner === uid ? partnerUid : uid;
+  const r = index < n ? index : index - n;
+  const c = index >= 0 ? aboutQuestion(game, owner, r) : null;
+  const ownerName = owner === uid ? "You" : partnerName;
+  const guesserName = guesser === uid ? "You" : partnerName;
+  const pick = c ? pickOf(game, r, owner) : undefined;
+  const guess = c ? guessOf(game, r, guesser) : undefined;
+
   return (
     <>
       <div className={cn("flex-1 min-h-0 rounded-[1.5rem] bg-gradient-to-br p-7 flex flex-col gap-5 overflow-y-auto", gradient)}>
-        {index === -1 ? (
+        {!c ? (
           <div className="my-auto space-y-6">
             <p className="text-[10px] text-white/80 font-bebas tracking-[0.4em] uppercase">How well you know each other</p>
             <div className="grid grid-cols-2 gap-3">
-              <Score who="You" n={mine} total={total} note={`guessed ${partnerName}`} avatar={user_(partner, false)} />
-              <Score who={partnerName} n={theirs} total={total} note="guessed you" avatar={user_(partner, true)} />
+              <Score who="You" n={mine} total={n} note={`guessed ${partnerName}`} avatar={user} />
+              <Score who={partnerName} n={theirs} total={n} note="guessed you" avatar={partner} />
             </div>
             <p className="font-outfit text-sm text-white/85 leading-relaxed">Tap next to go through every question.</p>
           </div>
         ) : (
-          (() => {
-            const c = cardOf(game, index);
-            const row = (label: string, pick?: string, guess?: string, against?: string, tone = "text-pink-300") => (
+          <>
+            <div className="space-y-2">
+              <p className="text-[10px] text-white/80 font-bebas tracking-[0.4em] uppercase">{`${owner === uid ? "Your" : `${partnerName}'s`} question ${r + 1} of ${n}`}</p>
+              <h2 className="font-bebas uppercase tracking-wide text-[1.9rem] leading-[1.08] text-pretty">{c.q}</h2>
+            </div>
+            <div className="space-y-3 mt-auto">
               <div className="rounded-2xl bg-black/25 border border-white/10 px-4 py-3.5 space-y-1.5">
-                <p className={cn("font-bebas text-sm tracking-widest uppercase", tone)}>{label}</p>
+                <p className={cn("font-bebas text-sm tracking-widest uppercase", owner === uid ? "text-pink-300" : "text-blue-300")}>{`${ownerName} picked`}</p>
                 <p className="font-outfit text-sm text-white/95">{pick !== undefined ? c.opts[Number(pick)] : "No answer"}</p>
-                {guess !== undefined && (
-                  <p className="font-outfit text-xs text-white/75 flex items-center gap-1.5">
-                    {guess === against ? <Check className="w-3.5 h-3.5 text-emerald-300" /> : <X className="w-3.5 h-3.5 text-rose-300" />}
-                    {`${label === "You" ? partnerName : "You"} guessed ${c.opts[Number(guess)]}`}
-                  </p>
-                )}
               </div>
-            );
-            return (
-              <>
-                <div className="space-y-2">
-                  <p className="text-[10px] text-white/80 font-bebas tracking-[0.4em] uppercase">{`Question ${index + 1} of ${total}`}</p>
-                  <h2 className="font-bebas uppercase tracking-wide text-[1.9rem] leading-[1.08] text-pretty">{c.q}</h2>
-                </div>
-                <div className="space-y-3 mt-auto">
-                  {row(partnerName, pickOf(game, index, partnerUid), guessOf(game, index, uid), pickOf(game, index, partnerUid), "text-blue-300")}
-                  {row("You", pickOf(game, index, uid), guessOf(game, index, partnerUid), pickOf(game, index, uid))}
-                </div>
-              </>
-            );
-          })()
+              <div className="rounded-2xl bg-black/25 border border-white/10 px-4 py-3.5 space-y-1.5">
+                <p className={cn("font-bebas text-sm tracking-widest uppercase flex items-center gap-1.5", guesser === uid ? "text-pink-300" : "text-blue-300")}>
+                  {guess !== undefined && (guess === pick ? <Check className="w-4 h-4 text-emerald-300" /> : <X className="w-4 h-4 text-rose-300" />)}
+                  {`${guesserName} guessed`}
+                </p>
+                <p className="font-outfit text-sm text-white/95">{guess !== undefined ? c.opts[Number(guess)] : "No guess"}</p>
+              </div>
+            </div>
+          </>
         )}
       </div>
       <nav aria-label="Questions" className={cn("shrink-0 grid gap-3", index === total - 1 ? "grid-cols-[3.5rem_1fr_1fr]" : "grid-cols-[3.5rem_1fr_3.5rem]")}>
@@ -262,7 +338,7 @@ const Results = ({ game, uid, partnerUid, partner, partnerName, gradient, busy, 
         {index === total - 1 ? (
           <>
             <button onClick={onFinish} disabled={busy} className="h-14 rounded-2xl bg-[#161616] border border-[#2a2a2a] font-bebas tracking-widest uppercase hover:bg-[#242424] active:scale-95 disabled:opacity-30 transition-all">Finish</button>
-            <button onClick={onNewDeck} disabled={busy} className="h-14 rounded-2xl bg-white text-black font-bebas tracking-widest uppercase hover:bg-neutral-200 active:scale-95 disabled:opacity-30 transition-all">New Deck</button>
+            <button onClick={onNext} disabled={busy} className="h-14 rounded-2xl bg-white text-black font-bebas tracking-widest uppercase hover:bg-neutral-200 active:scale-95 disabled:opacity-30 transition-all">Next Deck</button>
           </>
         ) : (
           <>
@@ -275,9 +351,7 @@ const Results = ({ game, uid, partnerUid, partner, partnerName, gradient, busy, 
   );
 };
 
-const user_ = (partner: ReturnType<typeof useMailbox>["partner"], isPartner: boolean) => (isPartner ? partner : null);
-
-const Score = ({ who, n, total, note, avatar }: { who: string; n: number; total: number; note: string; avatar: ReturnType<typeof user_> }) => (
+const Score = ({ who, n, total, note, avatar }: { who: string; n: number; total: number; note: string; avatar: ReturnType<typeof useMailbox>["partner"] }) => (
   <div className="rounded-2xl bg-black/25 border border-white/10 p-4 space-y-1">
     <div className="flex items-center gap-2 min-w-0">
       {avatar && <Avatar user={avatar} size="xs" />}

@@ -36,10 +36,18 @@ export const guessOf = (game: CoupleGame, round: number, uid: string) => game.gu
 export const pickedCount = (game: CoupleGame, uid: string) => game.cards.filter((_, r) => pickOf(game, r, uid) !== undefined).length;
 export const guessedCount = (game: CoupleGame, uid: string) => game.cards.filter((_, r) => guessOf(game, r, uid) !== undefined).length;
 
-export type AboutPhase = "picking" | "waiting-picks" | "guessing" | "waiting-guesses" | "done";
+export type AboutPhase = "editing" | "picking" | "waiting-picks" | "guessing" | "waiting-guesses" | "done";
+
+/** Whose questions these are: each person answers their own set, and their partner guesses it. */
+export const questionsOf = (game: CoupleGame, owner: string): AboutQ[] => game.aboutSets?.[owner] ?? game.about ?? [];
+export const aboutQuestion = (game: CoupleGame, owner: string, round: number): AboutQ => {
+  const set = questionsOf(game, owner);
+  return set[game.cards[round]] ?? set[round] ?? { q: "", opts: [] };
+};
 
 export function aboutPhase(game: CoupleGame, me: string, them: string): AboutPhase {
   const n = game.cards.length;
+  if (!game.aboutReady?.[me]) return "editing";
   if (pickedCount(game, me) < n) return "picking";
   if (pickedCount(game, them) < n) return "waiting-picks";
   if (guessedCount(game, me) < n) return "guessing";
@@ -55,6 +63,12 @@ export const rightGuesses = (game: CoupleGame, guesser: string, target: string) 
     const g = guessOf(game, r, guesser);
     return g !== undefined && g === pickOf(game, r, target);
   }).length;
+
+/** One edited question: trimmed, empty answers dropped. Null while it still needs a question and two answers. */
+export function cleanQuestion({ q, opts }: AboutQ): AboutQ | null {
+  const out = { q: q.trim().slice(0, 140), opts: opts.map(o => o.trim().slice(0, 60)).filter(Boolean).slice(0, 4) };
+  return out.q && out.opts.length >= 2 ? out : null;
+}
 
 /** Tidy a list of questions someone edited: trims text, drops empty answers, keeps 2 to 4 answers and 3 to 12 questions. */
 export function cleanQuestions(list: AboutQ[]): AboutQ[] | null {
