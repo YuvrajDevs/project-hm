@@ -51,7 +51,8 @@ import {
 import { DECK_BY_ID, slotFor, type DeckId } from "./games/decks";
 import type { User as FirebaseUser } from "firebase/auth";
 import { REACTION_ICONS } from "./constants";
-import { getAesKeyForCouple, encryptDraft, decryptMessage, encryptBytes, decryptBytes, rotateKeys } from "./e2ee.ts";
+import { getAesKeyForCouple, encryptDraft, decryptMessage, encryptBytes, decryptBytes, rotateKeys, prepareKeyReset } from "./e2ee.ts";
+import { finalizeChatKeyReset } from "./chatReset.ts";
 import { ChatMediaError } from "./chatMedia.ts";
 import { aboutDone, likeKey } from "./games/about.ts";
 
@@ -1435,13 +1436,16 @@ export const purgeChatHistory = async (coupleId: string, uid: string) => {
 };
 
 /**
- * Forgotten-passphrase reset: generates a fresh key (the old one is unrecoverable by design, see
- * rotateKeys) and purges this person's own chat history so they aren't left staring at "can't
- * open this message" for everything they sent under the old key. The caller must have already
- * verified the emailed 6-digit code - see app/api/chat/reset/route.ts - before calling this.
+ * Forgotten-passphrase reset: generates a fresh key locally, then spends `ticket` (from
+ * verifyResetCode) so the server publishes it and drops the old backup - the old key is
+ * unrecoverable by design once that happens. Also purges this person's own chat history so they
+ * aren't left staring at "can't open this message" for everything they sent under the old key.
+ * The caller must have already verified the emailed 6-digit code to get `ticket` - see
+ * app/api/chat/reset/route.ts - and finalize() rejects anything else.
  */
-export const resetChatKey = async (uid: string, coupleId: string) => {
-  const publicJwk = await rotateKeys(uid);
+export const resetChatKey = async (uid: string, coupleId: string, ticket: string) => {
+  const publicJwk = await prepareKeyReset(uid);
+  await finalizeChatKeyReset(ticket, publicJwk);
   await purgeChatHistory(coupleId, uid);
   return publicJwk;
 };

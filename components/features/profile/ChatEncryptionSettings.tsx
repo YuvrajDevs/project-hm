@@ -99,8 +99,8 @@ export const ChatEncryptionSettings = () => {
   const confirmReset = async () => {
     setMessage(""); setBusy(true);
     try {
-      await verifyResetCode(resetCode);
-      await resetChatKey(uid, couple.id);
+      const { ticket } = await verifyResetCode(resetCode);
+      await resetChatKey(uid, couple.id, ticket);
       setHasBackup(false);
       setHint("");
       setResetStage("idle");

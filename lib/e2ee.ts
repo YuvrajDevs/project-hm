@@ -97,21 +97,32 @@ export const completeKeySetup = async (uid: string, passphrase: string, hint: st
   if (publicJwk) await updateDoc(doc(db, "users", uid), { chatPublicKey: publicJwk });
 };
 
-// One function for every case that invalidates the current key material: re-pair, partner leaves,
-// lost-passphrase reset. Old messages under the old key become permanently undecryptable by design.
-export const rotateKeys = async (uid: string): Promise<JsonWebKey> => {
+const wipeAndRegenerateLocalKey = async (uid: string): Promise<JsonWebKey> => {
   setKeyScope(uid);
   await deleteKey("privateKey");
   await deleteKey("privateKeyJwk");
   await deleteKey("publicKeyJwk");
   aesKeyCache.clear();
-  const publicJwk = await generateAndStoreKeyPair();
+  return generateAndStoreKeyPair();
+};
+
+// One function for every case that invalidates the current key material: re-pair, partner leaves.
+// Old messages under the old key become permanently undecryptable by design.
+export const rotateKeys = async (uid: string): Promise<JsonWebKey> => {
+  const publicJwk = await wipeAndRegenerateLocalKey(uid);
   await updateDoc(doc(db, "users", uid), { chatPublicKey: publicJwk });
   // The old backup blob wraps a now-discarded private key - leaving it would let a future
   // restore resurrect a dead key and silently fail to decrypt anything.
   await deleteDoc(doc(db, "users", uid, "keys", "chat")).catch(() => {});
   return publicJwk;
 };
+
+// Local-only half of a forgotten-passphrase reset: wipes this device's key material and generates
+// its replacement, but never touches Firestore. Publishing the new key and dropping the old backup
+// only happens server-side, gated by a verified-code ticket - see finalizeChatKeyReset (lib/chatReset.ts)
+// and app/api/chat/reset/route.ts. Unlike rotateKeys above, calling this alone can't destroy the
+// published key or anyone's chat history.
+export const prepareKeyReset = (uid: string): Promise<JsonWebKey> => wipeAndRegenerateLocalKey(uid);
 
 const aesKeyCache = new Map<string, { key: CryptoKey; partnerJwkThumbprint: string }>();
 const thumbprint = (jwk: JsonWebKey) => `${jwk.x}.${jwk.y}`;
