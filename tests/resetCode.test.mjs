@@ -2,7 +2,10 @@
 // Pure functions only (no Firebase/network) - see lib/resetCode.ts.
 import { test } from "node:test";
 import assert from "node:assert/strict";
-import { makeResetCode, hashResetCode, isResetCodeExpired, RESET_CODE_TTL_MS, RESET_CODE_MAX_ATTEMPTS } from "../lib/resetCode.ts";
+import {
+  makeResetCode, hashResetCode, isResetCodeExpired, RESET_CODE_TTL_MS, RESET_CODE_MAX_ATTEMPTS,
+  makeResetTicket, hashResetTicket, RESET_TICKET_TTL_MS,
+} from "../lib/resetCode.ts";
 
 test("a code is always exactly 6 digits", () => {
   for (let i = 0; i < 50; i++) {
@@ -32,4 +35,28 @@ test("expiry is a plain timestamp comparison", () => {
 test("TTL and attempt cap are sane bounds", () => {
   assert.equal(RESET_CODE_TTL_MS, 10 * 60 * 1000);
   assert.ok(RESET_CODE_MAX_ATTEMPTS >= 1 && RESET_CODE_MAX_ATTEMPTS <= 10);
+});
+
+test("a ticket is long, random and never repeats", () => {
+  const seen = new Set();
+  for (let i = 0; i < 50; i++) {
+    const ticket = makeResetTicket();
+    assert.match(ticket, /^[0-9a-f]{64}$/);
+    assert.ok(!seen.has(ticket));
+    seen.add(ticket);
+  }
+});
+
+test("ticket hashing is stable, salted by uid, and distinct from code hashing", () => {
+  const t1 = hashResetTicket("abc123", "alice-uid");
+  const t2 = hashResetTicket("abc123", "alice-uid");
+  const t3 = hashResetTicket("abc123", "bob-uid");
+  assert.equal(t1, t2);
+  assert.notEqual(t1, t3);
+  assert.notEqual(hashResetTicket("abc123", "alice-uid"), hashResetCode("abc123", "alice-uid"));
+});
+
+test("ticket TTL is short - just long enough to finish one reset", () => {
+  assert.equal(RESET_TICKET_TTL_MS, 5 * 60 * 1000);
+  assert.ok(RESET_TICKET_TTL_MS <= RESET_CODE_TTL_MS);
 });

@@ -5,10 +5,18 @@ const production = process.env.NODE_ENV === "production" && !emulators;
 // Vercel injects its comment toolbar into preview deploys only
 const preview = process.env.VERCEL_ENV === "preview";
 
+// The one inline script the app ever renders: THEME_BOOT_SCRIPT (lib/theme.ts), set via
+// dangerouslySetInnerHTML in app/layout.tsx so the theme applies before first paint. Allow-listed
+// by exact content hash instead of 'unsafe-inline', so an XSS bug can't get its own script to run.
+// If THEME_BOOT_SCRIPT's text ever changes, this hash must be regenerated to match (recompute with
+// `openssl dgst -sha256 -binary <<< "$SCRIPT" | openssl base64 -A`, or the equivalent in Node), or
+// the boot script will silently stop running in production (CSP violation, no runtime error).
+const themeBootScriptHash = "'sha256-byKrSnfZn6YU6Lz5T60Yr9E51YR5L3L6Svl8hni1hW4='";
+
 // Everything the app talks to: itself, Firebase (Auth sign-in popup, Firestore, App Check) and nothing else
 export const contentSecurityPolicy = [
   "default-src 'self'",
-  `script-src 'self' 'unsafe-inline' ${production ? "" : "'unsafe-eval' "}https://apis.google.com https://www.google.com https://www.gstatic.com${preview ? " https://vercel.live" : ""}`,
+  `script-src 'self' ${themeBootScriptHash} ${production ? "" : "'unsafe-inline' 'unsafe-eval' "}https://apis.google.com https://www.google.com https://www.gstatic.com${preview ? " https://vercel.live" : ""}`,
   "style-src 'self' 'unsafe-inline'",
   "img-src 'self' data: blob: https://*.googleusercontent.com",
   "font-src 'self' data:",

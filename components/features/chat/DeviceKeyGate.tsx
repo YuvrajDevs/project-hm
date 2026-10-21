@@ -52,8 +52,8 @@ export const DeviceKeyGate = ({ uid, coupleId, keyStatus, onDone }: { uid: strin
   const confirmReset = async () => {
     setMessage(""); setBusy(true);
     try {
-      await verifyResetCode(resetCode);
-      await resetChatKey(uid, coupleId);
+      const { ticket } = await verifyResetCode(resetCode);
+      await resetChatKey(uid, coupleId, ticket);
       onDone();
     } catch (err) {
       setMessage(err instanceof Error ? err.message : "That code didn't work.");

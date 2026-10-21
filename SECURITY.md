@@ -29,6 +29,20 @@ Limits, stated plainly:
   up (passphrase-wrapped) to Firestore, so a second device can always recover it instead of dead-ending.
   Losing the passphrase means chat history can't be recovered on a new device; "start fresh" still
   generates a new key and makes every earlier message permanently unreadable, by design.
+- **The private key also exists in an extractable form on-device, for that same backup feature.**
+  Day-to-day encrypt/decrypt only ever touches the non-extractable `CryptoKey` (`privateKey` in
+  IndexedDB), but a plaintext `privateKeyJwk` copy is kept alongside it so `backupLocalKey` can wrap
+  it under a new passphrase at any later point. This is intentional, not an oversight: both forms
+  live inside the same on-device trust boundary, so "non-extractable" guards against code
+  accidentally exporting the key, not against an attacker who already has script access to this
+  origin (same caveat as the metadata and forward-secrecy points above).
+- **A forgotten-passphrase reset is enforced server-side, not just in the UI.** The emailed 6-digit
+  code is checked in `app/api/chat/reset/route.ts`, which mints a short-lived single-use ticket only
+  once that check passes; publishing the replacement key and deleting the old backup
+  (`action: "finalize"`) happen via the Admin SDK against that ticket, not as an unconditional write
+  the client SDK could otherwise make on its own. `rotateKeys` (`lib/e2ee.ts`) is unchanged and still
+  used, without a ticket, for re-pairing and a partner leaving - those are already gated by the
+  membership change itself, not by this emailed code.
 - **Re-pairing or a partner leaving rotates the key** (`rotateKeys` in `lib/e2ee.ts`) - the old shared
   key is discarded and anything still encrypted with it becomes unreadable. In practice the couple's
   whole chat history is also deleted on unpair/reset (`resetCoupleHistory`), so this mostly matters for

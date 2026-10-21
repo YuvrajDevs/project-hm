@@ -4,7 +4,10 @@
 // and purging history (resetChatKey, lib/firestore-helpers.ts) only happens after verify() resolves.
 import { auth } from "./firebase";
 
-type ResetAction = { action: "request" } | { action: "verify"; code: string };
+type ResetAction =
+  | { action: "request" }
+  | { action: "verify"; code: string }
+  | { action: "finalize"; ticket: string; publicKey: JsonWebKey };
 
 const call = async (body: ResetAction) => {
   const token = await auth.currentUser?.getIdToken();
@@ -20,4 +23,7 @@ const call = async (body: ResetAction) => {
 };
 
 export const requestResetCode = () => call({ action: "request" });
-export const verifyResetCode = (code: string) => call({ action: "verify", code });
+export const verifyResetCode = (code: string) => call({ action: "verify", code }) as Promise<{ ok: true; ticket: string }>;
+// Spends the ticket from verifyResetCode: the server only publishes `publicKey` and drops the old
+// backup once it matches an unexpired, verified ticket - see app/api/chat/reset/route.ts.
+export const finalizeChatKeyReset = (ticket: string, publicKey: JsonWebKey) => call({ action: "finalize", ticket, publicKey });
