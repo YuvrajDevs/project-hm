@@ -2,6 +2,8 @@
 
 A private two-person space for couples: say how you feel, say what you need, check in daily, and repair after conflict.
 
+<!-- test PR: trigger redeploy -->
+
 ## Stack
 
 - Next.js 16 (App Router, client components), React 19, Tailwind 4, framer-motion
