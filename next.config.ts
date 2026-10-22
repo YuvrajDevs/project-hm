@@ -1,39 +1,11 @@
 import type { NextConfig } from "next";
+import { contentSecurityPolicy } from "./lib/csp.ts";
 
-const emulators = process.env.NEXT_PUBLIC_USE_EMULATORS === "1";
-const production = process.env.NODE_ENV === "production" && !emulators;
-// Vercel injects its comment toolbar into preview deploys only
-const preview = process.env.VERCEL_ENV === "preview";
+export { contentSecurityPolicy };
 
-// The one inline script the app ever renders: THEME_BOOT_SCRIPT (lib/theme.ts), set via
-// dangerouslySetInnerHTML in app/layout.tsx so the theme applies before first paint. Allow-listed
-// by exact content hash instead of 'unsafe-inline', so an XSS bug can't get its own script to run.
-// If THEME_BOOT_SCRIPT's text ever changes, this hash must be regenerated to match (recompute with
-// `openssl dgst -sha256 -binary <<< "$SCRIPT" | openssl base64 -A`, or the equivalent in Node), or
-// the boot script will silently stop running in production (CSP violation, no runtime error).
-const themeBootScriptHash = "'sha256-byKrSnfZn6YU6Lz5T60Yr9E51YR5L3L6Svl8hni1hW4='";
-
-// Everything the app talks to: itself, Firebase (Auth sign-in popup, Firestore, App Check) and nothing else
-export const contentSecurityPolicy = [
-  "default-src 'self'",
-  `script-src 'self' ${themeBootScriptHash} ${production ? "" : "'unsafe-inline' 'unsafe-eval' "}https://apis.google.com https://www.google.com https://www.gstatic.com${preview ? " https://vercel.live" : ""}`,
-  "style-src 'self' 'unsafe-inline'",
-  "img-src 'self' data: blob: https://*.googleusercontent.com",
-  "font-src 'self' data:",
-  "media-src 'self' blob: data:",
-  `connect-src 'self' https://*.googleapis.com https://*.firebaseio.com wss://*.firebaseio.com https://www.google.com${emulators ? " http://127.0.0.1:8080 http://127.0.0.1:9099 http://127.0.0.1:9199 ws://127.0.0.1:8080" : ""}${preview ? " https://vercel.live wss://ws-us3.pusher.com" : ""}`,
-  `frame-src 'self' https://*.firebaseapp.com https://accounts.google.com https://www.google.com${emulators ? " http://127.0.0.1:9099" : ""}${preview ? " https://vercel.live" : ""}`,
-  "worker-src 'self' blob:",
-  "manifest-src 'self'",
-  "object-src 'none'",
-  "base-uri 'self'",
-  "form-action 'self'",
-  "frame-ancestors 'none'",
-  ...(production ? ["upgrade-insecure-requests"] : []),
-].join("; ");
-
+// The CSP header itself is set per-request, with a real nonce, by proxy.ts — see lib/csp.ts
+// for why a static one (even a content-hash one) can't cover Next's own inline scripts.
 export const securityHeaders = [
-  { key: "Content-Security-Policy", value: contentSecurityPolicy },
   { key: "X-Frame-Options", value: "DENY" },
   { key: "X-Content-Type-Options", value: "nosniff" },
   { key: "Referrer-Policy", value: "strict-origin-when-cross-origin" },

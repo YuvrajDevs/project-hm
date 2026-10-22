@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import { headers } from "next/headers";
 import { Bebas_Neue, Outfit, Inter, Playfair_Display } from "next/font/google";
 import { SITE_URL, SITE_NAME } from "@/lib/seo";
 import "./globals.css";
@@ -75,11 +76,12 @@ export const metadata: Metadata = {
 
 import { JsonLd } from "@/components/seo/JsonLd";
 
-export default function RootLayout({
+export default async function RootLayout({
   children,
 }: Readonly<{
   children: React.ReactNode;
 }>) {
+  const nonce = (await headers()).get("x-nonce") ?? undefined;
   return (
     <html
       lang="en"
@@ -88,7 +90,7 @@ export default function RootLayout({
     >
       <head>
         {/* Apply the theme before the page paints, so it never flashes the wrong colour: light on the public site, dark in the app by default */}
-        <script dangerouslySetInnerHTML={{ __html: THEME_BOOT_SCRIPT }} />
+        <script nonce={nonce} dangerouslySetInnerHTML={{ __html: THEME_BOOT_SCRIPT }} />
       </head>
       <body suppressHydrationWarning className={`${outfit.className} min-h-screen bg-[var(--page)] text-neutral-50 overflow-x-hidden flex flex-col`}>
         <ThemeGuard />
