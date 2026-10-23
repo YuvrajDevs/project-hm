@@ -40,7 +40,7 @@
     "eslint-config-next": "16.4.2",
     "firebase-tools": "^15.33.0",
     "tailwindcss": "^4",
-    "typescript": "^5"
+    "typescript": "^7"
   },
   "overrides": {
     "jwks-rsa": "3.2.2"
