@@ -7,6 +7,7 @@ import "./theme.css";
 import { ThemeGuard } from "@/components/ThemeGuard";
 import { THEME_BOOT_SCRIPT } from "@/lib/theme";
 import { ImagePreloader } from "@/components/ui/ImagePreloader";
+import { Analytics } from "@vercel/analytics/next";
 
 const bebasNeue = Bebas_Neue({
   weight: "400",
@@ -111,6 +112,7 @@ export default async function RootLayout({
           }}
         />
         <ImagePreloader />
+        <Analytics />
         {children}
       </body>
     </html>
