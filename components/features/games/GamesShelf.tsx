@@ -8,7 +8,7 @@ import { createPortal } from "react-dom";
 import { useMailbox } from "@/context/MailboxContext";
 import { endGame, startGame } from "@/lib/firestore-helpers";
 import { DECKS, DECK_BY_ID, MAX_OPEN_GAMES, SECTIONS, slotFor, type DeckInfo } from "@/lib/games/decks";
-import { answeredCount } from "@/lib/games/engine";
+import { answeredCount, runningScore } from "@/lib/games/engine";
 import { aboutPhase, pickedCount, guessedCount } from "@/lib/games/about";
 import type { ActiveGame } from "@/lib/types";
 import { useSensoryFeedback } from "@/hooks/useSensoryFeedback";
@@ -104,10 +104,11 @@ export const GamesShelf = () => {
 
 // The two of you, all-time: points from every game you've finished
 const ScoreTally = () => {
-  const { user, partner, couple } = useMailbox();
-  const scores = couple?.gameScores ?? {};
-  const mine = user?.uid ? scores[user.uid] ?? 0 : 0;
-  const theirs = partner?.uid ? scores[partner.uid] ?? 0 : 0;
+  const { user, partner, couple, liveGames, questionGames } = useMailbox();
+  // Stored points plus finished games still open, so a win shows here the moment it happens, not only once the game is closed
+  const [mine, theirs] = user?.uid && partner?.uid
+    ? runningScore(couple?.gameScores, [...liveGames, ...questionGames], [user.uid, partner.uid])
+    : [0, 0];
   const partnerName = partnerLabel(user, partner, "Partner");
   return (
     <div className="shrink-0 rounded-2xl bg-[#161616] border border-[#2a2a2a] px-3.5 py-2 text-center" aria-label={`Score: you ${mine}, ${partnerName} ${theirs}`}>

@@ -54,7 +54,7 @@ import { REACTION_ICONS } from "./constants";
 import { getAesKeyForCouple, encryptDraft, decryptMessage, encryptBytes, decryptBytes, rotateKeys, prepareKeyReset } from "./e2ee.ts";
 import { finalizeChatKeyReset } from "./chatReset.ts";
 import { ChatMediaError } from "./chatMedia.ts";
-import { aboutDone, likeKey } from "./games/about.ts";
+import { likeKey } from "./games/about.ts";
 
 /**
  * Generic converter for Firestore to maintain type safety
@@ -329,18 +329,21 @@ export const subscribeToSafeSpaceMessages = (coupleId: string, sessionId: string
  */
 export const sendSafeSpaceMessage = async (coupleId: string, sessionId: string, senderUid: string, text: string, notifyUid?: string) => {
   const sessionRef = doc(db, "couples", coupleId, "safe_space_sessions", sessionId);
-  await addDoc(collection(db, "couples", coupleId, "safe_space_sessions", sessionId, "messages"), {
+  // One write for both: the partner sees the thought and whose turn it is in the same update, never one without the other
+  const batch = writeBatch(db);
+  batch.set(doc(collection(db, "couples", coupleId, "safe_space_sessions", sessionId, "messages")), {
     senderUid,
     text,
     createdAt: Timestamp.now()
   });
-  await updateDoc(sessionRef, {
+  batch.update(sessionRef, {
     lastMessageAt: Timestamp.now(),
     lastMessageBy: senderUid,
     // Whoever is speaking has the floor until they hand it over
     currentTurnUid: senderUid,
     [`seen.${senderUid}`]: new Date().toISOString(),
   });
+  await batch.commit();
 
   if (notifyUid) {
     await notifyPartner(notifyUid, {
@@ -432,45 +435,40 @@ export const subscribeToGames = (coupleId: string, callback: (games: ActiveGame[
   );
 
 /**
- * A game counts as finished when the last card is done, for a question deck when both have answered everything,
- * and for a board game once anyone has won a round
+ * Close a game for both. A finished game is archived to the history, its points are added to the couple's
+ * running score, and the live game is removed, all in ONE atomic write: the shelf's score (runningScore in
+ * lib/games/engine.ts) counts finished open games plus `gameScores`, so a half-applied end would show the points
+ * twice or not at all for a moment. The history id comes from the game itself, and history entries can be created
+ * but never overwritten, so if both partners end it at once only the first write lands; the second falls back to
+ * just removing the (already removed) game and the points are never counted twice.
  */
-const isFinished = (g: CoupleGame) => {
-  if (!DECK_BY_ID[g.deck]) return false;
-  const mechanic = DECK_BY_ID[g.deck].mechanic;
-  if (mechanic === "xo" || mechanic === "connect4") return Object.values(g.wins ?? {}).some(n => n > 0);
-  if (mechanic === "about") return aboutDone(g);
-  if (mechanic === "open") return g.players.every(u => g.cards.every((_, r) => !!g.answers?.[`r${r}`]?.[u]?.text));
-  return g.round >= g.cards.length;
-};
-
-/**
- * Keep a finished game before it's removed, so it can be read again later.
- * The id comes from the game itself, so both partners tapping at once still store it once.
- */
-const archiveIfFinished = async (coupleId: string, gameId: string) => {
+const endGameAtomically = async (coupleId: string, gameId: string) => {
   const snap = await getDoc(gameRef(coupleId, gameId));
   if (!snap.exists()) return;
   const game = snap.data() as CoupleGame;
-  if (!isFinished(game)) return;
+  const { isGameFinished, totalScores, withoutPhotos } = await import("./games/engine");
+  if (!isGameFinished(game)) {
+    await deleteDoc(gameRef(coupleId, gameId));
+    return;
+  }
   const id = `${game.startedAt}_${game.deck}`.replace(/[^\w-]/g, "_");
-  // Truth or dare photos stay inside the live game and are never kept; the archived copy says one was deleted
-  const { withoutPhotos } = await import("./games/engine");
-  const kept = withoutPhotos(game);
-  // If the partner already stored it, the copy is there and history entries can't be overwritten,
-  // so the write fails and the points aren't counted a second time
-  const stored = await setDoc(doc(db, "couples", coupleId, "game_history", id), { ...kept, archivedAt: new Date().toISOString() })
-    .then(() => true, () => false);
-  if (!stored) return;
-  // Add this game's points to the couple's running score
-  const { totalScores } = await import("./games/engine");
   const [a, b] = game.players;
   const pts = totalScores(game, [a, b]);
+  const batch = writeBatch(db);
+  // Truth or dare photos stay inside the live game and are never kept; the archived copy says one was deleted
+  batch.set(doc(db, "couples", coupleId, "game_history", id), { ...withoutPhotos(game), archivedAt: new Date().toISOString() });
   if (pts[a] || pts[b]) {
-    await updateDoc(doc(db, "couples", coupleId), {
+    batch.update(doc(db, "couples", coupleId), {
       [`gameScores.${a}`]: increment(pts[a] || 0),
       [`gameScores.${b}`]: increment(pts[b] || 0),
-    }).catch(console.error);
+    });
+  }
+  batch.delete(gameRef(coupleId, gameId));
+  try {
+    await batch.commit();
+  } catch (err) {
+    // Already archived by the partner (history can't be overwritten): just make sure the live game is gone
+    await deleteDoc(gameRef(coupleId, gameId)).catch(() => { throw err; });
   }
 };
 
@@ -722,10 +720,7 @@ export const replayGame = async (coupleId: string, oldId: string, uid: string, p
 };
 
 /** Close a game for both. A finished one is kept in the history first. */
-export const endGame = async (coupleId: string, gameId: string) => {
-  await archiveIfFinished(coupleId, gameId);
-  await deleteDoc(gameRef(coupleId, gameId));
-};
+export const endGame = (coupleId: string, gameId: string) => endGameAtomically(coupleId, gameId);
 
 export const updateUserMood = async (uid: string, mood: string, partnerUid?: string) => {
   const userRef = doc(db, "users", uid);

@@ -140,7 +140,6 @@ export const MailboxProvider: React.FC<{ children: React.ReactNode }> = ({ child
   const [partner, setPartner] = useState<User | null>(null);
   const [rawMessages, setRawMessages] = useState<MailboxMessage[]>([]);
   const [reactions, setReactions] = useState<QuickReact[]>([]);
-  const [checkins, setCheckins] = useState<DailyCheckIn[]>([]);
   const [historyCheckins, setHistoryCheckins] = useState<DailyCheckIn[]>([]);
   const [activeSafeSpace, setActiveSafeSpace] = useState<SafeSpaceSession | null>(null);
   const [games, setGames] = useState<ActiveGame[]>([]);
@@ -156,6 +155,11 @@ export const MailboxProvider: React.FC<{ children: React.ReactNode }> = ({ child
   const [now, setNow] = useState(() => Date.now());
   // Both partners use the couple's shared timezone, so "today" is the same day for both of them
   const todayId = getCheckInDateId(new Date(now), couple?.dayTimezone);
+  // Today's check-ins, taken from the history listener (newest first, at most one per person)
+  const checkins = useMemo(
+    () => historyCheckins.filter(c => c.dateId === todayId).filter((c, i, all) => all.findIndex(o => o.userUid === c.userUid) === i),
+    [historyCheckins, todayId]
+  );
 
   useEffect(() => {
     const interval = setInterval(() => setNow(Date.now()), 60000);
@@ -368,7 +372,6 @@ export const MailboxProvider: React.FC<{ children: React.ReactNode }> = ({ child
   const clearCoupleData = () => {
     setRawMessages([]);
     setReactions([]);
-    setCheckins([]);
     setHistoryCheckins([]);
     setRawEvents([]);
     setActiveSafeSpace(null);
@@ -397,8 +400,7 @@ export const MailboxProvider: React.FC<{ children: React.ReactNode }> = ({ child
         setPartner(null);
         setRawMessages([]);
         setReactions([]);
-        setCheckins([]);
-        setNotifications([]);
+            setNotifications([]);
         setNotifications([]);
         clearCoupleData();
         deletingRef.current = false;
@@ -502,24 +504,12 @@ export const MailboxProvider: React.FC<{ children: React.ReactNode }> = ({ child
       setNotifications(notis);
     });
 
-    // Checkins (Today's according to 6 AM reset)
-    const today = todayId;
     const checkinsRef = collection(db, "couples", user.coupleId, "checkins");
-    const qCheckins = query(checkinsRef, where("dateId", "==", today));
-    const unsubCheckins = onSnapshot(qCheckins, (snap) => {
-      setCheckins(snap.docs.map(d => {
-        const data = d.data();
-        return { 
-          ...data, 
-          id: d.id,
-          createdAt: data.createdAt?.toDate ? data.createdAt.toDate().toISOString() : data.createdAt
-        } as DailyCheckIn;
-      }));
-      setHasLoadedCheckins(true);
-    });
 
     // History (Last 100 docs ≈ 50 days)
     const qHistory = query(checkinsRef, orderBy("dateId", "desc"), limit(100));
+    // Today's check-ins are the newest entries of this same list (it is ordered by day), so one listener serves both
+    // and nothing has to be torn down and re-read when the day rolls over at midnight
     const unsubHistory = onSnapshot(qHistory, (snap) => {
       setHistoryCheckins(snap.docs.map(d => {
         const data = d.data();
@@ -529,6 +519,7 @@ export const MailboxProvider: React.FC<{ children: React.ReactNode }> = ({ child
           createdAt: data.createdAt?.toDate ? data.createdAt.toDate().toISOString() : data.createdAt
         } as DailyCheckIn;
       }));
+      setHasLoadedCheckins(true);
     });
 
     // Active Safe Space Session
@@ -579,14 +570,13 @@ export const MailboxProvider: React.FC<{ children: React.ReactNode }> = ({ child
 
     return () => {
       unsubReactions();
-      unsubCheckins();
       unsubHistory();
       unsubSafeSpace();
       unsubGames();
       unsubEvents();
       unsubNotis();
     };
-  }, [user?.coupleId, user?.uid, todayId]);
+  }, [user?.coupleId, user?.uid]);
 
   // ─── Couple upkeep ────────────────────────────────────────────────────────
   // The first device to notice fixes the couple's shared timezone for check-in days

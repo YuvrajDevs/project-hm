@@ -2,6 +2,7 @@ import { C4_COLS, C4_ROWS, DECK_BY_ID, ROUND_SIZE, XO_CELLS, type DeckId } from 
 import { CONTENT } from "./content.ts";
 import type { CoupleGame } from "@/lib/types";
 import { ABOUT_ROUND } from "./aboutContent.ts";
+import { aboutDone } from "./about.ts";
 
 // Pure game rules: which card is showing, when a card is finished, and who scored.
 
@@ -137,6 +138,41 @@ export const totalScores = (game: CoupleGame, uids: [string, string]) => {
     totals[uids[1]] += pts[uids[1]];
   }
   return totals;
+};
+
+/**
+ * A game counts as finished when the last card is done, for a question deck when both have answered everything,
+ * for Everything About Us when both have picked and guessed everything, and for a board game once anyone has won a round.
+ * Only finished games add to the couple's running score.
+ */
+export const isGameFinished = (game: CoupleGame): boolean => {
+  const mechanic = mechanicOf(game);
+  if (!mechanic) return false;
+  if (mechanic === "xo" || mechanic === "connect4") return Object.values(game.wins ?? {}).some(n => n > 0);
+  if (mechanic === "about") return aboutDone(game);
+  if (mechanic === "open") return game.cards.length > 0 && game.players.every(u => game.cards.every((_, r) => !!game.answers?.[roundKey(r)]?.[u]?.text));
+  return game.cards.length > 0 && game.round >= game.cards.length;
+};
+
+/**
+ * The all-time score shown on the games shelf: what finished games already added to the couple (`gameScores`),
+ * plus finished games that are still open. Ending a game moves its points into `gameScores` and removes it in one
+ * atomic write (see endGame), so the two parts never count the same game twice and the number never jumps back.
+ */
+export const runningScore = (
+  stored: Record<string, number> | undefined,
+  openGames: CoupleGame[],
+  [me, them]: [string, string]
+): [number, number] => {
+  let mine = Math.max(0, stored?.[me] ?? 0);
+  let theirs = Math.max(0, stored?.[them] ?? 0);
+  for (const game of openGames) {
+    if (!isGameFinished(game)) continue;
+    const pts = totalScores(game, [me, them]);
+    mine += pts[me] ?? 0;
+    theirs += pts[them] ?? 0;
+  }
+  return [mine, theirs];
 };
 
 // ─── Question decks: each person works through the cards at their own pace ─
