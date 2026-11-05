@@ -17,6 +17,7 @@ import { Text } from "~/ui/Text";
 import { C, TW, W } from "~/theme/tokens";
 import { usePageColors } from "~/theme/appearance";
 import { pop } from "~/lib/feedback";
+import { AccentWords } from "~/ui/Wordmark";
 
 const PREVIEW = 4;
 const MAX_LENGTH = 140;
@@ -77,7 +78,7 @@ export const PartnerNotes = memo(function PartnerNotes() {
     <View style={styles.section}>
       <View style={styles.header}>
         <View style={styles.flex}>
-          <Text variant="heading" style={styles.h2}>Partner Notes</Text>
+          <Text variant="heading" style={styles.h2}><AccentWords text="Partner Notes" /></Text>
           <Text variant="eyebrow" numberOfLines={1}>{`Things to remember about ${name}`}</Text>
         </View>
         <Press onPress={() => setOpen("new")} style={[styles.addBtn, { borderColor: page.hairline, backgroundColor: page.fill }]} accessibilityRole="button" accessibilityLabel="Add note">

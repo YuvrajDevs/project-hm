@@ -53,4 +53,14 @@ config.resolver.resolveRequest = (context, moduleName, platform) => {
   return result;
 };
 
+// Shared code loads some modules on demand (`await import("./games/engine")` in lib/firestore-helpers.ts keeps them
+// out of the website's first page). In development Metro serves each of those as a separate bundle, requested by a
+// path relative to this folder, which can't reach ../lib: every game start, move and end failed with "Unable to
+// resolve module ./lib/games/engine". Turning off lazy bundling inlines them, as release builds already do.
+const rewriteRequestUrl = config.server.rewriteRequestUrl;
+config.server.rewriteRequestUrl = (url) => {
+  const next = rewriteRequestUrl ? rewriteRequestUrl(url) : url;
+  return next.replace(/([?&])lazy=true\b/, "$1lazy=false");
+};
+
 module.exports = config;

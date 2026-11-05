@@ -14,6 +14,7 @@ import { Press } from "~/ui/Pressable";
 import { Text } from "~/ui/Text";
 import { C, W } from "~/theme/tokens";
 import { thump, warn } from "~/lib/feedback";
+import { AccentWords } from "~/ui/Wordmark";
 
 export const WhiteFlagCard = memo(function WhiteFlagCard() {
   const uid = useSession((s) => s.authUser?.uid);
@@ -47,7 +48,7 @@ export const WhiteFlagCard = memo(function WhiteFlagCard() {
 
   return (
     <Card tone="slate" style={styles.card}>
-      <Text variant="heading" onCard>White Flag</Text>
+      <Text variant="heading" onCard><AccentWords text="White Flag" /></Text>
       <Text variant="small" color={C.neutral500}>Mid-argument and want to stop fighting? Raise it. It isn&apos;t an apology, just a signal that you two matter more than winning.</Text>
       <Animated.View style={pulse}>
         <Press

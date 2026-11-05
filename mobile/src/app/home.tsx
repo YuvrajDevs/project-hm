@@ -32,6 +32,7 @@ import { PartnerNotes } from "~/features/notes/PartnerNotes";
 import { CheckInSheet } from "~/features/checkin/CheckInSheet";
 import { SignalSheet, SignalSplash } from "~/features/reactions/Signals";
 import { Archive } from "~/features/archive/Archive";
+import { AccentWords } from "~/ui/Wordmark";
 
 export default function Home() {
   const allowed = useGuard(["/home"]);
@@ -88,7 +89,7 @@ function MailboxView() {
     >
       <Header />
       <View style={styles.titleBlock}>
-        <Text variant="title" style={styles.title}>The Mailbox</Text>
+        <Text variant="title" style={styles.title}><AccentWords text="The Mailbox" /></Text>
         <Text variant="eyebrow" color={page.inkMuted}>Honest thoughts, safely landed.</Text>
       </View>
       <TodayRow />

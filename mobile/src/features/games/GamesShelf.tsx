@@ -20,6 +20,7 @@ import { Button } from "~/ui/Button";
 import { C, gradientOf, W } from "~/theme/tokens";
 import { pop, warn } from "~/lib/feedback";
 import { DeckIcon } from "./deckIcons";
+import { AccentWords } from "~/ui/Wordmark";
 
 const SIDE = 24;
 
@@ -98,7 +99,7 @@ const DeckSection = memo(function DeckSection({ title, subtitle, decks, active, 
     <View style={styles.section}>
       <View style={styles.sectionHead}>
         <View style={styles.flex}>
-          <Text variant="heading" style={styles.h2}>{title}</Text>
+          <Text variant="heading" style={styles.h2}><AccentWords text={title} /></Text>
           <Text variant="eyebrow">{subtitle}</Text>
         </View>
         {showScore && <ScoreTally />}

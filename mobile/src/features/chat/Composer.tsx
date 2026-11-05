@@ -31,7 +31,8 @@ const VOICE: RecordingOptions = {
 const replyWord = (r: ChatReply) => (r.kind === "text" ? r.text || "Message" : r.kind === "image" ? "Photo" : r.kind === "video" ? "Video" : r.kind === "voice" ? "Voice note" : "Sticker");
 
 export const Composer = memo(function Composer({ onText, onSticker, onMedia, onVoice, onError, preparing, reply, replyName, onCancelReply }: {
-  onText: (text: string, once: boolean) => void;
+  /** Resolves false when the message didn't send */
+  onText: (text: string, once: boolean) => Promise<boolean>;
   onSticker: (id: string) => void;
   onMedia: (once: boolean) => void;
   onVoice: (clip: VoiceClip, once: boolean) => void;
@@ -96,7 +97,8 @@ export const Composer = memo(function Composer({ onText, onSticker, onMedia, onV
     const t = text.trim();
     if (!t) return;
     setText("");
-    onText(t, once);
+    // A failed send gives the words back, unless something new has been typed since
+    onText(t, once).then((sent) => { if (!sent) setText((now) => now || t); });
   };
 
   if (recording) {

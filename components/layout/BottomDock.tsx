@@ -2,7 +2,7 @@
 
 import React from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { BarChart3, MessageCircle, User } from "lucide-react";
+import { BarChart3, Home, MessageCircle, User } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { cn } from "@/lib/utils";
 import { useSensoryFeedback } from "@/hooks/useSensoryFeedback";
@@ -49,7 +49,22 @@ export const BottomDock: React.FC<BottomDockProps> = ({
             transition={{ type: "spring", damping: 20, stiffness: 100 }}
             className="pointer-events-auto relative flex items-center gap-1 p-2 bg-[#0e0e0e] border border-[#232323] rounded-[1.5rem] shadow-[0_20px_50px_rgba(0,0,0,0.5)]"
           >
-        {/* Far Left: Chat */}
+        {/* Far Left: Home */}
+        <button
+          aria-label="Home"
+          onClick={() => handleNav("mailbox")}
+          className={cn(
+            "relative w-14 h-14 rounded-full flex items-center justify-center transition-all group active:scale-90",
+            activeView === "mailbox" ? "text-white bg-white/10" : "text-neutral-400 hover:text-white hover:bg-white/5"
+          )}
+        >
+          <Home className="w-6 h-6 group-hover:scale-110 transition-transform" />
+          <span className="absolute -top-12 left-1/2 -translate-x-1/2 px-3 py-1 bg-white text-black text-[10px] font-bebas tracking-widest uppercase rounded-lg opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none">
+            Home
+          </span>
+        </button>
+
+        {/* Chat */}
         <button
           aria-label="Chat"
           onClick={() => { playTick(); vibrateTick(); onChatClick(); }}
@@ -64,24 +79,7 @@ export const BottomDock: React.FC<BottomDockProps> = ({
           </span>
         </button>
 
-        {/* Center: Home Button (Logo) */}
-        <div className="relative mx-1">
-            <button
-                aria-label="Home"
-                onClick={() => handleNav("mailbox")}
-                className={cn(
-                    "w-16 h-16 rounded-full overflow-hidden transition-all group",
-                    activeView === "mailbox" ? "ring-2 ring-pink-400 shadow-[0_0_30px_rgba(236,72,153,0.45)]" : "ring-1 ring-white/10 opacity-80 hover:opacity-100"
-                )}
-            >
-                <img src="/home-icon.png" alt="HM Logo" width={64} height={64} className="w-full h-full object-cover group-hover:scale-110 transition-transform" />
-            </button>
-            <span className="absolute -top-14 left-1/2 -translate-x-1/2 px-4 py-1.5 bg-white text-black text-[10px] font-bebas tracking-widest uppercase rounded-lg opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none whitespace-nowrap">
-                Home
-            </span>
-        </div>
-
-        {/* Right: Dashboard Button */}
+        {/* Archive */}
         <button
           aria-label="Archive"
           onClick={() => handleNav("archive")}

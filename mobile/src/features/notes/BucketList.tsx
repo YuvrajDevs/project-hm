@@ -16,6 +16,7 @@ import { Text } from "~/ui/Text";
 import { C, TONES, W } from "~/theme/tokens";
 import { usePageColors } from "~/theme/appearance";
 import { pop, success, warn } from "~/lib/feedback";
+import { AccentWords } from "~/ui/Wordmark";
 
 const PREVIEW = 5;
 
@@ -39,7 +40,7 @@ export const BucketList = memo(function BucketList() {
     <View style={styles.section}>
       <View style={styles.header}>
         <View style={styles.flex}>
-          <Text variant="heading" style={styles.h2}>Bucket List</Text>
+          <Text variant="heading" style={styles.h2}><AccentWords text="Bucket List" /></Text>
           <Text variant="eyebrow">Things to do together</Text>
         </View>
         {items.length > 0 && <Text variant="label" color={page.inkMuted} tabular>{`${doneCount} of ${items.length} done`}</Text>}

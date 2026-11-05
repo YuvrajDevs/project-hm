@@ -8,6 +8,8 @@ export const FONT = {
   bodyMedium: "Outfit_500Medium",
   bodySemi: "Outfit_600SemiBold",
   bodyBold: "Outfit_700Bold",
+  // The wordmark's "Honest" (components/ui/Wordmark.tsx on the web)
+  serifItalic: "PlayfairDisplay_600SemiBold_Italic",
 } as const;
 
 export const PAGE = { dark: "#0e0e0e", light: "#f4efe6" } as const;

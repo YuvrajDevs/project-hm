@@ -65,18 +65,18 @@ const MyMood = memo(function MyMood() {
   const mood = useSession((s) => s.user?.currentMood);
   const updatedAt = useSession((s) => s.user?.moodUpdatedAt);
   const tz = useSession((s) => s.couple?.dayTimezone);
-  useLive((s) => s.now); // the "x minutes ago" line stays fresh with the minute clock
+  const now = useLive((s) => s.now); // the "x minutes ago" line stays fresh with the minute clock
   const today = useTodayId();
   const needsUpdate = !updatedAt || getCheckInDateId(new Date(updatedAt), tz) !== today;
   return (
-    <Press onPress={() => ui.set({ signals: true })} style={styles.flex} accessibilityRole="button" accessibilityLabel={`You are feeling ${mood || "not set"}. Change`}>
-      <Card tone="red" padding={14} style={[styles.mood, needsUpdate && styles.ring]}>
+    <Press onPress={() => ui.set({ signals: true })} style={styles.flex} accessibilityRole="button" accessibilityLabel={`You are feeling ${mood || "not set"}.${needsUpdate ? " Update it for today." : ""} Change`}>
+      <Card tone="red" padding={14} style={styles.mood}>
+        {/* Not updated today: just a small dot in the corner */}
+        {needsUpdate && <View style={styles.cornerDot}><PulseDot /></View>}
         <Text variant="eyebrow" onCard style={styles.eyebrow} numberOfLines={1}>You are feeling</Text>
         <View style={styles.between}>
           <Image source={moodIcon(mood) ?? moodIcon("Appreciative")} style={[styles.icon, !mood && styles.unset]} contentFit="contain" />
-          {needsUpdate ? (
-            <View style={styles.update}><PulseDot /><Text variant="small" onCard style={styles.since}>Update today</Text></View>
-          ) : updatedAt ? <Text variant="small" onCard style={styles.since}>{formatRelativeTime(updatedAt)}</Text> : null}
+          {!needsUpdate && updatedAt ? <Text variant="small" onCard numberOfLines={1} style={styles.since}>{formatRelativeTime(updatedAt, now)}</Text> : null}
         </View>
         <Text variant="heading" onCard numberOfLines={1} adjustsFontSizeToFit>{mood || "Set mood"}</Text>
       </Card>
@@ -89,7 +89,7 @@ const PartnerMood = memo(function PartnerMood() {
   const updatedAt = useSession((s) => s.partner?.moodUpdatedAt);
   const partnerUid = useSession((s) => s.partner?.uid);
   const name = usePartnerName("Partner");
-  useLive((s) => s.now);
+  const now = useLive((s) => s.now);
   const replay = () => {
     const latest = useLive.getState().reactions.find((r) => r.senderUid === partnerUid);
     if (latest) ui.set({ splash: { react: latest, manual: true } });
@@ -102,7 +102,7 @@ const PartnerMood = memo(function PartnerMood() {
           {mood ? <Image source={moodIcon(mood)} style={styles.icon} contentFit="contain" /> : (
             <View style={styles.unknown}><Text variant="heading" onCard>?</Text></View>
           )}
-          {mood && updatedAt ? <Text variant="small" onCard style={styles.since}>{formatRelativeTime(updatedAt)}</Text> : null}
+          {mood && updatedAt ? <Text variant="small" onCard numberOfLines={1} style={styles.since}>{formatRelativeTime(updatedAt, now)}</Text> : null}
         </View>
         <Text variant="heading" onCard numberOfLines={1} adjustsFontSizeToFit>{mood || "Not shared yet"}</Text>
       </Card>
@@ -122,11 +122,11 @@ const styles = StyleSheet.create({
   number: { flexDirection: "row", alignItems: "baseline", gap: 6 },
   big: { fontSize: 120, lineHeight: 112, letterSpacing: 0 },
   mood: { flex: 1, justifyContent: "space-between", gap: 6 },
-  ring: { borderWidth: 2, borderColor: "#fde047" },
   icon: { width: 48, height: 48 },
   unset: { opacity: 0.25 },
   unknown: { width: 48, height: 48, borderRadius: 24, backgroundColor: "rgba(0,0,0,0.2)", alignItems: "center", justifyContent: "center" },
-  update: { flexDirection: "row", alignItems: "center", gap: 6 },
-  pulse: { width: 6, height: 6, borderRadius: 3, backgroundColor: "#fde047" },
-  since: { fontSize: 11, opacity: 0.85, textAlign: "right" },
+  cornerDot: { position: "absolute", top: 14, right: 16, zIndex: 1 },
+  pulse: { width: 8, height: 8, borderRadius: 4, backgroundColor: "#fde047" },
+  // One line, never squeezed by the icon: "just now" used to wrap and lose its second word
+  since: { fontSize: 11, opacity: 0.85, textAlign: "right", flexShrink: 0, minWidth: 56 },
 });

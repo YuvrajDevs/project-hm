@@ -7,9 +7,13 @@ export function cn(...inputs: ClassValue[]) {
 
 export { formatDateId, getCheckInDateId, addDays, eventFallsOn, countStreak } from "./dates";
 
-export function formatRelativeTime(date: string | Date | number): string {
+/**
+ * "just now", "5m ago"... Pass `nowMs` from a ticking clock where the result is memoised (the app's React Compiler
+ * caches anything whose inputs don't change, so a label that reads the time on its own would freeze).
+ */
+export function formatRelativeTime(date: string | Date | number, nowMs: number = Date.now()): string {
     const d = new Date(date);
-    const now = new Date();
+    const now = new Date(nowMs);
     const diffInSeconds = Math.floor((now.getTime() - d.getTime()) / 1000);
     
     if (diffInSeconds < 60) return "just now";

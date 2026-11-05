@@ -7,6 +7,7 @@ import { C } from "~/theme/tokens";
 import { MASCOT } from "./assets";
 import { Press } from "./Pressable";
 import { Text } from "./Text";
+import { Wordmark } from "./Wordmark";
 
 /** A full screen on the page colour, padded for the status bar and the gesture bar (edge-to-edge). */
 export function Screen({ children, style, padTop = true, padBottom = true }: { children: React.ReactNode; style?: StyleProp<ViewStyle>; padTop?: boolean; padBottom?: boolean }) {
@@ -23,9 +24,9 @@ export function Screen({ children, style, padTop = true, padBottom = true }: { c
 export function Brand({ small }: { small?: boolean }) {
   const page = usePageColors();
   return (
-    <View style={styles.brand} accessible accessibilityLabel="Honest Mailbox">
+    <View style={styles.brand} accessible accessibilityLabel="The Honest Mailbox">
       <Image source={MASCOT} style={{ width: small ? 28 : 36, height: small ? 28 : 36 }} contentFit="contain" />
-      <Text variant="heading" color={small ? page.inkMuted : page.ink} style={{ fontSize: small ? 20 : 24 }}>Honest Mailbox</Text>
+      <Wordmark size={small ? 20 : 24} color={small ? page.inkMuted : page.ink} />
     </View>
   );
 }

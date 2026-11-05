@@ -17,6 +17,7 @@ import { C } from "~/theme/tokens";
 import { usePageColors } from "~/theme/appearance";
 import { MessageCard } from "./MessageCard";
 import { LockedCapsule } from "./LockedCapsule";
+import { AccentWords } from "~/ui/Wordmark";
 
 type Filter = "week" | "saved";
 const MAX_CARDS = 4;
@@ -48,7 +49,7 @@ export const OurThoughts = memo(function OurThoughts({ active }: { active: boole
     <View style={styles.section}>
       <View style={styles.header}>
         <View style={styles.flex}>
-          <Text variant="heading" style={styles.h2}>Our Thoughts</Text>
+          <Text variant="heading" style={styles.h2}><AccentWords text="Our Thoughts" /></Text>
           <Text variant="eyebrow">{filter === "week" ? `Kept for ${THOUGHT_DAYS} days` : "Only you can see these"}</Text>
         </View>
         <Press onPress={() => ui.set({ compose: true })} style={styles.newBtn} accessibilityRole="button" accessibilityLabel="New thought">

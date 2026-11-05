@@ -11,6 +11,7 @@ import { Press } from "~/ui/Pressable";
 import { ActionSheet } from "~/ui/ActionSheet";
 import { C, FONT, W } from "~/theme/tokens";
 import { EditSheet } from "./EditSheet";
+import { AccentWords } from "~/ui/Wordmark";
 
 const formatLeft = (unlockAt: string) => {
   const diff = new Date(unlockAt).getTime() - Date.now();
@@ -49,7 +50,7 @@ export const LockedCapsule = memo(function LockedCapsule({ message }: { message:
         <MoreVertical size={16} color={C.neutral400} />
       </Press>
       <View style={styles.lock}><Lock size={24} color="rgba(236,72,153,0.85)" /></View>
-      <Text variant="label" onCard center style={styles.title}>Time Capsule</Text>
+      <Text variant="label" onCard center style={styles.title}><AccentWords text="Time Capsule" /></Text>
       <Text variant="body" color={C.neutral400} center style={styles.body}>
         {isSender ? "Your words are sealed. No one can read them until the timer runs out." : "A note is waiting for you. It opens by itself when the timer runs out."}
       </Text>

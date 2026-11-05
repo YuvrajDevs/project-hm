@@ -23,7 +23,8 @@ const replyPreview = (reply: ChatReply) =>
 // In the field: write; the mic, photo/video and sticker buttons sit on the right until you start typing,
 // then they give way to Send. Enter starts a new line; sending is the button.
 export const Composer = ({ onText, onSticker, onMedia, onVoice, onError, preparing, reply, replyName, onCancelReply }: {
-  onText: (text: string, once: boolean) => void;
+  /** Resolves false when the message didn't send */
+  onText: (text: string, once: boolean) => Promise<boolean>;
   onSticker: (id: string) => void;
   onMedia: (file: File, once: boolean) => void;
   onVoice: (clip: VoiceClip, once: boolean) => void;
@@ -57,7 +58,8 @@ export const Composer = ({ onText, onSticker, onMedia, onVoice, onError, prepari
     const t = text.trim();
     if (!t) return;
     setText("");
-    onText(t, once);
+    // A failed send gives the words back, unless something new has been typed since
+    onText(t, once).then((sent) => { if (!sent) setText((now) => now || t); });
   };
 
   const ghost = "bg-[#1c1c1c] border border-[#2a2a2a] text-neutral-300 hover:text-white hover:bg-[#242424]";

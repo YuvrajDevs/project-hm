@@ -59,7 +59,8 @@ export function KeyGate({ uid, coupleId, keyStatus, onDone }: { uid: string; cou
 
   if (keyStatus === "needs-setup") {
     return (
-      <KeyboardAwareScrollView style={styles.cover} contentContainerStyle={styles.body} keyboardShouldPersistTaps="handled" bottomOffset={24}>
+      <View style={styles.cover}>
+      <KeyboardAwareScrollView style={styles.fill} contentContainerStyle={styles.body} keyboardShouldPersistTaps="handled" bottomOffset={24}>
         <View style={styles.icon}><Lock size={24} color={C.neutral300} /></View>
         <Text variant="heading" onCard center>Secure this chat</Text>
         <Text variant="body" color={C.neutral500} center>Chat is end-to-end encrypted. Set a passphrase to back up your key, so you can read your messages on another device later. We never store the passphrase itself.</Text>
@@ -70,11 +71,13 @@ export function KeyGate({ uid, coupleId, keyStatus, onDone }: { uid: string; cou
         <Button label={busy ? "Securing..." : "Continue"} onPress={setup} disabled={!passphrase || !confirm} busy={busy} onCard />
         {message ? <Text variant="body" color="#fb7185" center accessibilityLiveRegion="assertive">{message}</Text> : null}
       </KeyboardAwareScrollView>
+      </View>
     );
   }
 
   return (
-    <ScrollView style={styles.cover} contentContainerStyle={styles.body} keyboardShouldPersistTaps="handled">
+    <View style={styles.cover}>
+    <ScrollView style={styles.fill} contentContainerStyle={styles.body} keyboardShouldPersistTaps="handled">
       <View style={styles.icon}><Lock size={24} color={C.neutral300} /></View>
       <Text variant="heading" onCard center>Unlock chat on this device</Text>
       <Text variant="body" color={C.neutral500} center>
@@ -108,11 +111,14 @@ export function KeyGate({ uid, coupleId, keyStatus, onDone }: { uid: string; cou
         </>
       )}
     </ScrollView>
+    </View>
   );
 }
 
 const styles = StyleSheet.create({
-  cover: { ...StyleSheet.absoluteFill, zIndex: 30, backgroundColor: PAGE.dark },
+  // A plain view takes the full-screen layer; scroll views don't reliably honour absolute positioning
+  cover: { position: "absolute", top: 0, left: 0, right: 0, bottom: 0, zIndex: 30, elevation: 30, backgroundColor: PAGE.dark },
+  fill: { flex: 1 },
   body: { flexGrow: 1, justifyContent: "center", gap: 14, padding: 28, maxWidth: 420, alignSelf: "center", width: "100%" },
   icon: { alignSelf: "center", padding: 16, borderRadius: 16, backgroundColor: C.card },
   link: { alignSelf: "center", padding: 8 },

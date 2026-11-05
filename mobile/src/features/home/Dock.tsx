@@ -1,14 +1,12 @@
-// The floating dock (components/layout/BottomDock.tsx): chat, home, archive, profile.
+// The floating dock (components/layout/BottomDock.tsx): home, chat, archive, profile.
 import { memo } from "react";
 import { StyleSheet, View } from "react-native";
 import { router } from "expo-router";
-import { Image } from "expo-image";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
-import { BarChart3, MessageCircle, User } from "lucide-react-native";
+import { BarChart3, Home, MessageCircle, User } from "lucide-react-native";
 import { useUnreadChat } from "~/store/derived";
 import { ui, useUI } from "~/store/ui";
 import { openChat } from "~/lib/nav";
-import { HOME_ICON } from "~/ui/assets";
 import { Press } from "~/ui/Pressable";
 import { C, PAGE, W } from "~/theme/tokens";
 
@@ -21,12 +19,12 @@ export const Dock = memo(function Dock() {
   return (
     <View style={[styles.wrap, { bottom: Math.max(insets.bottom, 12) + 8 }]} pointerEvents="box-none">
       <View style={styles.dock} accessibilityRole="tablist">
+        <Press onPress={() => ui.set({ view: "mailbox" })} style={[styles.btn, view === "mailbox" && styles.btnOn]} accessibilityRole="tab" accessibilityState={{ selected: view === "mailbox" }} accessibilityLabel="Home" scaleTo={0.9}>
+          <Home size={24} color={view === "mailbox" ? C.white : C.neutral400} />
+        </Press>
         <Press onPress={openChat} style={styles.btn} accessibilityRole="button" accessibilityLabel={unread ? "Chat, new messages" : "Chat"} scaleTo={0.9}>
           <MessageCircle size={24} color={C.neutral400} />
           {unread && <View style={styles.dot} />}
-        </Press>
-        <Press onPress={() => ui.set({ view: "mailbox" })} style={[styles.home, view === "mailbox" ? styles.homeOn : styles.homeOff]} accessibilityRole="tab" accessibilityState={{ selected: view === "mailbox" }} accessibilityLabel="Home" scaleTo={0.92}>
-          <Image source={HOME_ICON} style={styles.homeImg} contentFit="cover" />
         </Press>
         <Press onPress={() => ui.set({ view: "archive" })} style={[styles.btn, view === "archive" && styles.btnOn]} accessibilityRole="tab" accessibilityState={{ selected: view === "archive" }} accessibilityLabel="Archive" scaleTo={0.9}>
           <BarChart3 size={24} color={view === "archive" ? C.white : C.neutral400} />
@@ -48,8 +46,4 @@ const styles = StyleSheet.create({
   btn: { width: 56, height: 56, borderRadius: 28, alignItems: "center", justifyContent: "center" },
   btnOn: { backgroundColor: W(0.1) },
   dot: { position: "absolute", top: 14, right: 14, width: 10, height: 10, borderRadius: 5, backgroundColor: C.pink, borderWidth: 2, borderColor: PAGE.dark },
-  home: { width: 64, height: 64, borderRadius: 32, overflow: "hidden", marginHorizontal: 4 },
-  homeOn: { borderWidth: 2, borderColor: C.pink400 },
-  homeOff: { borderWidth: 1, borderColor: W(0.1), opacity: 0.85 },
-  homeImg: { width: "100%", height: "100%" },
 });

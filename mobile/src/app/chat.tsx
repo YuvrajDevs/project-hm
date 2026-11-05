@@ -165,7 +165,8 @@ export default function Chat() {
   const nameOf = useCallback((u: string) => (u === uid ? "You" : partnerName), [uid, partnerName]);
 
   const fail = useCallback((what: string) => (err: unknown) => {
-    console.error(err);
+    // An expected refusal (partner not set up, file too big) is shown to the user; only surprises are logged
+    if (!(err instanceof ChatMediaError)) console.error(err);
     warn();
     setError(err instanceof ChatMediaError ? err.message : `That ${what} didn't send. Check your connection and try again.`);
   }, []);
@@ -177,7 +178,8 @@ export default function Chat() {
     await sendChatMessage(coupleId, uid, partnerUid, { ...draft, reply });
   }, [coupleId, uid, partnerUid, replyTo]);
 
-  const sendText = useCallback((text: string, once: boolean) => { send({ kind: "text", text, once }).catch(fail("message")); }, [send, fail]);
+  // Resolves false when it didn't send, so the composer can put the words back
+  const sendText = useCallback((text: string, once: boolean) => send({ kind: "text", text, once }).then(() => true, (err) => { fail("message")(err); return false; }), [send, fail]);
   const sendSticker = useCallback((id: string) => { send({ kind: "sticker", sticker: id }).catch(fail("sticker")); }, [send, fail]);
   const sendVoice = useCallback((clip: VoiceClip, once: boolean) => { send({ kind: "voice", mime: clip.mime, data: clip.data, dur: clip.dur, once }).catch(fail("voice note")); }, [send, fail]);
 

@@ -250,11 +250,13 @@ export const ChatScreen = ({ onClose }: { onClose: () => void }) => {
   };
 
   const fail = (what: string) => (err: unknown) => {
-    console.error(err);
+    // An expected refusal (partner not set up, file too big) is shown to the user; only surprises are logged
+    if (!(err instanceof ChatMediaError)) console.error(err);
     setError(err instanceof ChatMediaError ? err.message : `That ${what} didn't send. Check your connection and try again.`);
   };
 
-  const sendText = (text: string, once: boolean) => { send({ kind: "text", text, once }).catch(fail("message")); };
+  // Resolves false when it didn't send, so the composer can put the words back
+  const sendText = (text: string, once: boolean) => send({ kind: "text", text, once }).then(() => true, (err) => { fail("message")(err); return false; });
 
   const sendMedia = async (file: File, once: boolean) => {
     setPreparing(true);

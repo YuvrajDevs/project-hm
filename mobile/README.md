@@ -76,6 +76,10 @@ npm run test:rules      # from the repo root: Firestore security rules on the em
 Against the emulators: `EXPO_PUBLIC_USE_EMULATORS=1 npx expo start` (the Android emulator reaches the host at
 `10.0.2.2`).
 
+To test the app against the website (one partner on each), both must use the same emulator project. The app always
+uses `honest-mailbox` (from `google-services.json`), so start the website with
+`NEXT_PUBLIC_EMULATOR_PROJECT_ID=honest-mailbox npm run dev:emulators`.
+
 ## Not in this version
 
 - Push notifications (FCM). Toasts appear while the app is open, and the widget refreshes when the app syncs.

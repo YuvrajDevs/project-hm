@@ -23,6 +23,7 @@ import { C, TONES, W, type Tone } from "~/theme/tokens";
 import { usePageColors } from "~/theme/appearance";
 import { DOCK_HEIGHT } from "../home/Dock";
 import { warn } from "~/lib/feedback";
+import { AccentWords } from "~/ui/Wordmark";
 
 const STATE_HELP: Record<string, string> = {
   "In Conflict": "One of you signalled conflict today",
@@ -40,7 +41,7 @@ export function Archive() {
   return (
     <ScrollView contentContainerStyle={[styles.content, { paddingBottom: DOCK_HEIGHT + insets.bottom + 48 }]} showsVerticalScrollIndicator={false}>
       <View style={styles.titleBlock}>
-        <Text variant="title" style={styles.title}>The Archive</Text>
+        <Text variant="title" style={styles.title}><AccentWords text="The Archive" /></Text>
         <Text variant="eyebrow" color={page.inkMuted}>How the two of you are doing</Text>
       </View>
       <Glance />
@@ -54,7 +55,7 @@ const Glance = memo(function Glance() {
   const uid = useSession((s) => s.authUser?.uid);
   const name = usePartnerName("your partner");
   const todays = useTodaysCheckins();
-  useLive((s) => s.now);
+  const now = useLive((s) => s.now);
   if (!metrics) return null;
   const mine = todays.find((c) => c.userUid === uid);
   const theirs = todays.find((c) => c.userUid !== uid);
@@ -67,7 +68,7 @@ const Glance = memo(function Glance() {
       sub: !mine ? "You haven't checked in today" : !theirs ? `Only you so far. Waiting on ${name}` : metrics.connectionAvgToday >= 7 ? "Feeling close" : metrics.connectionAvgToday >= 4 ? "Somewhere in between" : "A gentle day might help" },
     { id: "pulse", tone: "pink", icon: <Mail size={16} color={C.white} />, label: "Waiting on you", value: `${metrics.unreadCount}`, unit: metrics.unreadCount === 1 ? "note" : "notes",
       sub: metrics.unreadCount > 0 ? `From ${name}` : "All caught up" },
-    { id: "activity", tone: "blue", icon: <Activity size={16} color={C.white} />, label: "Last activity", value: a ? formatRelativeTime(a.time) : "—", unit: "",
+    { id: "activity", tone: "blue", icon: <Activity size={16} color={C.white} />, label: "Last activity", value: a ? formatRelativeTime(a.time, now) : "—", unit: "",
       sub: a ? `${a.initiator === "you" ? "You" : name} ${a.type === "message" ? "sent a note" : "sent a signal"}` : "Send the first note" },
     { id: "touch", tone: "violet", icon: <Zap size={16} color={C.white} />, label: "Signals this week", value: `${metrics.reactsCount}`, unit: "", sub: metrics.reactsCount > 0 ? "Between you two" : "Send one in a tap" },
     { id: "state", tone: metrics.state === "In Conflict" ? "red" : "emerald", icon: <Wind size={16} color={C.white} />, label: "Right now", value: metrics.state, unit: "", sub: STATE_HELP[metrics.state] || "From today's signals" },

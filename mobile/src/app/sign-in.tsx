@@ -16,6 +16,7 @@ import { Screen } from "~/ui/Screen";
 import { Text } from "~/ui/Text";
 import { Button } from "~/ui/Button";
 import { MASCOT } from "~/ui/assets";
+import { Wordmark } from "~/ui/Wordmark";
 import { C } from "~/theme/tokens";
 import { usePageColors } from "~/theme/appearance";
 import { warn } from "~/lib/feedback";
@@ -63,7 +64,7 @@ export default function SignIn() {
           <Image source={MASCOT} style={styles.mascot} contentFit="contain" accessibilityLabel="Honest Mailbox mascot" />
         </Animated.View>
         <Animated.View entering={FadeInDown.delay(120).duration(450)} style={styles.copy}>
-          <Text variant="title" center>Honest{"\n"}Mailbox</Text>
+          <Wordmark size={40} />
           <Text variant="body" color={page.inkMuted} center style={styles.lead}>
             Games, daily check-ins and a safe space to talk things through, built for the two of you.
           </Text>

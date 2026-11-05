@@ -20,6 +20,7 @@ export default function Notifications() {
   const insets = useSafeAreaInsets();
   const { list, unread } = useBell();
   const games = useLive((s) => s.games);
+  const now = useLive((s) => s.now); // keeps the "x minutes ago" labels ticking
   const close = () => (router.canGoBack() ? router.back() : router.replace("/home"));
 
   const open = (n: AppNotification) => {
@@ -64,7 +65,7 @@ export default function Notifications() {
                 <View style={styles.flex}>
                   <View style={styles.between}>
                     <Text variant="label" color={n.read ? C.neutral500 : C.white} numberOfLines={1} style={styles.flex}>{n.title}</Text>
-                    <Text variant="small" color={C.neutral600} style={styles.when}>{formatRelativeTime(n.createdAt)}</Text>
+                    <Text variant="small" color={C.neutral600} style={styles.when} numberOfLines={1}>{formatRelativeTime(n.createdAt, now)}</Text>
                   </View>
                   <Text variant="small" color={n.read ? C.neutral600 : C.neutral400} numberOfLines={2}>{n.body}</Text>
                   {game && <Text variant="eyebrow" color={C.pink300} style={styles.cta}>{slotFor(game.deck) === "questions" ? "Answer now" : "Join now"}</Text>}

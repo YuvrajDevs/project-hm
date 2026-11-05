@@ -38,6 +38,7 @@ export default function SafeSpace() {
   const partnerUid = useSession((s) => s.partner?.uid ?? "");
   const partnerName = usePartnerName("your partner");
   const session = useLive((s) => s.activeSafeSpace);
+  const now = useLive((s) => s.now); // keeps the "x minutes ago" labels ticking
   const sessionId = session?.id;
 
   const [messages, setMessages] = useState<SafeSpaceMessage[]>([]);
@@ -167,7 +168,7 @@ export default function SafeSpace() {
           <Text variant="label" onCard center>Safe Space</Text>
           <View style={styles.presence}>
             {partnerPresent && <View style={styles.presentDot} />}
-            <Text variant="eyebrow" color={partnerPresent ? "#a5b4fc" : C.neutral500} numberOfLines={1}>{partnerPresent ? `${partnerName} is in the room` : "Open until one of you closes it"}</Text>
+            <Text variant="eyebrow" color={partnerPresent ? "#a5b4fc" : C.neutral500} numberOfLines={1} adjustsFontSizeToFit minimumFontScale={0.75}>{partnerPresent ? `${partnerName} is in the room` : "Open until one of you closes it"}</Text>
           </View>
         </View>
         <Press onPress={() => setShowClosure(true)} style={[styles.headerBtn, styles.closeBtn]} accessibilityRole="button" accessibilityLabel="Close the safe space for both">
@@ -175,19 +176,21 @@ export default function SafeSpace() {
         </Press>
       </View>
 
+      {/* The empty state sits outside the inverted list (as in the chat): inside it, its orientation depends on the
+          React Native version, and on this one it came out upside down */}
+      {reversed.length === 0 ? (
+        <View style={styles.empty}>
+          <Clock size={44} color={C.neutral600} />
+          <Text variant="label" color={C.neutral600}>Nothing here yet</Text>
+          <Text variant="small" color={C.neutral600} center>Take your time. No one can interrupt you here, and nothing is lost when you leave.</Text>
+        </View>
+      ) : (
       <FlatList
         data={reversed}
         inverted
         keyExtractor={(m) => m.id}
         contentContainerStyle={styles.list}
         keyboardShouldPersistTaps="handled"
-        ListEmptyComponent={
-          <View style={styles.empty}>
-            <Clock size={44} color={C.neutral600} />
-            <Text variant="label" color={C.neutral600}>Nothing here yet</Text>
-            <Text variant="small" color={C.neutral600} center>Take your time. No one can interrupt you here, and nothing is lost when you leave.</Text>
-          </View>
-        }
         renderItem={({ item, index }) => {
           const mine = item.senderUid === uid;
           const isLast = index === 0;
@@ -195,7 +198,7 @@ export default function SafeSpace() {
             <Animated.View entering={FadeInUp.duration(250)} style={[styles.msg, mine ? styles.mine : styles.theirs]}>
               <View style={[styles.msgMeta, mine && styles.metaRight]}>
                 <Text variant="eyebrow" color={C.neutral500}>{mine ? "You" : partnerName}</Text>
-                <Text variant="small" color={C.neutral600} style={styles.time}>{formatRelativeTime(item.createdAt)}</Text>
+                <Text variant="small" color={C.neutral600} style={styles.time} numberOfLines={1}>{formatRelativeTime(item.createdAt, now)}</Text>
               </View>
               <Text style={[styles.msgText, mine && styles.textRight]} selectable>{item.text}</Text>
               {mine && isLast && partnerSawLast && (
@@ -207,6 +210,7 @@ export default function SafeSpace() {
           );
         }}
       />
+      )}
 
       <View style={[styles.composer, { paddingBottom: insets.bottom + 12 }]}>
         <Text variant="small" color={C.neutral400} center>{status}</Text>
@@ -274,13 +278,13 @@ const styles = StyleSheet.create({
   presence: { flexDirection: "row", alignItems: "center", gap: 6 },
   presentDot: { width: 6, height: 6, borderRadius: 3, backgroundColor: "#818cf8" },
   list: { paddingHorizontal: 24, paddingVertical: 28, gap: 32, flexGrow: 1 },
-  empty: { flex: 1, alignItems: "center", justifyContent: "center", gap: 12, paddingHorizontal: 32, transform: [{ scaleY: -1 }] },
+  empty: { flex: 1, alignItems: "center", justifyContent: "center", gap: 12, paddingHorizontal: 32 },
   msg: { maxWidth: "88%", gap: 6 },
   mine: { alignSelf: "flex-end" },
   theirs: { alignSelf: "flex-start" },
   msgMeta: { flexDirection: "row", alignItems: "center", gap: 8 },
   metaRight: { justifyContent: "flex-end" },
-  time: { fontSize: 11 },
+  time: { fontSize: 11, flexShrink: 0 },
   msgText: { color: C.white, fontFamily: FONT.body, fontSize: 20, lineHeight: 30 },
   textRight: { textAlign: "right" },
   composer: { paddingHorizontal: 20, paddingTop: 16, gap: 12, borderTopWidth: 1, borderTopColor: W(0.05), backgroundColor: PAGE.dark },
