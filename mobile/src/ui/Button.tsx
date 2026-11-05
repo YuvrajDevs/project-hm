@@ -18,18 +18,23 @@ interface Props {
   /** On a coloured card the ghost/secondary text stays white in light mode too */
   onCard?: boolean;
   accessibilityLabel?: string;
+  /** Explicit colours (e.g. the Google blue), overriding the kind's */
+  bg?: string;
+  fg?: string;
 }
 
-export const Button = React.memo(function Button({ label, onPress, kind = "primary", disabled, busy, icon, style, onCard, accessibilityLabel }: Props) {
+export const Button = React.memo(function Button({ label, onPress, kind = "primary", disabled, busy, icon, style, onCard, accessibilityLabel, bg: bgOverride, fg: fgOverride }: Props) {
   const page = usePageColors();
   const lightPage = page.isLight && !onCard;
-  const bg = kind === "primary" ? (lightPage ? "#141210" : C.white)
+  const bgKind = kind === "primary" ? (lightPage ? "#141210" : C.white)
     : kind === "danger" ? C.red
     : kind === "secondary" ? (lightPage ? "rgba(20,18,16,0.06)" : W(0.06))
     : "transparent";
-  const fg = kind === "primary" ? (lightPage ? C.white : C.black)
+  const fgKind = kind === "primary" ? (lightPage ? C.white : C.black)
     : kind === "danger" ? C.white
     : onCard ? C.white : kind === "ghost" ? page.inkMuted : page.ink;
+  const bg = bgOverride ?? bgKind;
+  const fg = fgOverride ?? fgKind;
   return (
     <Press
       onPress={onPress}

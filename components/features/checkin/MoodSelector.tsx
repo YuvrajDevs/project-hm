@@ -2,24 +2,10 @@
 
 import React from "react";
 import { REACTION_ICONS } from "@/lib/constants";
-import type { ReactionType } from "@/lib/types";
+import { MOOD_TYPES, MOODS } from "@/lib/moods";
 import { cn } from "@/lib/utils";
 
-// Each check-in feeling uses the same pixel icon as its signal
-export const MOOD_TYPES: Record<string, ReactionType> = {
-  "Love": "LOVE",
-  "Peace": "PEACE",
-  "Closeness": "CLOSENESS",
-  "Reassurance": "REASSURANCE",
-  "Brighter": "FEELING_BETTER",
-  "Appreciative": "APPRECIATIVE",
-  "Not Okay": "NOT_OKAY",
-  "Gloomy": "GLOOMY",
-  "Anxious": "ANXIOUS",
-  "In Conflict": "CONFLICT",
-  "Tired": "TIRED",
-  "Energized": "ENERGIZED",
-};
+export { MOOD_TYPES };
 
 export const MoodIcon = ({ mood, className }: { mood?: string; className?: string }) => {
   const type = mood ? MOOD_TYPES[mood] : undefined;
@@ -27,20 +13,7 @@ export const MoodIcon = ({ mood, className }: { mood?: string; className?: strin
   return type ? <img src={REACTION_ICONS[type].url} alt="" className={className} /> : null;
 };
 
-const MOODS = [
-    "Love",
-    "Peace",
-    "Closeness",
-    "Reassurance",
-    "Brighter",
-    "Appreciative",
-    "Not Okay",
-    "Gloomy",
-    "Anxious",
-    "In Conflict",
-    "Tired",
-    "Energized"
-];
+
 
 interface MoodSelectorProps {
     selectedMood?: string;

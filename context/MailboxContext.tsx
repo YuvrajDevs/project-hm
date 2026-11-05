@@ -108,7 +108,7 @@ interface MailboxContextType {
   addEvent: (event: Omit<CoupleEvent, "id" | "createdAt" | "createdBy">) => Promise<void>;
   removeEvent: (eventId: string) => Promise<void>;
   wipeoutUserAccount: () => Promise<void>;
-  updateMood: (mood: string, notify?: boolean) => Promise<void>;
+  updateMood: (mood: string, notify?: boolean, colourToday?: boolean) => Promise<void>;
   requestReset: () => Promise<void>;
   confirmReset: () => Promise<void>;
   rejectReset: () => Promise<void>;
@@ -688,11 +688,12 @@ export const MailboxProvider: React.FC<{ children: React.ReactNode }> = ({ child
     }
   };
 
-  const updateMood = async (mood: string, notify = true) => {
+  const updateMood = async (mood: string, notify = true, colourToday = true) => {
     if (!user?.uid) return;
     await updateUserMood(user.uid, mood, notify ? user.partnerId || undefined : undefined);
-    // The last headspace of the day is what colours that day on the calendar
-    if (user.coupleId) updateCheckInMood(user.coupleId, todayId, user.uid, mood);
+    // The last headspace of the day is what colours that day on the calendar. A check-in has just written the same
+    // value itself, so it skips this (one write and one snapshot fewer for both phones).
+    if (user.coupleId && colourToday) updateCheckInMood(user.coupleId, todayId, user.uid, mood);
   };
 
   const markNotiRead = async (id: string) => {

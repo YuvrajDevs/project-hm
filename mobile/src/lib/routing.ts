@@ -3,18 +3,21 @@
 import { useEffect } from "react";
 import { router } from "expo-router";
 import { useSession } from "~/store/session";
+import { isOwnerEmail } from "@/lib/adminMetrics";
 
-export type Place = "/sign-in" | "/onboarding" | "/pair" | "/home";
+export type Place = "/sign-in" | "/owner" | "/onboarding" | "/single" | "/home";
 
 type S = ReturnType<typeof useSession.getState>;
 
 export const placeFor = (s: S): Place | null => {
   if (s.auth === "loading") return null;
   if (s.auth === "signedOut") return "/sign-in";
+  // The owner account is only for the website's dashboard and never gets a couple profile
+  if (isOwnerEmail(s.authUser?.email)) return "/owner";
   if (!s.user) return null; // profile still loading (or being created)
   if (!s.user.hasCompletedOnboarding) return "/onboarding";
-  // A partner who left: the home screen shows them the news first, then sends them on to pair again
-  if (!s.user.coupleId && !s.user.leftByPartner) return "/pair";
+  // Not paired (never, or a partner left): the single hub, which also shows the "partner left" news
+  if (!s.user.coupleId) return "/single";
   return "/home";
 };
 

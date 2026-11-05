@@ -55,7 +55,7 @@ export const DailyCheckInPopup: React.FC<DailyCheckInPopupProps> = ({ onClose })
       }
 
       // 3. Update persistent user mood label
-      await updateMood(moodStatus, false);
+      await updateMood(moodStatus, false, false);
 
       playChime();
       setStep("summary");

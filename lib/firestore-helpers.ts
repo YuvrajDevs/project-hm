@@ -819,6 +819,16 @@ export const resetCoupleHistory = async (coupleId: string) => {
   }
 
   await deleteRefs(refs);
+
+  // Chat videos live in Storage, not Firestore, so deleting the messages above would leave their (encrypted) files
+  // behind forever. Both partners may list and delete in the couple's folder while they are still its members, which
+  // is why this runs before the couple document itself goes. Best effort: a missing file is already what we want.
+  try {
+    const { items } = await listAll(storageRef(storage, `chat/${coupleId}`));
+    await Promise.all(items.map((item) => deleteObject(item).catch(() => {})));
+  } catch {
+    // No video folder for this couple
+  }
 };
 
 export const destroyCoupleData = async (coupleId: string) => {

@@ -104,12 +104,13 @@ export const wipeoutUserAccount = async () => {
   }
 };
 
-export const updateMood = async (mood: string, notify = true) => {
+export const updateMood = async (mood: string, notify = true, colourToday = true) => {
   const { uid, coupleId, partnerId } = ctx();
   if (!uid) return;
   await updateUserMood(uid, mood, notify ? partnerId || undefined : undefined);
-  // The last headspace of the day is what colours that day on the calendar
-  if (coupleId) updateCheckInMood(coupleId, todayId(), uid, mood);
+  // The last headspace of the day is what colours that day on the calendar. Skipped right after a check-in,
+  // which has just written the same value itself (one write fewer, one snapshot fewer for both phones).
+  if (coupleId && colourToday) updateCheckInMood(coupleId, todayId(), uid, mood);
 };
 
 export const markNotiRead = async (id: string) => {

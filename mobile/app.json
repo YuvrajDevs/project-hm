@@ -70,7 +70,9 @@
       "expo-image",
       [
         "expo-audio",
-        { "microphonePermission": "Voice notes in your chat are recorded with the microphone." }
+        {
+          "microphonePermission": "Voice notes in your chat are recorded with the microphone."
+        }
       ],
       "expo-video",
       "expo-secure-store",
@@ -94,11 +96,20 @@
             "enableMinifyInReleaseBuilds": true,
             "enableShrinkResourcesInReleaseBuilds": true,
             "enablePngCrunchInReleaseBuilds": true,
-            "buildArchs": ["arm64-v8a", "armeabi-v7a"]
+            "buildArchs": [
+              "arm64-v8a",
+              "armeabi-v7a"
+            ]
           },
           "ios": {
             "useFrameworks": "static",
-            "forceStaticLinking": ["RNFBApp", "RNFBAuth", "RNFBFirestore", "RNFBStorage", "RNFBAppCheck"]
+            "forceStaticLinking": [
+              "RNFBApp",
+              "RNFBAuth",
+              "RNFBFirestore",
+              "RNFBStorage",
+              "RNFBAppCheck"
+            ]
           }
         }
       ],
@@ -126,7 +137,8 @@
             }
           ]
         }
-      ]
+      ],
+      "@react-native-community/datetimepicker"
     ],
     "experiments": {
       "typedRoutes": true,

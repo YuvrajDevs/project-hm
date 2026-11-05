@@ -22,6 +22,7 @@ import { useTodayId } from "~/store/derived";
 import { computeMetrics, pickSafeSpace, todaysCheckins } from "~/lib/derive";
 import { rememberDeleting, isDeleting } from "./accountFlags";
 import { refreshWidget } from "~/widget/bridge";
+import { isOwnerEmail } from "@/lib/adminMetrics";
 
 type Snap = { id: string; ref: unknown; data: () => Record<string, unknown> | undefined };
 const iso = (v: unknown): string | undefined => {
@@ -71,7 +72,7 @@ function useAuthAndProfile() {
         useSession.setState({ user: null });
         // Signed in without a profile (interrupted sign-up): recreate it, never while the account is being deleted
         const u = auth.currentUser;
-        if (u && !isDeleting()) ensureUserDoc(u as never).catch(console.error);
+        if (u && !isDeleting() && !isOwnerEmail(u.email)) ensureUserDoc(u as never).catch(console.error);
         return;
       }
       const user = { ...(snap.data() as User), uid };

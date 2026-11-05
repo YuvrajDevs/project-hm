@@ -1,9 +1,10 @@
 // Generated from ../public/icons and ../public/stickers: the same pixel art the website uses, bundled into the app.
 // Metro needs every require() written out, so this map is the one place they are listed.
 /* eslint-disable @typescript-eslint/no-require-imports */
-import type { ImageSourcePropType } from "react-native";
+// A bundled asset is a numeric module id at runtime
+type Asset = number;
 
-export const ICONS: Record<string, ImageSourcePropType> = {
+export const ICONS: Record<string, Asset> = {
   "/icons/feeling_anxious_us.png": require("../../../public/icons/feeling_anxious_us.png"),
   "/icons/feeling_connected.png": require("../../../public/icons/feeling_connected.png"),
   "/icons/feeling_distant.png": require("../../../public/icons/feeling_distant.png"),
@@ -46,7 +47,7 @@ export const ICONS: Record<string, ImageSourcePropType> = {
   "/icons/white_flag.png": require("../../../public/icons/white_flag.png"),
 };
 
-export const STICKERS: Record<string, ImageSourcePropType> = {
+export const STICKERS: Record<string, Asset> = {
   s00: require("../../../public/stickers/s00.webp"),
   s01: require("../../../public/stickers/s01.webp"),
   s02: require("../../../public/stickers/s02.webp"),
@@ -76,8 +77,8 @@ export const STICKERS: Record<string, ImageSourcePropType> = {
   s26: require("../../../public/stickers/s26.webp"),
 };
 
-export const MASCOT: ImageSourcePropType = require("../../../public/mascot.webp");
-export const LOGO: ImageSourcePropType = require("../../../public/logo.png");
+export const MASCOT: Asset = require("../../../public/mascot.webp");
+export const LOGO: Asset = require("../../../public/logo.png");
 
 /** A pixel icon by the web path the shared constants use ("/icons/feeling_hard_day.png"). */
-export const iconFor = (url: string | undefined): ImageSourcePropType | undefined => (url ? ICONS[url] : undefined);
+export const iconFor = (url: string | undefined): Asset | undefined => (url ? ICONS[url] : undefined);
