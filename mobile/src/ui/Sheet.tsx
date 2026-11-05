@@ -30,9 +30,10 @@ export function Sheet({ open, onClose, title, subtitle, children, tall, locked }
 
   const finishClose = useCallback(() => setMounted(false), []);
 
+  // Mount in the same render that opens it, so the slide starts on the first frame
+  if (open && !mounted) setMounted(true);
   useEffect(() => {
     if (open) {
-      setMounted(true);
       fade.set(withTiming(1, { duration: 200 }));
       y.set(withSpring(0, SPRING));
     } else if (mounted) {

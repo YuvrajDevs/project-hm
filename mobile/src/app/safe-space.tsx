@@ -58,7 +58,6 @@ export default function SafeSpace() {
     if (session) { wasOpen.current = true; return; }
     if (wasOpen.current && !closedByMe.current) leave();
     if (!wasOpen.current) { const t = setTimeout(() => { if (!useLive.getState().activeSafeSpace) leave(); }, 2000); return () => clearTimeout(t); }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [session]);
 
   useEffect(() => {

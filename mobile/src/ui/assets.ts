@@ -1,6 +1,5 @@
 // Generated from ../public/icons and ../public/stickers: the same pixel art the website uses, bundled into the app.
 // Metro needs every require() written out, so this map is the one place they are listed.
-/* eslint-disable @typescript-eslint/no-require-imports */
 // A bundled asset is a numeric module id at runtime
 type Asset = number;
 

@@ -23,9 +23,10 @@ export function Dialog({ open, title, body, confirmLabel, cancelLabel = "Cancel"
   const [mounted, setMounted] = useState(open);
   const p = useSharedValue(0);
 
+  // Mount in the same render that opens it, so the spring starts on the first frame
+  if (open && !mounted) setMounted(true);
   useEffect(() => {
     if (open) {
-      setMounted(true);
       p.set(withSpring(1, SPRING));
     } else if (mounted) {
       p.set(withTiming(0, { duration: 150 }, (done) => { if (done) runOnJS(setMounted)(false); }));

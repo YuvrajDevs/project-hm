@@ -88,7 +88,9 @@ export const Composer = memo(function Composer({ onText, onSticker, onMedia, onV
   };
 
   // A voice note stops by itself at the limit, and is sent
-  useEffect(() => { if (recording && seconds >= MAX_VOICE_SECONDS) stop(true); }, [recording, seconds]); // eslint-disable-line react-hooks/exhaustive-deps
+  // (The recorder is outside React; stopping it from its own progress is exactly what an effect is for.)
+  // eslint-disable-next-line react-hooks/exhaustive-deps, react-hooks/set-state-in-effect
+  useEffect(() => { if (recording && seconds >= MAX_VOICE_SECONDS) stop(true); }, [recording, seconds]);
 
   const send = () => {
     const t = text.trim();

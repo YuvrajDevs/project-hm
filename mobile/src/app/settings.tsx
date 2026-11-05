@@ -15,7 +15,7 @@ import { useGuard } from "~/lib/routing";
 import { useSession } from "~/store/session";
 import { useNotificationsEnabled, usePartnerName } from "~/store/derived";
 import { cancelReset, leavePartner, logout, requestReset, toggleNotifications, wipeoutUserAccount } from "~/data/actions";
-import { useAppearance } from "~/theme/appearance";
+import { useAppearance, usePageColors } from "~/theme/appearance";
 import { RoundButton, Screen } from "~/ui/Screen";
 import { Dialog } from "~/ui/Dialog";
 import { Field } from "~/ui/Field";
@@ -23,7 +23,6 @@ import { Button } from "~/ui/Button";
 import { Press } from "~/ui/Pressable";
 import { Text } from "~/ui/Text";
 import { C, SPRING, W } from "~/theme/tokens";
-import { usePageColors } from "~/theme/appearance";
 import { success, warn } from "~/lib/feedback";
 
 export default function Settings() {

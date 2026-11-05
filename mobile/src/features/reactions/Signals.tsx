@@ -40,8 +40,14 @@ export function SignalSheet() {
   const [error, setError] = useState("");
   const close = () => { if (!sending) ui.set({ signals: false }); };
 
+  // Closing forgets the half-made signal
+  const [wasOpen, setWasOpen] = useState(open);
+  if (open !== wasOpen) {
+    setWasOpen(open);
+    if (!open) { setSelected(null); setNote(""); setError(""); }
+  }
   useEffect(() => {
-    if (!open) { setSelected(null); setNote(""); setError(""); docId.current = null; return; }
+    if (!open) { docId.current = null; return; }
     AsyncStorage.getItem(COOLDOWN_KEY).then((v) => {
       const diff = v ? Date.now() - Number(v) : Infinity;
       if (diff < COOLDOWN_MS) setCooldown(Math.ceil((COOLDOWN_MS - diff) / 1000));
