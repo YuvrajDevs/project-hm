@@ -1203,9 +1203,13 @@ export const markAllNotificationsAsRead = async (uid: string) => {
   const notisRef = collection(db, "users", uid, "notifications");
   const q = query(notisRef, where("read", "==", false));
   const snap = await getDocs(q);
-  const batch = writeBatch(db);
-  snap.docs.forEach((d) => batch.update(d.ref, { read: true }));
-  await batch.commit();
+  // A batch takes at most 500 writes, and game notifications (which the bell doesn't list) can pile up unread
+  // over months, so this goes out in chunks rather than failing outright on a long-lived account
+  for (let i = 0; i < snap.docs.length; i += 400) {
+    const batch = writeBatch(db);
+    snap.docs.slice(i, i + 400).forEach((d) => batch.update(d.ref, { read: true }));
+    await batch.commit();
+  }
 };
 
 export const updateUserNotificationSettings = async (uid: string, enabled: boolean) => {
