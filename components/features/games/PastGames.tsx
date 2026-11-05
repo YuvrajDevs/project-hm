@@ -1,13 +1,12 @@
 "use client";
 
 import React, { useEffect, useState } from "react";
-import { aboutQuestion, guessOf, rightGuesses } from "@/lib/games/about";
 import { motion } from "framer-motion";
 import { ArrowLeft, ChevronRight, Trash2, X } from "lucide-react";
 import { useMailbox } from "@/context/MailboxContext";
 import { clearGameHistory, deleteGameHistoryEntry, getGameHistory } from "@/lib/firestore-helpers";
 import { DECK_BY_ID, isKnownDeck } from "@/lib/games/decks";
-import { getCard, roundKey, totalScores, truthDarePlayer } from "@/lib/games/engine";
+import { pastGameSummary, replayItems } from "@/lib/games/replay";
 import type { CoupleGame } from "@/lib/types";
 import { cn, partnerLabel } from "@/lib/utils";
 import { DECK_ICONS, titleFont } from "./deckIcons";
@@ -176,117 +175,35 @@ export const PastGames = ({ onClose }: { onClose: () => void }) => {
   );
 };
 
-const summaryLine = (g: CoupleGame, uid: string, partnerUid: string, partnerName: string) => {
-  const mechanic = DECK_BY_ID[g.deck].mechanic;
-  if (mechanic === "open") return `${g.cards.length} questions`;
-  if (mechanic === "about") return `Guessed ${rightGuesses(g, uid, partnerUid)} of ${g.cards.length} · ${partnerName} ${rightGuesses(g, partnerUid, uid)}`;
-  if (mechanic === "xo" || mechanic === "connect4") {
-    const w = g.wins ?? {};
-    return `Rounds won: you ${w[uid] ?? 0} · ${partnerName} ${w[partnerUid] ?? 0}`;
-  }
-  if (mechanic === "scribble") {
-    const solved = g.cards.filter((_, r) => g.sb?.[roundKey(r)]?.result === "solved").length;
-    return `Guessed ${solved} of ${g.cards.length}`;
-  }
-  if (mechanic === "choice" || mechanic === "who") {
-    const matches = g.cards.filter((_, r) => {
-      const a = g.answers?.[roundKey(r)] || {};
-      return !!a[uid]?.pick && a[uid]?.pick === a[partnerUid]?.pick;
-    }).length;
-    return `In sync on ${matches} of ${g.cards.length}`;
-  }
-  const s = totalScores(g, [uid, partnerUid]);
-  return `You ${s[uid]} · ${partnerName} ${s[partnerUid]}`;
-};
+const summaryLine = pastGameSummary;
 
-// Every card of a finished game, with what each of them said
+// Every card of a finished game, with what each of them said (built by lib/games/replay.ts, shared with the app)
 const GameReplay = ({ game, uid, partnerUid, partnerName }: { game: CoupleGame; uid: string; partnerUid: string; partnerName: string }) => {
-  const nameOf = (id?: string) => (id === uid ? "You" : partnerName);
-  const mechanic = DECK_BY_ID[game.deck].mechanic;
+  const items = replayItems(game, uid, partnerUid, partnerName);
   // Board games have no cards to look back at, just the final tally
-  if (mechanic === "xo" || mechanic === "connect4") {
+  if (items.length === 0) {
     return (
       <p className="py-8 text-center font-outfit text-sm text-neutral-300">
         {summaryLine(game, uid, partnerUid, partnerName)}
       </p>
     );
   }
-  if (mechanic === "about") {
-    const sections = [uid, partnerUid].flatMap(owner => game.cards.map((_, r) => ({ owner, r })));
-    return (
-      <div className="divide-y divide-white/10">
-        {sections.map(({ owner, r }) => {
-          const guesser = owner === uid ? partnerUid : uid;
-          const c = aboutQuestion(game, owner, r);
-          const pick = game.answers?.[roundKey(r)]?.[owner]?.pick;
-          const guess = guessOf(game, r, guesser);
-          const opt = (k?: string) => (k === undefined ? "" : c.opts[Number(k)] ?? "");
-          return (
-            <div key={`${owner}-${r}`} className="py-4 space-y-2">
-              <p className="font-bebas text-lg uppercase tracking-wide leading-tight">{c.q}</p>
-              <p className="font-outfit text-sm text-white/85"><span className={cn("font-bebas tracking-widest uppercase mr-2", owner === uid ? "text-pink-300" : "text-blue-300")}>{nameOf(owner)} picked</span>{opt(pick)}</p>
-              <p className="font-outfit text-sm text-white/85"><span className={cn("font-bebas tracking-widest uppercase mr-2", guesser === uid ? "text-pink-300" : "text-blue-300")}>{nameOf(guesser)} guessed</span>{opt(guess)}{guess !== undefined ? (guess === pick ? " ✓" : " ✗") : ""}</p>
-            </div>
-          );
-        })}
-      </div>
-    );
-  }
   return (
     <div className="divide-y divide-white/10">
-      {game.cards.map((_, r) => {
-        const card = getCard(game, r);
-        if (!card) return null;
-        const answers = game.answers?.[roundKey(r)] || {};
-        let title = "";
-        let lines: { who: "you" | "them"; text: string }[] = [];
-        let hadPhoto = false;
-
-        if (card.kind === "choice") {
-          title = card.prompt ?? `${card.a} or ${card.b}`;
-          const label = (k?: string) => (k === "a" ? card.a : k === "b" ? card.b : "");
-          lines = [{ who: "them", text: label(answers[partnerUid]?.pick) }, { who: "you", text: label(answers[uid]?.pick) }];
-        } else if (card.kind === "who") {
-          title = card.prompt;
-          lines = [{ who: "them", text: nameOf(answers[partnerUid]?.pick) }, { who: "you", text: nameOf(answers[uid]?.pick) }];
-        } else if (card.kind === "open") {
-          title = card.text;
-          lines = [{ who: "them", text: answers[partnerUid]?.text || "" }, { who: "you", text: answers[uid]?.text || "" }];
-        } else if (card.kind === "draw") {
-          title = card.word;
-          const artist = truthDarePlayer(game, r);
-          const result = game.sb?.[roundKey(r)]?.result;
-          lines = [{ who: artist === uid ? "you" : "them", text: `Drew it · ${result === "solved" ? "guessed" : "skipped"}` }];
-        } else {
-          const td = game.td?.[roundKey(r)];
-          const player = truthDarePlayer(game, r);
-          if (card.kind !== "truthdare") return null;
-          title = td?.choice === "dare" ? card.dare : card.truth;
-          const by = player === uid ? "you" : "them";
-          lines = [
-            { who: by, text: `${td?.choice === "dare" ? "Dare" : "Truth"}, ${td?.result === "done" ? "done" : "skipped"}` },
-            { who: by, text: td?.answer ? `“${td.answer}”` : "" },
-          ];
-          hadPhoto = !!(td?.proof || td?.proofRemoved);
-        }
-
-        return (
-          <div key={r} className="py-4 space-y-2">
-            <p className="font-bebas text-lg uppercase tracking-wide leading-tight">{title}</p>
-            {lines.filter(l => l.text).map((l, i) => (
-              <p key={i} className="font-outfit text-sm leading-relaxed text-white/85 break-words whitespace-pre-wrap">
-                <span className={cn("font-bebas tracking-widest uppercase mr-2", l.who === "you" ? "text-pink-300" : "text-blue-300")}>
-                  {l.who === "you" ? "You" : partnerName}
-                </span>
-                {l.text}
-              </p>
-            ))}
-            {hadPhoto && (
-              <p className="font-outfit text-xs italic text-neutral-500">Photo deleted to keep it private</p>
-            )}
-          </div>
-        );
-      })}
+      {items.map((item) => (
+        <div key={item.key} className="py-4 space-y-2">
+          <p className="font-bebas text-lg uppercase tracking-wide leading-tight">{item.title}</p>
+          {item.lines.map((l, i) => (
+            <p key={i} className="font-outfit text-sm leading-relaxed text-white/85 break-words whitespace-pre-wrap">
+              <span className={cn("font-bebas tracking-widest uppercase mr-2", l.who === "you" ? "text-pink-300" : "text-blue-300")}>{l.label}</span>
+              {l.text}{l.mark === "right" ? " ✓" : l.mark === "wrong" ? " ✗" : ""}
+            </p>
+          ))}
+          {item.hadPhoto && (
+            <p className="font-outfit text-xs italic text-neutral-500">Photo deleted to keep it private</p>
+          )}
+        </div>
+      ))}
     </div>
   );
 };
