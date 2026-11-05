@@ -8,8 +8,8 @@ import { createPortal } from "react-dom";
 import { useMailbox } from "@/context/MailboxContext";
 import { endGame, startGame } from "@/lib/firestore-helpers";
 import { DECKS, DECK_BY_ID, MAX_OPEN_GAMES, SECTIONS, slotFor, type DeckInfo } from "@/lib/games/decks";
-import { answeredCount, runningScore } from "@/lib/games/engine";
-import { aboutPhase, pickedCount, guessedCount } from "@/lib/games/about";
+import { runningScore } from "@/lib/games/engine";
+import { describeGame } from "@/lib/games/describe";
 import type { ActiveGame } from "@/lib/types";
 import { useSensoryFeedback } from "@/hooks/useSensoryFeedback";
 import { cn, partnerLabel } from "@/lib/utils";
@@ -21,37 +21,6 @@ import { AccentWords } from "@/components/ui/Wordmark";
 const PastGames = dynamic(() => import("./PastGames").then(m => m.PastGames));
 
 const openAny = (g: ActiveGame) => (slotFor(g.deck) === "questions" ? openQuestions : openGame)(g.id);
-
-/** One line on where a game stands, and what tapping it does */
-const describe = (g: ActiveGame, uid: string, partnerUid: string, partnerName: string) => {
-  const invited = g.startedBy !== uid && !g.joined?.[uid];
-  if (DECK_BY_ID[g.deck].mechanic === "about") {
-    const phase = aboutPhase(g, uid, partnerUid);
-    const total = g.cards.length;
-    if (phase === "done") return { status: "You're both done. See how well you know each other", action: "Read" };
-    if (phase === "picking") return invited ? { status: `${partnerName} sent you ${total} questions`, action: "Answer" } : { status: `You've picked ${pickedCount(g, uid)} of ${total}`, action: "Answer" };
-    if (phase === "guessing") return { status: `Your turn to guess ${partnerName} · ${guessedCount(g, uid)}/${total}`, action: "Guess" };
-    return { status: `Waiting on ${partnerName}`, action: "Open" };
-  }
-  if (slotFor(g.deck) === "questions") {
-    const mine = answeredCount(g, uid), theirs = answeredCount(g, partnerUid), total = g.cards.length;
-    if (mine === total && theirs === total) return { status: "You're both done. Read your answers", action: "Read" };
-    if (mine === total) return { status: `You're done · ${partnerName} has ${total - theirs} left`, action: "Open" };
-    if (invited) return { status: `${partnerName} sent you ${total} questions`, action: "Answer" };
-    return { status: `You ${mine}/${total} · ${partnerName} ${theirs}/${total}`, action: "Answer" };
-  }
-  const mechanic = DECK_BY_ID[g.deck].mechanic;
-  if (mechanic === "xo" || mechanic === "connect4") {
-    const w = g.wins ?? {};
-    const tally = `You ${w[uid] ?? 0} · ${partnerName} ${w[partnerUid] ?? 0}`;
-    if (invited) return { status: `${partnerName} wants to play`, action: "Join" };
-    if (g.winner) return { status: `Round over · ${tally}`, action: "Open" };
-    return g.turn === uid ? { status: `Your move · ${tally}`, action: "Play" } : { status: `${partnerName}'s move · ${tally}`, action: "Open" };
-  }
-  if (g.round >= g.cards.length) return { status: "Finished, see how you did", action: "Open" };
-  if (invited) return { status: `${partnerName} wants to play`, action: "Join" };
-  return { status: `Card ${g.round + 1} of ${g.cards.length}`, action: "Resume" };
-};
 
 // Home screen: live games and question decks, each a row of cards with what's in progress stacked on top
 export const GamesShelf = () => {
@@ -129,7 +98,7 @@ const PendingRow = ({ games, noun, onOpen }: { games: ActiveGame[]; noun: string
   const { playTick, vibrateTick } = useSensoryFeedback();
   const uid = user?.uid || "";
   const partnerName = partnerLabel(user, partner, "your partner");
-  const waitingOnYou = games.filter(g => ["Join", "Answer", "Play", "Guess"].includes(describe(g, uid, partner?.uid || "", partnerName).action)).length;
+  const waitingOnYou = games.filter(g => ["Join", "Answer", "Play", "Guess"].includes(describeGame(g, uid, partner?.uid || "", partnerName).action)).length;
   const newest = DECK_BY_ID[games[0].deck];
 
   return (
@@ -173,7 +142,7 @@ const GameRow = ({ game }: { game: ActiveGame }) => {
   const partnerName = partnerLabel(user, partner, "your partner");
   const deck = DECK_BY_ID[game.deck];
   const Icon = DECK_ICONS[game.deck];
-  const { status, action } = describe(game, user?.uid || "", partner?.uid || "", partnerName);
+  const { status, action } = describeGame(game, user?.uid || "", partner?.uid || "", partnerName);
 
   return (
     <button
@@ -219,7 +188,7 @@ const PendingList = ({ games, busy, onClose, onOpen }: { games: ActiveGame[]; bu
               <div className="flex-1 min-w-0">
                 <p className={cn("font-bebas text-base tracking-wider uppercase leading-none truncate", titleFont(gDeck.id))}><DeckTitle title={gDeck.title} /></p>
                 <p className="font-outfit text-xs text-neutral-400 mt-1 truncate">
-                  {describe(g, uid, partner?.uid || "", partnerName).status}
+                  {describeGame(g, uid, partner?.uid || "", partnerName).status}
                 </p>
                 {oldest && <p className="font-outfit text-[11px] text-amber-300/80 mt-0.5">Waiting longest</p>}
               </div>

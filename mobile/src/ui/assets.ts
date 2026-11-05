@@ -82,3 +82,4 @@ export const LOGO: Asset = require("../../../public/logo.png");
 
 /** A pixel icon by the web path the shared constants use ("/icons/feeling_hard_day.png"). */
 export const iconFor = (url: string | undefined): Asset | undefined => (url ? ICONS[url] : undefined);
+export const HOME_ICON: Asset = require("../../../public/home-icon.png");
