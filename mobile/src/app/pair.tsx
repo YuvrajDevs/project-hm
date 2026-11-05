@@ -65,7 +65,7 @@ export default function Pair() {
     return onSnapshot(doc(db, "users", uid), (snap) => {
       const joined = snap.data()?.coupleId as string | undefined;
       if (joined) { hapticSuccess(); setCoupleId(joined); setMode("success"); }
-    });
+    }, (err) => console.warn("Invite listener stopped:", err));
   }, [mode, inviteCode]);
 
   const link = inviteCode ? `${CONFIG.siteUrl}/pair?code=${inviteCode}` : "";

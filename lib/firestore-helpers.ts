@@ -84,6 +84,13 @@ export const getCoupleCollection = (coupleId: string, subPath: string) => {
 };
 
 /**
+ * Error handler for live listeners. Losing access is expected (a partner unpairs, a reset, an account deleted on
+ * another device); the sync gate then moves the person on. Without a handler the phone app's Firebase SDK calls the
+ * listener with no snapshot, which crashed the app reading `.docs` of nothing.
+ */
+const listenerError = (what: string) => (err: unknown) => console.warn(`${what} listener stopped:`, err);
+
+/**
  * Mailbox Helpers
  */
 export const subscribeToMailbox = (coupleId: string, pageSize: number, callback: (messages: MailboxMessage[]) => void) => {
@@ -91,7 +98,7 @@ export const subscribeToMailbox = (coupleId: string, pageSize: number, callback:
   const q = query(getCoupleCollection(coupleId, "mailbox"), orderBy("createdAt", "desc"), limit(pageSize));
   return onSnapshot(q, (snapshot) => {
     callback(snapshot.docs.map(doc => doc.data() as MailboxMessage));
-  });
+  }, listenerError("Mailbox"));
 };
 
 export const sendMailboxMessage = async (coupleId: string, message: Omit<MailboxMessage, "id" | "createdAt">, partnerUid: string) => {
@@ -215,7 +222,7 @@ export const subscribeToSavedThoughts = (coupleId: string, uid: string, callback
         .filter((m) => !m.hiddenFor?.includes(uid))
         .sort((a, b) => (b.createdAt || "").localeCompare(a.createdAt || ""))
     );
-  });
+  }, listenerError("Saved thoughts"));
 };
 
 export const hideMessageForUser = async (coupleId: string, messageId: string, uid: string) => {
@@ -319,7 +326,7 @@ export const subscribeToSafeSpaceMessages = (coupleId: string, sessionId: string
   
   return onSnapshot(q, (snapshot) => {
     callback(snapshot.docs.map(doc => doc.data()));
-  });
+  }, listenerError("Safe space messages"));
 };
 
 /**
@@ -1065,7 +1072,7 @@ export const subscribeToEvents = (coupleId: string, callback: (events: CoupleEve
   const q = query(getCoupleCollection(coupleId, "events"), orderBy("dateId", "asc"));
   return onSnapshot(q, (snapshot) => {
     callback(snapshot.docs.map(doc => doc.data() as CoupleEvent));
-  });
+  }, listenerError("Events"));
 };
 
 export const saveCoupleEvent = async (coupleId: string, event: Omit<CoupleEvent, "id" | "createdAt">) => {
@@ -1095,7 +1102,7 @@ export const subscribeToPartnerNotes = (uid: string, callback: (notes: PartnerNo
   
   return onSnapshot(q, (snapshot) => {
     callback(snapshot.docs.map(doc => doc.data()));
-  });
+  }, listenerError("Partner notes"));
 };
 
 export const addPartnerNote = async (uid: string, text: string, shared = false) => {
@@ -1228,7 +1235,7 @@ export const subscribeToNotifications = (uid: string, callback: (notis: AppNotif
   
   return onSnapshot(q, (snapshot) => {
     callback(snapshot.docs.map(doc => doc.data()));
-  });
+  }, listenerError("Notifications"));
 };
 
 /**
