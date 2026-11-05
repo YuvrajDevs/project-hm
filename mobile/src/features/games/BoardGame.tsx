@@ -99,7 +99,7 @@ export function BoardGame({ game, uid, partnerUid, partnerName, coupleId, onLeav
                   accessibilityLabel={`Square ${i + 1}${owner ? (owner === xPlayer ? ", X" : ", O") : ""}`}
                 >
                   {owner ? (
-                    <Animated.View key={`${i}:${owner}:${game.match}`} entering={ZoomIn.springify().damping(14)} style={styles.mark}>
+                    <Animated.View key={`${i}:${owner}:${game.match}`} entering={ZoomIn.duration(180)} style={styles.mark}>
                       <Svg viewBox="0 0 100 100" width="100%" height="100%">
                         {owner === xPlayer ? (
                           <>
@@ -137,7 +137,8 @@ const Coin = memo(function Coin({ mine, win, dropFrom }: { mine: boolean; win: b
   const y = useSharedValue(-dropFrom * 52);
   const o = useSharedValue(0);
   useEffect(() => {
-    y.set(withSpring(0, { damping: 15, stiffness: 240, mass: 0.8 }));
+    // A coin drops and lands with a small settle, not a bounce
+    y.set(withSpring(0, { damping: 26, stiffness: 240, mass: 0.8 }));
     o.set(withTiming(1, { duration: 120 }));
   }, [y, o]);
   const style = useAnimatedStyle(() => ({ transform: [{ translateY: y.get() }], opacity: o.get() }));

@@ -18,7 +18,7 @@ import { markNotiRead } from "~/data/actions";
 import { openAnyGame, openChat } from "~/lib/nav";
 import { pop } from "~/lib/feedback";
 import { Text } from "~/ui/Text";
-import { C, W } from "~/theme/tokens";
+import { C, ENTER_MS, W } from "~/theme/tokens";
 
 const RECENT_MS = 2 * 60 * 1000;
 const SHOW_MS = 5000;
@@ -151,7 +151,7 @@ function Toast({ toast, onTap, onClose }: { toast: AppNotification; onTap?: () =
   const tint = toast.type === "MAILBOX" || toast.type === "CHAT" ? C.blue : toast.type === "CHECK_IN" ? C.pink : C.yellow;
   return (
     <Animated.View
-      entering={SlideInUp.springify().damping(20).stiffness(220)}
+      entering={SlideInUp.duration(ENTER_MS)}
       exiting={FadeOutUp.duration(180)}
       style={[styles.wrap, { top: insets.top + 12 }]}
       pointerEvents="box-none"

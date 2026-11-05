@@ -11,9 +11,10 @@ import { SyncEngine } from "~/data/sync";
 import { ToastHost } from "~/features/notifications/ToastHost";
 import { loadAppearance, useAppearance, pageColorsFor } from "~/theme/appearance";
 import { useSession } from "~/store/session";
+import { BootSplash } from "~/ui/BootSplash";
 
 SplashScreen.preventAutoHideAsync().catch(() => {});
-SplashScreen.setOptions({ duration: 220, fade: true });
+SplashScreen.setOptions({ duration: 0, fade: false }); // BootSplash takes over with the same mascot in the same place
 loadAppearance();
 
 export default function RootLayout() {
@@ -22,8 +23,6 @@ export default function RootLayout() {
   const authKnown = useSession((s) => s.auth !== "loading");
 
   useEffect(() => { SystemUI.setBackgroundColorAsync(page.page).catch(() => {}); }, [page.page]);
-  // The splash stays until Firebase has said whether someone is signed in, so the first frame is the right screen
-  useEffect(() => { if (authKnown) SplashScreen.hideAsync().catch(() => {}); }, [authKnown]);
 
   return (
     <GestureHandlerRootView style={[styles.root, { backgroundColor: page.page }]}>
@@ -51,6 +50,8 @@ export default function RootLayout() {
             <Stack.Screen name="notifications" options={{ presentation: "transparentModal", animation: "fade" }} />
           </Stack>
           <ToastHost />
+          {/* Covers the first screens until Firebase has said whether someone is signed in */}
+          <BootSplash ready={authKnown} />
         </KeyboardProvider>
       </SafeAreaProvider>
     </GestureHandlerRootView>

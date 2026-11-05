@@ -103,7 +103,12 @@ export const bgHexOf = (cls: string, fallback = "#2a2a2a") => cls.match(/#[0-9a-
 export const R = { card: 24, row: 16, input: 12, pill: 999 } as const;
 export const S = { page: 24, gap: 12 } as const;
 
-/** One spring for everything that moves, so the whole app has one feel. Critically damped: no wobble, no lag. */
-export const SPRING = { damping: 22, stiffness: 260, mass: 0.9 } as const;
-export const SPRING_SOFT = { damping: 26, stiffness: 180, mass: 1 } as const;
+/**
+ * One spring for everything that moves, so the whole app has one feel. Critically damped (damping = 2·√(stiffness·mass)):
+ * it settles without overshooting, so nothing wobbles. The old values (ratio ~0.72) bounced past the target.
+ */
+export const SPRING = { damping: 31, stiffness: 260, mass: 0.9 } as const;
+export const SPRING_SOFT = { damping: 27, stiffness: 180, mass: 1 } as const;
+/** Entrances: a short ease-out instead of a spring, so things arrive without a pop */
+export const ENTER_MS = 220;
 export const PRESS_SCALE = 0.97;

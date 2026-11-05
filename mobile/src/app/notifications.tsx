@@ -34,7 +34,7 @@ export default function Notifications() {
       <Animated.View entering={FadeIn.duration(200)} style={StyleSheet.absoluteFill}>
         <Pressable style={[StyleSheet.absoluteFill, styles.backdrop]} onPress={close} accessibilityLabel="Close notifications" />
       </Animated.View>
-      <Animated.View entering={SlideInDown.springify().damping(22)} style={[styles.panel, { marginTop: insets.top + 24, marginBottom: insets.bottom + 24 }]}>
+      <Animated.View entering={SlideInDown.duration(260)} style={[styles.panel, { marginTop: insets.top + 24, marginBottom: insets.bottom + 24 }]}>
         <View style={styles.header}>
           <View style={styles.row}>
             <View>

@@ -14,7 +14,7 @@ import { Field } from "~/ui/Field";
 import { Button } from "~/ui/Button";
 import { Press } from "~/ui/Pressable";
 import { Text } from "~/ui/Text";
-import { C, TW, W } from "~/theme/tokens";
+import { C, ENTER_MS, TW, W } from "~/theme/tokens";
 import { usePageColors } from "~/theme/appearance";
 import { pop } from "~/lib/feedback";
 import { AccentWords } from "~/ui/Wordmark";
@@ -149,7 +149,7 @@ function Tag({ kind, name }: { kind: Kind; name: string }) {
 
 const NoteCard = memo(function NoteCard({ note, kind, name, onOpen }: { note: PartnerNote; kind: Kind; name: string; onOpen: () => void }) {
   return (
-    <Animated.View layout={LinearTransition.springify().damping(20)} entering={FadeIn.duration(200)} exiting={FadeOut.duration(150)} style={styles.cardWrap}>
+    <Animated.View layout={LinearTransition.duration(ENTER_MS)} entering={FadeIn.duration(200)} exiting={FadeOut.duration(150)} style={styles.cardWrap}>
       <Press onPress={onOpen} accessibilityRole="button" accessibilityLabel={`Note: ${note.text}`}>
         <LinearGradient colors={LOOK[kind].colors} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }} style={styles.card}>
           <View style={styles.tagRow}><Tag kind={kind} name={name} /></View>

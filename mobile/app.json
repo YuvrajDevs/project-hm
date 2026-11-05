@@ -84,7 +84,7 @@
         "expo-splash-screen",
         {
           "image": "./assets/splash-icon.png",
-          "imageWidth": 180,
+          "imageWidth": 240,
           "resizeMode": "contain",
           "backgroundColor": "#0e0e0e"
         }
@@ -111,7 +111,7 @@
         {
           "photosPermission": "Pick photos and videos to send in your chat or use as a wallpaper.",
           "cameraPermission": "Take a photo to send in your chat or as dare proof.",
-          "microphonePermission": false
+          "microphonePermission": "Voice notes in your chat are recorded with the microphone."
         }
       ],
       "@react-native-firebase/app",
@@ -149,13 +149,15 @@
         {
           "fonts": [
             "./node_modules/@expo-google-fonts/bebas-neue/400Regular/BebasNeue_400Regular.ttf",
-            "./node_modules/@expo-google-fonts/outfit/400Regular/Outfit_400Regular.ttf"
+            "./node_modules/@expo-google-fonts/outfit/400Regular/Outfit_400Regular.ttf",
+            "./node_modules/@expo-google-fonts/playfair-display/600SemiBold_Italic/PlayfairDisplay_600SemiBold_Italic.ttf"
           ],
           "widgets": [
             {
               "name": "Us",
               "label": "Us",
               "description": "Your partner's mood, today's check-ins and your streak",
+              "previewImage": "./assets/widget-preview.png",
               "minWidth": "250dp",
               "minHeight": "110dp",
               "targetCellWidth": 4,

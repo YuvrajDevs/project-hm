@@ -21,7 +21,7 @@ import { Text } from "~/ui/Text";
 import { Field } from "~/ui/Field";
 import { Button } from "~/ui/Button";
 import { Press } from "~/ui/Pressable";
-import { C, PAGE } from "~/theme/tokens";
+import { C, ENTER_MS, PAGE } from "~/theme/tokens";
 import { Glow } from "~/ui/Glow";
 import { pop, success, warn } from "~/lib/feedback";
 
@@ -98,7 +98,7 @@ export function SignalSheet() {
       ) : (
         <Animated.View entering={FadeIn.duration(200)} style={styles.detail}>
           <Press onPress={() => setSelected(null)} style={styles.back} accessibilityLabel="Pick another"><X size={22} color={C.neutral500} /></Press>
-          <Animated.View entering={ZoomIn.springify().damping(16)} style={styles.center}>
+          <Animated.View entering={ZoomIn.duration(ENTER_MS)} style={styles.center}>
             <Image source={iconFor(selected.url)} style={styles.bigIcon} contentFit="contain" />
             <Text variant="heading" onCard center>{selected.label}</Text>
             <Text variant="eyebrow" color={C.neutral500} center>{selected.description}</Text>

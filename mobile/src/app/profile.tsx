@@ -26,7 +26,7 @@ import { Card } from "~/ui/Card";
 import { Press } from "~/ui/Pressable";
 import { RoundButton, Screen } from "~/ui/Screen";
 import { Text } from "~/ui/Text";
-import { C, TONES, W, type Tone } from "~/theme/tokens";
+import { C, SPRING, TONES, W, type Tone } from "~/theme/tokens";
 import { usePageColors } from "~/theme/appearance";
 import { AboutSheet, FactsSheet, IntentSheet, MetDateSheet, NicknameSheet, TagSheet } from "~/features/profile/Editors";
 
@@ -344,7 +344,7 @@ export default function Profile() {
 
 function Switcher({ view, partnerFirst, onChange }: { view: "me" | "partner"; partnerFirst: string; onChange: (v: "me" | "partner") => void }) {
   const [w, setW] = useState(0);
-  const pill = useAnimatedStyle(() => ({ transform: [{ translateX: withSpring(view === "me" ? 0 : w / 2, { damping: 22, stiffness: 260 }) }] }));
+  const pill = useAnimatedStyle(() => ({ transform: [{ translateX: withSpring(view === "me" ? 0 : w / 2, SPRING) }] }));
   return (
     <View style={styles.switch} onLayout={(e) => setW(e.nativeEvent.layout.width - 12)} accessibilityRole="tablist">
       {w > 0 && <Animated.View style={[styles.switchPill, { width: w / 2 }, pill]} />}

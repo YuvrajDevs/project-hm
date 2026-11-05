@@ -13,7 +13,7 @@ import { Sheet } from "~/ui/Sheet";
 import { Field } from "~/ui/Field";
 import { Press } from "~/ui/Pressable";
 import { Text } from "~/ui/Text";
-import { C, TONES, W } from "~/theme/tokens";
+import { C, ENTER_MS, TONES, W } from "~/theme/tokens";
 import { usePageColors } from "~/theme/appearance";
 import { pop, success, warn } from "~/lib/feedback";
 import { AccentWords } from "~/ui/Wordmark";
@@ -140,7 +140,7 @@ const ItemRow = memo(function ItemRow({ item, coupleId, onError }: { item: Bucke
     deleteBucketItem(coupleId, item.id).catch(() => onError("Couldn't remove that. Try again."));
   };
   return (
-    <Animated.View layout={LinearTransition.springify().damping(20)} entering={FadeIn.duration(200)} exiting={FadeOut.duration(150)} style={[styles.row, { backgroundColor: tone.from, borderColor: tone.border }]}>
+    <Animated.View layout={LinearTransition.duration(ENTER_MS)} entering={FadeIn.duration(200)} exiting={FadeOut.duration(150)} style={[styles.row, { backgroundColor: tone.from, borderColor: tone.border }]}>
       <Press onPress={toggle} style={[styles.check, item.done ? styles.checkOn : styles.checkOff]} accessibilityRole="checkbox" accessibilityState={{ checked: item.done }} accessibilityLabel={item.text}>
         {item.done && <Check size={16} color="#107238" />}
       </Press>

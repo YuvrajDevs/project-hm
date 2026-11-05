@@ -1,3 +1,6 @@
+"use no memo";
+// Widgets are drawn outside React (plain function calls), so React Compiler's caching hook would crash them with
+// "Invalid Hook Call": this file is opted out.
 // The "Us" home-screen widget. Android draws it from native RemoteViews, so it costs nothing while it sits on the
 // home screen; this JSX only describes it. It never shows anything written (notes, chat): only the partner's mood
 // word, whether each of you has checked in today, the streak, and how many notes are waiting.
@@ -13,6 +16,7 @@ const BLUE = "#60a5fa";
 const YELLOW = "#facc15";
 const BEBAS = "BebasNeue_400Regular";
 const BODY = "Outfit_400Regular";
+const SERIF = "PlayfairDisplay_600SemiBold_Italic";
 
 const Dot = ({ on, color }: { on: boolean; color: `#${string}` }) => (
   <FlexWidget style={{ width: 10, height: 10, borderRadius: 5, backgroundColor: on ? color : "#333333" }} />
@@ -22,7 +26,12 @@ export function UsWidget({ data }: { data: WidgetSnapshot | null }) {
   if (!data || !data.paired) {
     return (
       <FlexWidget clickAction="OPEN_APP" style={{ height: "match_parent", width: "match_parent", backgroundColor: BG, borderRadius: 24, borderWidth: 1, borderColor: BORDER, padding: 16, justifyContent: "center", alignItems: "center" }}>
-        <TextWidget text="HONEST MAILBOX" style={{ fontFamily: BEBAS, fontSize: 20, color: "#ffffff", letterSpacing: 0.1 }} />
+        {/* The wordmark, as in the app: THE Honest MAILBOX */}
+        <FlexWidget style={{ flexDirection: "row", alignItems: "center" }}>
+          <TextWidget text="THE " style={{ fontFamily: BEBAS, fontSize: 20, color: "#ffffff" }} />
+          <TextWidget text="Honest " style={{ fontFamily: SERIF, fontSize: 19, color: "#ffffff" }} />
+          <TextWidget text="MAILBOX" style={{ fontFamily: BEBAS, fontSize: 20, color: "#ffffff" }} />
+        </FlexWidget>
         <TextWidget text={data ? "Pair with your partner to see them here" : "Open the app to sign in"} style={{ fontFamily: BODY, fontSize: 12, color: MUTED, marginTop: 4 }} />
       </FlexWidget>
     );

@@ -4,7 +4,7 @@
 import { useEffect, useState } from "react";
 import { ActivityIndicator, Share, StyleSheet, View } from "react-native";
 import { router, useLocalSearchParams } from "expo-router";
-import Animated, { FadeInDown, FadeInRight, FadeOutLeft, ZoomIn } from "react-native-reanimated";
+import Animated, { FadeInDown, FadeInRight, ZoomIn } from "react-native-reanimated";
 import { KeyboardAwareScrollView } from "react-native-keyboard-controller";
 import * as Clipboard from "expo-clipboard";
 import { doc, onSnapshot, updateDoc } from "@react-native-firebase/firestore";
@@ -21,7 +21,7 @@ import { Button } from "~/ui/Button";
 import { Field } from "~/ui/Field";
 import { DateField } from "~/ui/DateField";
 import { Press } from "~/ui/Pressable";
-import { C, FONT } from "~/theme/tokens";
+import { C, ENTER_MS, FONT } from "~/theme/tokens";
 import { usePageColors } from "~/theme/appearance";
 import { success as hapticSuccess, warn } from "~/lib/feedback";
 
@@ -152,9 +152,11 @@ export default function Pair() {
         )}
       </View>
 
+      {/* Views swap instantly and only fade in: an exit animation kept the old view in the column, so the new one
+          was drawn over it for a moment */}
       <KeyboardAwareScrollView contentContainerStyle={styles.body} keyboardShouldPersistTaps="handled" bottomOffset={24}>
         {mode === "choice" && (
-          <Animated.View key="choice" entering={FadeInDown.duration(320)} exiting={FadeOutLeft.duration(180)} style={styles.stack}>
+          <Animated.View key="choice" entering={FadeInDown.duration(320)} style={styles.stack}>
             <View style={styles.titleBlock}>
               <Text variant="title" center>Connect{"\n"}Hearts</Text>
               <Text variant="eyebrow" center>Pair with your partner</Text>
@@ -166,7 +168,7 @@ export default function Pair() {
         )}
 
         {mode === "create" && (
-          <Animated.View key="create" entering={FadeInRight.duration(320)} exiting={FadeOutLeft.duration(180)} style={styles.stack}>
+          <Animated.View key="create" entering={FadeInRight.duration(320)} style={styles.stack}>
             <View style={styles.titleBlock}>
               <Text variant="title" center style={styles.h1}>Your Code</Text>
               <Text variant="eyebrow" center>Send the link, or read out the code</Text>
@@ -191,7 +193,7 @@ export default function Pair() {
         )}
 
         {mode === "join" && (
-          <Animated.View key="join" entering={FadeInRight.duration(320)} exiting={FadeOutLeft.duration(180)} style={styles.stack}>
+          <Animated.View key="join" entering={FadeInRight.duration(320)} style={styles.stack}>
             <View style={styles.titleBlock}>
               <Text variant="title" center style={styles.h1}>Enter Code</Text>
               <Text variant="eyebrow" center>Your partner&apos;s invite code</Text>
@@ -215,7 +217,7 @@ export default function Pair() {
         )}
 
         {mode === "success" && (
-          <Animated.View key="success" entering={ZoomIn.springify().damping(18)} style={styles.stack}>
+          <Animated.View key="success" entering={ZoomIn.duration(ENTER_MS)} style={styles.stack}>
             <View style={styles.heart}><Heart size={40} color={C.pink} fill={C.pink} /></View>
             <View style={styles.titleBlock}>
               <Text variant="title" center style={styles.h1}>Connected!</Text>
