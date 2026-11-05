@@ -167,6 +167,51 @@
               "resizeMode": "horizontal|vertical",
               "widgetCategory": "home_screen",
               "updatePeriodMillis": 1800000
+            },
+            {
+              "name": "Doodle",
+              "label": "Doodle",
+              "description": "The last doodle your partner drew for you",
+              "minWidth": "110dp",
+              "minHeight": "110dp",
+              "targetCellWidth": 2,
+              "targetCellHeight": 2,
+              "maxResizeWidth": "320dp",
+              "maxResizeHeight": "320dp",
+              "resizeMode": "horizontal|vertical",
+              "widgetCategory": "home_screen",
+              "updatePeriodMillis": 1800000,
+              "previewImage": "./assets/widget-doodle-preview.png"
+            },
+            {
+              "name": "LivePic",
+              "label": "Live pic",
+              "description": "The last photo your partner sent you",
+              "minWidth": "110dp",
+              "minHeight": "110dp",
+              "targetCellWidth": 2,
+              "targetCellHeight": 2,
+              "maxResizeWidth": "320dp",
+              "maxResizeHeight": "320dp",
+              "resizeMode": "horizontal|vertical",
+              "widgetCategory": "home_screen",
+              "updatePeriodMillis": 1800000,
+              "previewImage": "./assets/widget-livepic-preview.png"
+            },
+            {
+              "name": "Streak",
+              "label": "Streak",
+              "description": "Your check-in streak and today's check-ins",
+              "minWidth": "110dp",
+              "minHeight": "110dp",
+              "targetCellWidth": 2,
+              "targetCellHeight": 2,
+              "maxResizeWidth": "320dp",
+              "maxResizeHeight": "320dp",
+              "resizeMode": "horizontal|vertical",
+              "widgetCategory": "home_screen",
+              "updatePeriodMillis": 1800000,
+              "previewImage": "./assets/widget-streak-preview.png"
             }
           ]
         }

@@ -321,6 +321,23 @@ service cloud.firestore {
         allow delete: if isPartOfCouple(coupleId) && uid == request.auth.uid;
       }
 
+      // Home-screen widgets (phone app): one document per person holding the latest doodle and the latest live
+      // picture they sent, each end-to-end encrypted like a chat message. Both can read (the partner's phone draws
+      // them on its widgets); each person writes only their own. Either can delete during a reset or unpairing.
+      match /widgets/{uid} {
+        allow read: if isPartOfCouple(coupleId);
+        allow create, update: if isPartOfCouple(coupleId)
+          && uid == request.auth.uid
+          && request.resource.data.keys().hasOnly(['doodleIv', 'doodleCt', 'doodleAt', 'picIv', 'picCt', 'picAt'])
+          && (!('doodleIv' in request.resource.data) || (request.resource.data.doodleIv is string && request.resource.data.doodleIv.size() == 16))
+          && (!('doodleCt' in request.resource.data) || (request.resource.data.doodleCt is string && request.resource.data.doodleCt.size() <= 200000))
+          && (!('picIv' in request.resource.data) || (request.resource.data.picIv is string && request.resource.data.picIv.size() == 16))
+          && (!('picCt' in request.resource.data) || (request.resource.data.picCt is string && request.resource.data.picCt.size() <= 700000))
+          && (!('doodleAt' in request.resource.data) || request.resource.data.doodleAt is timestamp)
+          && (!('picAt' in request.resource.data) || request.resource.data.picAt is timestamp);
+        allow delete: if canDeleteCoupleItem(coupleId, uid);
+      }
+
       // What each of you likes, kept from the questions you answered about yourself (never from guesses):
       // the question and the answer picked, saved with the couple. Both can read; each writes only their own.
       match /preferences/{prefId} {

@@ -47,6 +47,8 @@ export default function RootLayout() {
             <Stack.Screen name="questions/[id]" options={{ animation: "slide_from_bottom" }} />
             <Stack.Screen name="about/[id]" options={{ animation: "slide_from_bottom" }} />
             <Stack.Screen name="safe-space" options={{ animation: "slide_from_bottom", gestureEnabled: false }} />
+            <Stack.Screen name="doodle" options={{ animation: "slide_from_bottom" }} />
+            <Stack.Screen name="snap" options={{ animation: "slide_from_bottom" }} />
             <Stack.Screen name="notifications" options={{ presentation: "transparentModal", animation: "fade" }} />
           </Stack>
           <ToastHost />

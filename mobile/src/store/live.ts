@@ -21,6 +21,9 @@ interface LiveState {
   activeSafeSpace: SafeSpaceSession | null;
   /** The sender's own words for capsules that are still sealed */
   sealedContent: Record<string, CapsuleContent>;
+  /** What the partner last sent to this phone's widgets (decrypted): their doodle's strokes and their live picture */
+  partnerDoodle: { strokes: string[]; at: string } | null;
+  partnerPic: { data: string; at: string } | null;
   /** A clock that ticks once a minute (and exactly when a capsule unlocks), for day rollover and unlocks */
   now: number;
 }
@@ -36,6 +39,8 @@ const EMPTY: Omit<LiveState, "now"> = {
   games: [],
   activeSafeSpace: null,
   sealedContent: {},
+  partnerDoodle: null,
+  partnerPic: null,
 };
 
 export const useLive = create<LiveState>(() => ({ ...EMPTY, now: Date.now() }));

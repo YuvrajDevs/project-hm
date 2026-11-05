@@ -21,6 +21,7 @@ import { C, PAGE } from "~/theme/tokens";
 import { usePageColors } from "~/theme/appearance";
 import { TodayRow } from "~/features/home/TodayRow";
 import { Dock, DOCK_HEIGHT } from "~/features/home/Dock";
+import { WidgetTiles } from "~/features/home/WidgetTiles";
 import { OurThoughts } from "~/features/mailbox/OurThoughts";
 import { ComposeSheet } from "~/features/mailbox/ComposeSheet";
 import { WhiteFlagCard, WhiteFlagOverlay } from "~/features/mailbox/WhiteFlag";
@@ -94,6 +95,7 @@ function MailboxView() {
       </View>
       <TodayRow />
       <OurThoughts active />
+      <WidgetTiles />
       <GamesShelf />
       <SafeSpaceEntry />
       <WhiteFlagCard />

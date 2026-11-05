@@ -21,7 +21,9 @@ import { resetSession, useSession } from "~/store/session";
 import { useTodayId } from "~/store/derived";
 import { computeMetrics, pickSafeSpace, todaysCheckins } from "~/lib/derive";
 import { rememberDeleting, isDeleting } from "./accountFlags";
-import { refreshWidget } from "~/widget/bridge";
+import { refreshSharedWidgets, refreshWidget } from "~/widget/bridge";
+import { doodleToSvg, loadShared } from "~/widget/shared";
+import { fetchPartnerWidgets, subscribeToPartnerWidgets, type PartnerWidgets } from "~/data/widgetShare";
 import { isOwnerEmail } from "@/lib/adminMetrics";
 
 type Snap = { id: string; ref: unknown; data: () => Record<string, unknown> | undefined };
@@ -43,6 +45,7 @@ export function SyncEngine() {
   useCoupleUpkeep();
   useCapsules();
   useWidgetFeed();
+  useSharedWidgetFeed();
   return null;
 }
 
@@ -304,4 +307,42 @@ function useWidgetFeed() {
   useEffect(() => {
     refreshWidget({ paired, partnerName: partnerName?.split(" ")[0] ?? "", partnerMood: partnerMood ?? "", streak: streak ?? 0, streakDay: streakDay ?? "", todayId, tz, mine, theirs, waiting });
   }, [paired, partnerName, partnerMood, streak, streakDay, todayId, tz, mine, theirs, waiting]);
+}
+
+// ─── 9. The partner's doodle and live picture, for the Doodle and Live pic widgets ─
+// Decrypted here and kept on the device (src/widget/shared.ts); signing out or unpairing clears them, so nothing of
+// the partner stays on this phone afterwards.
+function useSharedWidgetFeed() {
+  const uid = useSession((s) => s.authUser?.uid);
+  const coupleId = useSession((s) => s.user?.coupleId);
+  const partnerA = useSession((s) => s.couple?.partnerA_uid);
+  const partnerB = useSession((s) => s.couple?.partnerB_uid);
+  const partnerName = useSession((s) => s.user?.partnerNickname || s.partner?.displayName || "");
+  const partnerUid = uid && partnerA && partnerB ? (partnerA === uid ? partnerB : partnerA) : null;
+
+  useEffect(() => {
+    if (!uid || !coupleId || !partnerUid) { refreshSharedWidgets(null); return; }
+    // Something that can't be opened right now (key not unlocked yet) keeps the last copy instead of blanking it
+    let doodle: { svg: string; at: string } | null = null;
+    let pic: { data: string; at: string } | null = null;
+    const publish = (w: PartnerWidgets) => {
+      if (w.doodle) doodle = { svg: doodleToSvg(w.doodle.strokes), at: w.doodle.at };
+      if (w.pic) pic = { data: w.pic.data, at: w.pic.at };
+      // The home screen's tiles show the same, inside the app
+      if (w.doodle) useLive.setState({ partnerDoodle: w.doodle });
+      if (w.pic) useLive.setState({ partnerPic: w.pic });
+      refreshSharedWidgets({ coupleId, uid, partnerUid, partnerName: partnerName.split(" ")[0] ?? "", doodle, pic });
+    };
+    loadShared().then((saved) => {
+      if (saved?.coupleId !== coupleId || saved.uid !== uid) return;
+      doodle = doodle ?? saved.doodle;
+      pic = pic ?? saved.pic;
+    });
+    const off = subscribeToPartnerWidgets(coupleId, uid, partnerUid, publish);
+    // The chat key may be unlocked after this started (first set-up, a new phone): look again when the app returns
+    const sub = AppState.addEventListener("change", (state) => {
+      if (state === "active") fetchPartnerWidgets(coupleId, uid, partnerUid).then(publish).catch(() => {});
+    });
+    return () => { off(); sub.remove(); };
+  }, [uid, coupleId, partnerUid, partnerName]);
 }

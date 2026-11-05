@@ -91,6 +91,23 @@ export async function prepareAvatar(a: Asset): Promise<string> {
   throw new ChatMediaError("That picture is too large. Try a different one.");
 }
 
+/**
+ * A live picture for the partner's home-screen widget: a square from the middle (the widget is square), small
+ * enough that the widget can draw it from memory and the encrypted copy stays well inside a document.
+ */
+export async function prepareLivePic(a: Asset): Promise<string> {
+  if (!a.width || !a.height) throw new ChatMediaError("Couldn't open that picture. Try a different one.");
+  const side = Math.min(a.width, a.height);
+  const crop = { originX: Math.round((a.width - side) / 2), originY: Math.round((a.height - side) / 2), width: side, height: side };
+  for (const px of [720, 600, 480]) {
+    for (const q of [0.78, 0.64]) {
+      const out = await encode(a.uri, px, px, q, crop);
+      if (out.data && out.data.length <= 360_000) return out.data;
+    }
+  }
+  throw new ChatMediaError("That picture is too large. Try a different one.");
+}
+
 /** Checks a video against the limits and reads what the bubble needs: length, shape and a small still. */
 export async function prepareVideo(a: Asset): Promise<PreparedVideo> {
   const file = new File(a.uri);

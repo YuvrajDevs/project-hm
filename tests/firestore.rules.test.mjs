@@ -587,6 +587,26 @@ test("chat wallpaper: each person writes only their own, both can read", async (
   await assertSucceeds(deleteDoc(wp(ALICE)));
 });
 
+test("widgets: each person writes only their own encrypted doodle and picture, both can read", async () => {
+  await seedCouple();
+  const w = (who, owner = who) => doc(db(who), "couples", COUPLE, "widgets", owner);
+  const doodle = (extra = {}) => ({ doodleIv: "A".repeat(16), doodleCt: "A".repeat(500), doodleAt: serverTimestamp(), ...extra });
+  const pic = (extra = {}) => ({ picIv: "B".repeat(16), picCt: "B".repeat(5000), picAt: serverTimestamp(), ...extra });
+  await assertSucceeds(setDoc(w(ALICE), doodle(), { merge: true }));
+  await assertSucceeds(setDoc(w(ALICE), pic(), { merge: true }));                                   // the other kind, kept beside it
+  await assertSucceeds(getDoc(w(BOB, ALICE)));                                                       // the partner reads it
+  await assertFails(getDoc(w(MALLORY, ALICE)));                                                      // outsiders don't
+  await assertFails(setDoc(w(BOB, ALICE), doodle(), { merge: true }));                               // not Bob's to write
+  await assertFails(setDoc(w(MALLORY), doodle(), { merge: true }));                                  // not in the couple
+  await assertFails(setDoc(w(ALICE), doodle({ doodleIv: "short" }), { merge: true }));
+  await assertFails(setDoc(w(ALICE), doodle({ doodleCt: "A".repeat(200001) }), { merge: true }));
+  await assertFails(setDoc(w(ALICE), pic({ picCt: "B".repeat(700001) }), { merge: true }));
+  await assertFails(setDoc(w(ALICE), doodle({ text: "plain words" }), { merge: true }));          // nothing unencrypted
+  await assertFails(setDoc(w(ALICE), doodle({ doodleAt: "yesterday" }), { merge: true }));
+  await assertFails(deleteDoc(w(BOB, ALICE)));                                                       // only during a reset or unpairing
+  await assertSucceeds(deleteDoc(w(ALICE)));
+});
+
 test("a message and the chat summary on the couple are written together", async () => {
   await seedCouple();
   const alice = db(ALICE);

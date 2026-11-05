@@ -98,15 +98,7 @@ export function Scribble({ game, uid, partnerUid, partnerName, coupleId, onLeave
             onStroke={(s) => addScribbleStroke(coupleId, game.id, round, s).catch(() => setError("A line didn't save. Try drawing it again."))}
           />
           {iDraw && !result && (
-            <View style={styles.palette} accessibilityRole="radiogroup" accessibilityLabel="Pen">
-              <Press onPress={() => setTool(ERASER)} style={[styles.eraser, tool === ERASER && styles.toolOn]} accessibilityRole="radio" accessibilityState={{ selected: tool === ERASER }} accessibilityLabel="Eraser">
-                <Eraser size={16} color={C.white} />
-              </Press>
-              <View style={styles.sep} />
-              {PALETTE.map((c) => (
-                <Press key={c.id} onPress={() => setTool(c.id)} style={[styles.swatch, { backgroundColor: `#${c.id}` }, tool === c.id ? styles.swatchOn : styles.swatchOff]} accessibilityRole="radio" accessibilityState={{ selected: tool === c.id }} accessibilityLabel={c.name} />
-              ))}
-            </View>
+            <PenPalette tool={tool} onTool={setTool} />
           )}
           <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.guesses} style={styles.guessStrip}>
             {guesses.length === 0 ? (
@@ -168,7 +160,23 @@ const Saved = memo(function Saved({ strokes, scale }: { strokes: string[]; scale
   );
 });
 
-function Canvas({ strokes, canDraw, tool, onStroke }: { strokes: string[]; canDraw: boolean; tool: string; onStroke: (s: string) => void }) {
+/** The eraser and the colours, as a row (Scribble and the Doodle widget's pad) */
+export function PenPalette({ tool, onTool }: { tool: string; onTool: (t: string) => void }) {
+  return (
+    <View style={styles.palette} accessibilityRole="radiogroup" accessibilityLabel="Pen">
+      <Press onPress={() => onTool(ERASER)} style={[styles.eraser, tool === ERASER && styles.toolOn]} accessibilityRole="radio" accessibilityState={{ selected: tool === ERASER }} accessibilityLabel="Eraser">
+        <Eraser size={16} color={C.white} />
+      </Press>
+      <View style={styles.sep} />
+      {PALETTE.map((c) => (
+        <Press key={c.id} onPress={() => onTool(c.id)} style={[styles.swatch, { backgroundColor: `#${c.id}` }, tool === c.id ? styles.swatchOn : styles.swatchOff]} accessibilityRole="radio" accessibilityState={{ selected: tool === c.id }} accessibilityLabel={c.name} />
+      ))}
+    </View>
+  );
+}
+
+/** The drawing pad: strokes on a 0–1000 grid, drawn on the UI thread (see the top of this file) */
+export function Canvas({ strokes, canDraw, tool, onStroke }: { strokes: string[]; canDraw: boolean; tool: string; onStroke: (s: string) => void }) {
   const [box, setBox] = useState({ w: 0, h: 0 });
   const side = Math.min(box.w, box.h);
   // Strokes are a fixed width on screen whatever the pad's size, like the web's non-scaling strokes
