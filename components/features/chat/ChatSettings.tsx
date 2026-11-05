@@ -8,7 +8,7 @@ import { ChatMediaError, prepareWallpaper } from "@/lib/chatMedia";
 import { saveWallpaper, type ChatWallpaper } from "@/lib/firestore-helpers";
 import type { User } from "@/lib/types";
 import { cn } from "@/lib/utils";
-import { LEVELS, effectiveWallpaper } from "./wallpaper";
+import { LEVELS, effectiveWallpaper } from "@/lib/chatWallpaper";
 
 // One way of choosing a level, used for both dim and blur: five steps from Off to Max
 const LevelPicker = ({ label, value, onChange }: { label: string; value: number; onChange: (n: number) => void }) => (

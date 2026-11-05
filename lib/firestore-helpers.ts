@@ -1264,21 +1264,49 @@ const toChat = (d: QueryDocumentSnapshot): ChatMessage => {
   } as ChatMessage;
 };
 
-// Decrypts one raw doc into the plaintext shape the UI expects. Never throws: a missing/invalid
-// schema, a missing shared key, or a failed decrypt (tamper, or a key that's been rotated away) all
-// land on `decryptFailed`, which MessageContent shows as a placeholder instead of crashing.
-const decryptChat = async (raw: ChatMessage, uid: string, coupleId: string, partnerUid: string): Promise<ChatMessage> => {
-  // A view-once message that has been opened has no content left, by design: that isn't a failure
-  if (raw.once && raw.openedAt) return { ...raw, decryptFailed: false };
-  if (raw.v !== 1 || !raw.iv || !raw.ct) return { ...raw, decryptFailed: true };
-  try {
-    const aesKey = await getAesKeyForCouple(uid, coupleId, partnerUid);
+// Decrypting a message is pure work on bytes that never change once written (a doc's iv and ct are fixed; only
+// savedBy / openedAt move afterwards). So each listener keeps what it already decrypted, keyed by doc id + iv, and a
+// snapshot only decrypts what is actually new. It also resolves the shared key ONCE per snapshot: before this, every
+// snapshot re-decrypted every loaded message (photos included) and fetched the partner's profile from the server once
+// per message, which is where the chat's lag came from.
+type DecryptedFields = Partial<ChatMessage>;
+
+const makeChatDecrypter = (uid: string, coupleId: string, partnerUid: string) => {
+  const cache = new Map<string, { key: CryptoKey; fields: DecryptedFields }>();
+  let seq = 0;
+
+  const one = async (raw: ChatMessage, aesKey: CryptoKey | null): Promise<ChatMessage> => {
+    // A view-once message that has been opened has no content left, by design: that isn't a failure
+    if (raw.once && raw.openedAt) return { ...raw, decryptFailed: false };
+    if (raw.v !== 1 || !raw.iv || !raw.ct) return { ...raw, decryptFailed: true };
     if (!aesKey) return { ...raw, decryptFailed: true };
-    const fields = await decryptMessage(coupleId, raw.senderUid, raw.kind, raw.iv, raw.ct, aesKey);
-    return { ...raw, ...fields, decryptFailed: false };
-  } catch {
-    return { ...raw, decryptFailed: true };
-  }
+    const id = `${raw.id}/${raw.iv}`;
+    const hit = cache.get(id);
+    if (hit && hit.key === aesKey) return { ...raw, ...hit.fields, decryptFailed: false };
+    try {
+      const fields = await decryptMessage(coupleId, raw.senderUid, raw.kind, raw.iv, raw.ct, aesKey);
+      cache.set(id, { key: aesKey, fields });
+      return { ...raw, ...fields, decryptFailed: false };
+    } catch {
+      // Tampered, or encrypted with a key that has since been rotated away: shown as a placeholder, never a crash
+      return { ...raw, decryptFailed: true };
+    }
+  };
+
+  /**
+   * Decrypts a whole snapshot. Resolves to null if a newer snapshot started in the meantime, so a slow decrypt can
+   * never overwrite newer messages on screen with an older list.
+   */
+  return async (raws: ChatMessage[]): Promise<ChatMessage[] | null> => {
+    const mine = ++seq;
+    const needsKey = raws.some((r) => !(r.once && r.openedAt) && r.v === 1 && r.iv && r.ct);
+    const aesKey = needsKey ? await getAesKeyForCouple(uid, coupleId, partnerUid).catch(() => null) : null;
+    const out = await Promise.all(raws.map((r) => one(r, aesKey)));
+    // Forget what is no longer on screen, so memory stays bounded by what the listener holds
+    const live = new Set(raws.map((r) => `${r.id}/${r.iv}`));
+    for (const k of cache.keys()) if (!live.has(k)) cache.delete(k);
+    return mine === seq ? out : null;
+  };
 };
 
 // The newest `count` messages, oldest first
@@ -1291,12 +1319,13 @@ export const subscribeToChat = (
   onError?: (err: unknown) => void
 ) => {
   const q = query(collection(db, "couples", coupleId, "chat"), orderBy("createdAt", "asc"), limitToLast(count));
+  const decryptAll = makeChatDecrypter(uid, coupleId, partnerUid);
   return onSnapshot(
     q,
     { includeMetadataChanges: true },
     async (snap) => {
-      const messages = await Promise.all(snap.docs.map(toChat).map((m) => decryptChat(m, uid, coupleId, partnerUid)));
-      callback(messages, snap.size >= count);
+      const messages = await decryptAll(snap.docs.map(toChat));
+      if (messages) callback(messages, snap.size >= count);
     },
     onError
   );
@@ -1311,11 +1340,12 @@ export const subscribeToSavedChat = (
   onError?: (err: unknown) => void
 ) => {
   const q = query(collection(db, "couples", coupleId, "chat"), where("savedBy", "array-contains", uid));
+  const decryptAll = makeChatDecrypter(uid, coupleId, partnerUid);
   return onSnapshot(
     q,
     async (snap) => {
-      const messages = await Promise.all(snap.docs.map(toChat).map((m) => decryptChat(m, uid, coupleId, partnerUid)));
-      callback(messages.sort((a, b) => b.createdAt.localeCompare(a.createdAt)));
+      const messages = await decryptAll(snap.docs.map(toChat));
+      if (messages) callback(messages.sort((a, b) => b.createdAt.localeCompare(a.createdAt)));
     },
     onError
   );
@@ -1376,8 +1406,11 @@ export const markChatSeen = (coupleId: string, uid: string, lastAt?: string) => 
 export const setChatMessageSaved = (coupleId: string, messageId: string, uid: string, saved: boolean) =>
   updateDoc(doc(db, "couples", coupleId, "chat", messageId), { savedBy: saved ? arrayUnion(uid) : arrayRemove(uid) });
 
-export const deleteChatMessage = (coupleId: string, messageId: string) =>
-  deleteDoc(doc(db, "couples", coupleId, "chat", messageId));
+/** Unsend. A video's encrypted file goes too, once the message pointing at it is gone (otherwise it would be orphaned). */
+export const deleteChatMessage = async (coupleId: string, messageId: string, videoPath?: string) => {
+  await deleteDoc(doc(db, "couples", coupleId, "chat", messageId));
+  if (videoPath) await deleteObject(storageRef(storage, videoPath)).catch(() => {});
+};
 
 /**
  * Open a view-once message: the content is wiped from the server in the same step, so it can be seen

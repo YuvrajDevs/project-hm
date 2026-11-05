@@ -23,7 +23,7 @@ import { Composer } from "./Composer";
 import { ImageViewer } from "./ImageViewer";
 import { OnceViewer, VideoViewer } from "./MediaViewers";
 import { ChatSettings } from "./ChatSettings";
-import { effectiveWallpaper, pendingOffer } from "./wallpaper";
+import { effectiveWallpaper, pendingOffer } from "@/lib/chatWallpaper";
 import { SavedMessages } from "./SavedMessages";
 
 const PAGE = 40;
@@ -324,7 +324,7 @@ export const ChatScreen = ({ onClose }: { onClose: () => void }) => {
 
   const unsend = (m: ChatMessage) => {
     setSelectedId(null);
-    deleteChatMessage(coupleId, m.id).catch(() => setError("Couldn't unsend that. Try again."));
+    deleteChatMessage(coupleId, m.id, m.path).catch(() => setError("Couldn't unsend that. Try again."));
   };
 
   const partnerTitle = user?.partnerNickname?.trim() || partner?.displayName || "Your person";
