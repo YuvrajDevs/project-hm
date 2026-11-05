@@ -151,11 +151,11 @@ function Splash({ react, manual }: { react: { type: ReactionType; note?: string 
   const glow = useSharedValue(0.28);
   const float = useSharedValue(0);
   useEffect(() => {
-    glow.value = withRepeat(withSequence(withTiming(0.42, { duration: 2000 }), withTiming(0.28, { duration: 2000 })), -1);
-    float.value = withRepeat(withSequence(withTiming(-10, { duration: 1800 }), withTiming(0, { duration: 1800 })), -1);
+    glow.set(withRepeat(withSequence(withTiming(0.42, { duration: 2000 }), withTiming(0.28, { duration: 2000 })), -1));
+    float.set(withRepeat(withSequence(withTiming(-10, { duration: 1800 }), withTiming(0, { duration: 1800 })), -1));
   }, [glow, float]);
-  const glowStyle = useAnimatedStyle(() => ({ opacity: glow.value * 2, transform: [{ scale: 1 + (glow.value - 0.28) }] }));
-  const floatStyle = useAnimatedStyle(() => ({ transform: [{ translateY: float.value }] }));
+  const glowStyle = useAnimatedStyle(() => ({ opacity: glow.get() * 2, transform: [{ scale: 1 + (glow.get() - 0.28) }] }));
+  const floatStyle = useAnimatedStyle(() => ({ transform: [{ translateY: float.get() }] }));
   if (!cfg) return null;
   const tint = cfg.color === "#ffffff" ? "#a3a3a3" : cfg.color;
   const dismiss = () => ui.set({ splash: null });

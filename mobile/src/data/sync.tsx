@@ -293,12 +293,13 @@ function useWidgetFeed() {
   const tz = useSession((s) => s.couple?.dayTimezone);
   const history = useLive((s) => s.historyCheckins);
   const raw = useLive((s) => s.rawMessages);
+  const now = useLive((s) => s.now);
   const todayId = useTodayId();
 
   const today = todaysCheckins(history, todayId);
   const mine = !!uid && today.some((c) => c.userUid === uid);
   const theirs = today.some((c) => c.userUid !== uid);
-  const waiting = uid ? raw.filter((m) => !m.response && m.senderUid !== uid && !m.hiddenFor?.includes(uid) && !(m.unlockAt && new Date(m.unlockAt).getTime() > Date.now())).length : 0;
+  const waiting = uid ? raw.filter((m) => !m.response && m.senderUid !== uid && !m.hiddenFor?.includes(uid) && !(m.unlockAt && new Date(m.unlockAt).getTime() > now)).length : 0;
 
   useEffect(() => {
     refreshWidget({ paired, partnerName: partnerName?.split(" ")[0] ?? "", partnerMood: partnerMood ?? "", streak: streak ?? 0, streakDay: streakDay ?? "", todayId, tz, mine, theirs, waiting });

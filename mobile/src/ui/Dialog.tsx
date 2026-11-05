@@ -26,15 +26,15 @@ export function Dialog({ open, title, body, confirmLabel, cancelLabel = "Cancel"
   useEffect(() => {
     if (open) {
       setMounted(true);
-      p.value = withSpring(1, SPRING);
+      p.set(withSpring(1, SPRING));
     } else if (mounted) {
-      p.value = withTiming(0, { duration: 150 }, (done) => { if (done) runOnJS(setMounted)(false); });
+      p.set(withTiming(0, { duration: 150 }, (done) => { if (done) runOnJS(setMounted)(false); }));
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [open]);
 
-  const backdrop = useAnimatedStyle(() => ({ opacity: Math.min(1, p.value) }));
-  const panel = useAnimatedStyle(() => ({ opacity: Math.min(1, p.value), transform: [{ scale: 0.94 + 0.06 * p.value }] }));
+  const backdrop = useAnimatedStyle(() => ({ opacity: Math.min(1, p.get()) }));
+  const panel = useAnimatedStyle(() => ({ opacity: Math.min(1, p.get()), transform: [{ scale: 0.94 + 0.06 * p.get() }] }));
 
   if (!mounted) return null;
   const cancel = () => { if (!busy) onCancel(); };

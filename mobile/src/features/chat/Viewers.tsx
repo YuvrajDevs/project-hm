@@ -43,30 +43,30 @@ export function ImageViewer({ message, onClose }: { message: ChatMessage; onClos
   const fade = useSharedValue(1);
 
   const pinch = Gesture.Pinch()
-    .onUpdate((e) => { scale.value = Math.max(1, Math.min(5, saved.value * e.scale)); })
-    .onEnd(() => { saved.value = scale.value; if (scale.value <= 1.01) { tx.value = withSpring(0, SPRING); ty.value = withSpring(0, SPRING); } });
+    .onUpdate((e) => { scale.set(Math.max(1, Math.min(5, saved.get() * e.scale))); })
+    .onEnd(() => { saved.set(scale.get()); if (scale.get() <= 1.01) { tx.set(withSpring(0, SPRING)); ty.set(withSpring(0, SPRING)); } });
   const pan = Gesture.Pan()
     .averageTouches(true)
     .onUpdate((e) => {
-      if (scale.value > 1.01) { tx.value = e.translationX; ty.value = e.translationY; }
-      else { ty.value = e.translationY; fade.value = Math.max(0.3, 1 - Math.abs(e.translationY) / 500); }
+      if (scale.get() > 1.01) { tx.set(e.translationX); ty.set(e.translationY); }
+      else { ty.set(e.translationY); fade.set(Math.max(0.3, 1 - Math.abs(e.translationY) / 500)); }
     })
     .onEnd((e) => {
-      if (scale.value <= 1.01 && (Math.abs(e.translationY) > 140 || Math.abs(e.velocityY) > 1200)) {
-        ty.value = withTiming(Math.sign(e.translationY || 1) * height, { duration: 180, easing: Easing.in(Easing.quad) }, () => runOnJS(onClose)());
+      if (scale.get() <= 1.01 && (Math.abs(e.translationY) > 140 || Math.abs(e.velocityY) > 1200)) {
+        ty.set(withTiming(Math.sign(e.translationY || 1) * height, { duration: 180, easing: Easing.in(Easing.quad) }, () => runOnJS(onClose)()));
         return;
       }
-      if (scale.value <= 1.01) { tx.value = withSpring(0, SPRING); ty.value = withSpring(0, SPRING); fade.value = withTiming(1); }
+      if (scale.get() <= 1.01) { tx.set(withSpring(0, SPRING)); ty.set(withSpring(0, SPRING)); fade.set(withTiming(1)); }
     });
   const doubleTap = Gesture.Tap().numberOfTaps(2).onEnd(() => {
-    const zoomIn = scale.value <= 1.01;
-    scale.value = withSpring(zoomIn ? 2.5 : 1, SPRING);
-    saved.value = zoomIn ? 2.5 : 1;
-    if (!zoomIn) { tx.value = withSpring(0, SPRING); ty.value = withSpring(0, SPRING); }
+    const zoomIn = scale.get() <= 1.01;
+    scale.set(withSpring(zoomIn ? 2.5 : 1, SPRING));
+    saved.set(zoomIn ? 2.5 : 1);
+    if (!zoomIn) { tx.set(withSpring(0, SPRING)); ty.set(withSpring(0, SPRING)); }
   });
   const gesture = Gesture.Simultaneous(pinch, pan, doubleTap);
-  const style = useAnimatedStyle(() => ({ transform: [{ translateX: tx.value }, { translateY: ty.value }, { scale: scale.value }] }));
-  const bg = useAnimatedStyle(() => ({ opacity: fade.value }));
+  const style = useAnimatedStyle(() => ({ transform: [{ translateX: tx.get() }, { translateY: ty.get() }, { scale: scale.get() }] }));
+  const bg = useAnimatedStyle(() => ({ opacity: fade.get() }));
   const ratio = message.w && message.h ? message.w / message.h : 1;
   const w = Math.min(width, height * ratio);
 
@@ -88,8 +88,12 @@ function useVideoFile(message: ChatMessage, preloaded?: Uint8Array) {
   const coupleId = useSession((s) => s.user?.coupleId);
   const partnerUid = useSession((s) => s.partner?.uid);
   const [uri, setUri] = useState<string | null>(null);
-  const [failed, setFailed] = useState(false);
+  const [failedFor, setFailedFor] = useState<string | null>(null);
+  const missing = !preloaded && !(coupleId && uid && partnerUid && message.path);
+  const failed = missing || failedFor === message.id;
   useEffect(() => {
+    if (missing) return;
+    const fail = () => setFailedFor(message.id);
     let cancelled = false;
     const file = new File(Paths.cache, `video-${message.id.replace(/[^\w-]/g, "_")}.mp4`);
     const show = async (bytes: Uint8Array) => {
@@ -97,12 +101,12 @@ function useVideoFile(message: ChatMessage, preloaded?: Uint8Array) {
       await file.write(bytes);
       if (!cancelled) setUri(file.uri);
     };
-    if (preloaded) show(preloaded).catch(() => setFailed(true));
+    if (preloaded) show(preloaded).catch(fail);
     else if (coupleId && uid && partnerUid && message.path) {
-      downloadChatVideo(coupleId, uid, partnerUid, message.senderUid, message.path).then(show).catch((e) => { console.error(e); if (!cancelled) setFailed(true); });
-    } else setFailed(true);
+      downloadChatVideo(coupleId, uid, partnerUid, message.senderUid, message.path).then(show).catch((e) => { console.error(e); if (!cancelled) fail(); });
+    }
     return () => { cancelled = true; try { if (file.exists) file.delete(); } catch { /* gone */ } };
-  }, [message.id, message.path, message.senderUid, preloaded, coupleId, uid, partnerUid]);
+  }, [message.id, message.path, message.senderUid, preloaded, coupleId, uid, partnerUid, missing]);
   return { uri, failed };
 }
 
@@ -168,12 +172,12 @@ function OnceText({ text, onDone }: { text: string; onDone: () => void }) {
   const [left, setLeft] = useState(ONCE_TEXT_SECONDS);
   const bar = useSharedValue(1);
   useEffect(() => {
-    bar.value = withTiming(0, { duration: ONCE_TEXT_SECONDS * 1000, easing: Easing.linear });
+    bar.set(withTiming(0, { duration: ONCE_TEXT_SECONDS * 1000, easing: Easing.linear }));
     const id = setInterval(() => setLeft((s) => s - 1), 1000);
     return () => clearInterval(id);
   }, [bar]);
   useEffect(() => { if (left <= 0) onDone(); }, [left, onDone]);
-  const barStyle = useAnimatedStyle(() => ({ transform: [{ scaleX: bar.value }] }));
+  const barStyle = useAnimatedStyle(() => ({ transform: [{ scaleX: bar.get() }] }));
   return (
     <View style={styles.onceText}>
       <View style={styles.onceBox}><Text style={styles.onceTextBody}>{text}</Text></View>

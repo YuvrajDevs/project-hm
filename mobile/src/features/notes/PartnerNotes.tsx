@@ -20,6 +20,7 @@ import { pop } from "~/lib/feedback";
 
 const PREVIEW = 4;
 const MAX_LENGTH = 140;
+const NONE: PartnerNote[] = [];
 type Filter = "all" | "mine" | "shared";
 type Kind = "private" | "shared" | "theirs";
 
@@ -45,11 +46,12 @@ export const PartnerNotes = memo(function PartnerNotes() {
 
   useEffect(() => { if (uid) return subscribeToPartnerNotes(uid, setMine); }, [uid]);
   useEffect(() => {
-    if (!partnerUid) { setTheirs([]); return; }
-    return subscribeToSharedNotes(partnerUid, setTheirs);
+    if (!partnerUid) return;
+    const unsubscribe = subscribeToSharedNotes(partnerUid, setTheirs);
+    return () => { unsubscribe(); setTheirs([]); };
   }, [partnerUid]);
 
-  const fromPartner = partnerUid ? theirs : [];
+  const fromPartner = partnerUid ? theirs : NONE;
   const kindOf = (n: PartnerNote): Kind => (n.userUid !== uid ? "theirs" : n.shared ? "shared" : "private");
   const shown = useMemo(() => (
     filter === "mine" ? mine.filter((n) => !n.shared)

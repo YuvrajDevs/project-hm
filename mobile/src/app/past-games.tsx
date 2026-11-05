@@ -12,7 +12,7 @@ import type { CoupleGame } from "@/lib/types";
 import { useGuard } from "~/lib/routing";
 import { useSession } from "~/store/session";
 import { usePartnerName } from "~/store/derived";
-import { deckIcon } from "~/features/games/deckIcons";
+import { DeckIcon } from "~/features/games/deckIcons";
 import { Screen, TopBar } from "~/ui/Screen";
 import { Press } from "~/ui/Pressable";
 import { Text } from "~/ui/Text";
@@ -92,10 +92,9 @@ export default function PastGames() {
           contentContainerStyle={styles.list}
           renderItem={({ item: e }) => {
             const deck = DECK_BY_ID[e.deck];
-            const Icon = deckIcon(e.deck);
             return (
               <Press onPress={() => setOpen(e)} style={styles.row} accessibilityRole="button">
-                <LinearGradient colors={gradientOf(deck.cards[0])} style={styles.icon}><Icon size={20} color={C.white} /></LinearGradient>
+                <LinearGradient colors={gradientOf(deck.cards[0])} style={styles.icon}><DeckIcon id={e.deck} size={20} color={C.white} /></LinearGradient>
                 <View style={styles.flex}>
                   <Text variant="label" onCard numberOfLines={1}>{deck.title}</Text>
                   <Text variant="small" color={C.neutral400} numberOfLines={1}>{pastGameSummary(e, uid, partnerUid, name)}</Text>

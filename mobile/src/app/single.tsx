@@ -68,9 +68,9 @@ function PartnerLeft() {
   const [error, setError] = useState("");
   const beat = useSharedValue(1);
   useEffect(() => {
-    beat.value = withRepeat(withSequence(withTiming(1.1, { duration: 1500 }), withTiming(1, { duration: 1500 })), -1);
+    beat.set(withRepeat(withSequence(withTiming(1.1, { duration: 1500 }), withTiming(1, { duration: 1500 })), -1));
   }, [beat]);
-  const heart = useAnimatedStyle(() => ({ transform: [{ scale: beat.value }] }));
+  const heart = useAnimatedStyle(() => ({ transform: [{ scale: beat.get() }] }));
 
   const clear = async () => {
     setBusy(true);

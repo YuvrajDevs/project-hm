@@ -1,6 +1,6 @@
 // A short list of actions in a bottom sheet (the app's version of the web's little "⋯" menus). Destructive
 // actions ask for a second tap, exactly like the web ("Tap again to hide").
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import { StyleSheet, View } from "react-native";
 import { Sheet } from "./Sheet";
 import { Press } from "./Pressable";
@@ -19,7 +19,7 @@ export interface SheetAction {
 
 export function ActionSheet({ open, onClose, title, actions }: { open: boolean; onClose: () => void; title?: string; actions: SheetAction[] }) {
   const [armed, setArmed] = useState<string | null>(null);
-  useEffect(() => { if (!open) setArmed(null); }, [open]);
+  if (!open && armed) setArmed(null);
   return (
     <Sheet open={open} onClose={onClose} title={title}>
       <View style={styles.list}>

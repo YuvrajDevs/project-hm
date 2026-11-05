@@ -18,13 +18,13 @@ interface Props extends Omit<PressableProps, "style"> {
 
 export const Press = React.memo(function Press({ style, scaleTo = PRESS_SCALE, haptic = true, onPressIn, onPressOut, onPress, disabled, children, ...rest }: Props) {
   const scale = useSharedValue(1);
-  const animated = useAnimatedStyle(() => ({ transform: [{ scale: scale.value }] }));
+  const animated = useAnimatedStyle(() => ({ transform: [{ scale: scale.get() }] }));
   return (
     <AnimatedPressable
       {...rest}
       disabled={disabled}
-      onPressIn={(e) => { scale.value = withTiming(scaleTo, { duration: 90 }); onPressIn?.(e); }}
-      onPressOut={(e) => { scale.value = withSpring(1, SPRING); onPressOut?.(e); }}
+      onPressIn={(e) => { scale.set(withTiming(scaleTo, { duration: 90 })); onPressIn?.(e); }}
+      onPressOut={(e) => { scale.set(withSpring(1, SPRING)); onPressOut?.(e); }}
       onPress={(e) => { if (haptic) tick(); onPress?.(e); }}
       style={[style, animated, disabled && { opacity: 0.4 }]}
       hitSlop={rest.hitSlop ?? 6}

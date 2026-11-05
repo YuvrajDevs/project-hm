@@ -1,7 +1,7 @@
 // The Daily Heart-Sync (components/features/checkin/DailyCheckInPopup.tsx): mood, connection, a feeling, then how
 // in sync the two of you are once both have checked in. Every write is idempotent (fixed document ids), so a retry
 // after a dropped connection never doubles anything.
-import { useEffect, useRef, useState } from "react";
+import { useRef, useState } from "react";
 import { ScrollView, StyleSheet, View } from "react-native";
 import Animated, { FadeIn, FadeInRight, FadeOutLeft } from "react-native-reanimated";
 import { ArrowRight, Check, Heart, Link2, Send, Smile, X, Zap } from "lucide-react-native";
@@ -52,13 +52,13 @@ export function CheckInSheet({ open, onClose }: { open: boolean; onClose: () => 
   const [error, setError] = useState("");
 
   // Opening again after finishing goes straight to the result; a fresh day starts from the top
-  useEffect(() => {
-    if (!open) return;
-    setError("");
-    setStep(mine ? "summary" : "intro");
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [open]);
-  useEffect(() => { if (mine && step === "intro") setStep("summary"); }, [mine, step]);
+  const [wasOpen, setWasOpen] = useState(open);
+  if (open !== wasOpen) {
+    setWasOpen(open);
+    if (open) { setError(""); setStep(mine ? "summary" : "intro"); }
+  }
+  // Checked in from the other phone while this one sat on the intro
+  if (mine && step === "intro") setStep("summary");
 
   const submit = async () => {
     if (!uid || !moodStatus || savingRef.current) return;

@@ -19,8 +19,8 @@ export function ResetOverlay() {
   const [resetting, setResetting] = useState(false);
   const [error, setError] = useState("");
   const spin = useSharedValue(0);
-  useEffect(() => { spin.value = withRepeat(withTiming(360, { duration: 6000, easing: Easing.linear }), -1); }, [spin]);
-  const spinStyle = useAnimatedStyle(() => ({ transform: [{ rotate: `${spin.value}deg` }] }));
+  useEffect(() => { spin.set(withRepeat(withTiming(360, { duration: 6000, easing: Easing.linear }), -1)); }, [spin]);
+  const spinStyle = useAnimatedStyle(() => ({ transform: [{ rotate: `${spin.get()}deg` }] }));
 
   if (status !== "pending" || by === uid) return null;
 

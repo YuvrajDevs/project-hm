@@ -5,7 +5,7 @@ import { Platform, ScrollView, StyleSheet, View } from "react-native";
 import Animated, { FadeIn, FadeOut, LinearTransition } from "react-native-reanimated";
 import DateTimePicker, { DateTimePickerAndroid, type DateTimePickerEvent } from "@react-native-community/datetimepicker";
 import { CalendarClock, Clock, Lock, Send, Unlock } from "lucide-react-native";
-import { capsuleUnlockInstant, clockIn, instantToWallTime } from "@/lib/capsule";
+import { capsuleUnlockInstant, clockIn, instantToWallTime, wallTimeToInstant } from "@/lib/capsule";
 import type { MailboxIntent, MailboxMessage, MailboxStatus } from "@/lib/types";
 import { sendMessage } from "~/data/actions";
 import { useSession } from "~/store/session";
@@ -34,7 +34,7 @@ export function ComposeSheet({ open, onClose }: { open: boolean; onClose: () => 
   const [wall, setWall] = useState(""); // "YYYY-MM-DDTHH:MM" on the chosen clock
   const [mode, setMode] = useState<"MINE" | "PARTNERS">("MINE");
   const [secret, setSecret] = useState(false);
-  const [iosPicker, setIosPicker] = useState(false);
+  const [iosPicker, setIosPicker] = useState<Date | null>(null);
 
   const myTZ = deviceTZ();
   const theirTZ = partnerTZ || myTZ;
@@ -52,14 +52,15 @@ export function ComposeSheet({ open, onClose }: { open: boolean; onClose: () => 
 
   const reset = () => {
     setStatus(null); setIntent(defaultIntent); setNote(""); setError("");
-    setCapsule(false); setWall(""); setMode("MINE"); setSecret(false);
+    setCapsule(false); setWall(""); setMode("MINE"); setSecret(false); setIosPicker(null);
   };
   const close = () => { if (!sending) { onClose(); reset(); } };
 
   // Android shows a date dialog, then a time dialog; iOS shows one inline picker
   const pickWhen = () => {
-    const start = wall ? new Date(capsuleUnlockInstant(wall, mode, myTZ, theirTZ)) : new Date(Date.now() + 3_600_000);
-    if (Platform.OS === "ios") { setIosPicker(true); return; }
+    // The pickers show this phone's clock numbers, and those numbers are the wall time (read on the chosen clock)
+    const start = wall ? new Date(wallTimeToInstant(wall, myTZ)) : new Date(Date.now() + 3_600_000);
+    if (Platform.OS === "ios") { setIosPicker(start); return; }
     DateTimePickerAndroid.open({
       value: start, mode: "date", minimumDate: new Date(),
       onChange: (e, date) => {
@@ -145,7 +146,7 @@ export function ComposeSheet({ open, onClose }: { open: boolean; onClose: () => 
               <Text variant="body" color={wall ? C.white : C.neutral600}>{wallLabel}</Text>
             </Press>
             {iosPicker && Platform.OS === "ios" && (
-              <DateTimePicker value={new Date(Date.now() + 3_600_000)} mode="datetime" display="inline" minimumDate={new Date()} onChange={onIosPick} />
+              <DateTimePicker value={iosPicker} mode="datetime" display="inline" onChange={onIosPick} />
             )}
             {preview ? (
               <View style={styles.preview}>

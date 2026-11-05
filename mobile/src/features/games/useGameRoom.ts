@@ -2,7 +2,7 @@
 // marks this person as in the room (so no toast fires for it), joins on open, keeps the last known state on screen
 // while it closes, follows the partner into the next round if they started one, and closes if the game is ended
 // from the other phone or was already gone when a stale notification opened it.
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useState } from "react";
 import { router } from "expo-router";
 import { presence } from "@/lib/presence";
 import { joinGame } from "@/lib/firestore-helpers";
@@ -33,9 +33,10 @@ export function useGameRoom(id: string) {
     if (coupleId && uid && game && !joined) joinGame(coupleId, id, uid).catch(console.error);
   }, [coupleId, id, uid, game, joined]);
 
-  const replacedBy = useRef<string | null>(null);
-  if (game?.replacedBy) replacedBy.current = game.replacedBy;
-  const next = useLive((s) => (replacedBy.current ? s.games.find((g) => g.id === replacedBy.current) ?? null : null));
+  // Remembered past the game's own deletion: the partner's next round may land after this one is gone
+  const [replacedBy, setReplacedBy] = useState<string | null>(null);
+  if (game?.replacedBy && game.replacedBy !== replacedBy) setReplacedBy(game.replacedBy);
+  const next = useLive((s) => (replacedBy ? s.games.find((g) => g.id === replacedBy) ?? null : null));
   const gone = !!lastSeen && !live;
   useEffect(() => {
     if (!gone) return;

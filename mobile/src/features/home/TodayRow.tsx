@@ -56,8 +56,8 @@ const StreakCard = memo(function StreakCard() {
 
 function PulseDot() {
   const v = useSharedValue(0.6);
-  useEffect(() => { v.value = withRepeat(withSequence(withTiming(1, { duration: 1000 }), withTiming(0.6, { duration: 1000 })), -1); }, [v]);
-  const style = useAnimatedStyle(() => ({ opacity: v.value, transform: [{ scale: 0.8 + v.value * 0.5 }] }));
+  useEffect(() => { v.set(withRepeat(withSequence(withTiming(1, { duration: 1000 }), withTiming(0.6, { duration: 1000 })), -1)); }, [v]);
+  const style = useAnimatedStyle(() => ({ opacity: v.get(), transform: [{ scale: 0.8 + v.get() * 0.5 }] }));
   return <Animated.View style={[styles.pulse, style]} />;
 }
 

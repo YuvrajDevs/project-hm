@@ -19,7 +19,7 @@ import { Text } from "~/ui/Text";
 import { Button } from "~/ui/Button";
 import { C, gradientOf, W } from "~/theme/tokens";
 import { pop, warn } from "~/lib/feedback";
-import { deckIcon } from "./deckIcons";
+import { DeckIcon } from "./deckIcons";
 
 const SIDE = 24;
 
@@ -124,11 +124,10 @@ const DeckSection = memo(function DeckSection({ title, subtitle, decks, active, 
 });
 
 const DeckCard = memo(function DeckCard({ deck, onPick }: { deck: DeckInfo; onPick: (d: DeckInfo) => void }) {
-  const Icon = deckIcon(deck.id);
   return (
     <Press onPress={() => onPick(deck)} accessibilityRole="button" accessibilityLabel={`${deck.title}. ${deck.blurb}`}>
       <LinearGradient colors={gradientOf(deck.gradient)} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }} style={styles.deck}>
-        <View style={styles.deckIcon}><Icon size={18} color={C.white} /></View>
+        <View style={styles.deckIcon}><DeckIcon id={deck.id} size={18} color={C.white} /></View>
         <View style={styles.deckText}>
           <Text variant="label" onCard numberOfLines={3} style={styles.deckTitle}>{deck.title}</Text>
           <Text variant="small" color={W(0.6)} numberOfLines={2}>{deck.blurb}</Text>
@@ -143,13 +142,12 @@ const GameRow = memo(function GameRow({ game }: { game: ActiveGame }) {
   const partnerUid = useSession((s) => s.partner?.uid ?? "");
   const name = usePartnerName("your partner");
   const deck = DECK_BY_ID[game.deck];
-  const Icon = deckIcon(game.deck);
   const { status, action } = describeGame(game, uid, partnerUid, name);
   return (
     <Press onPress={() => openAnyGame(game)} accessibilityRole="button" accessibilityLabel={`${deck.title}. ${status}. ${action}`}>
       <LinearGradient colors={gradientOf(deck.gradient)} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }} style={styles.gameRow}>
         <View style={[styles.row, styles.flex]}>
-          <LinearGradient colors={gradientOf(deck.cards[0])} style={styles.rowIcon}><Icon size={16} color={C.white} /></LinearGradient>
+          <LinearGradient colors={gradientOf(deck.cards[0])} style={styles.rowIcon}><DeckIcon id={game.deck} size={16} color={C.white} /></LinearGradient>
           <View style={styles.flex}>
             <Text variant="label" onCard numberOfLines={1}>{deck.title}</Text>
             <Text variant="small" color={W(0.7)} numberOfLines={1}>{status}</Text>
@@ -176,10 +174,9 @@ const PendingRow = memo(function PendingRow({ games, noun, onOpen }: { games: Ac
         <View style={[styles.row, styles.flex]}>
           <View style={styles.stack}>
             {games.slice(0, 3).map((g, i) => {
-              const Icon = deckIcon(g.deck);
               return (
                 <LinearGradient key={g.id} colors={gradientOf(DECK_BY_ID[g.deck].cards[0])} style={[styles.rowIcon, styles.stacked, { marginLeft: i === 0 ? 0 : -12 }]}>
-                  <Icon size={16} color={C.white} />
+                  <DeckIcon id={g.deck} size={16} color={C.white} />
                 </LinearGradient>
               );
             })}
@@ -206,12 +203,11 @@ function PendingList({ games, busy, onCloseGame, onOpened }: { games: ActiveGame
     <View style={styles.pendingList}>
       {games.map((g, i) => {
         const deck = DECK_BY_ID[g.deck];
-        const Icon = deckIcon(g.deck);
         const oldest = games.length > 1 && i === games.length - 1;
         return (
           <View key={g.id} style={styles.pendingItem}>
             <Press onPress={() => { onOpened(); openAnyGame(g); }} style={[styles.row, styles.flex]} accessibilityRole="button">
-              <LinearGradient colors={gradientOf(deck.cards[0])} style={styles.rowIcon}><Icon size={16} color={C.white} /></LinearGradient>
+              <LinearGradient colors={gradientOf(deck.cards[0])} style={styles.rowIcon}><DeckIcon id={g.deck} size={16} color={C.white} /></LinearGradient>
               <View style={styles.flex}>
                 <Text variant="label" onCard numberOfLines={1} style={styles.small}>{deck.title}</Text>
                 <Text variant="small" color={C.neutral400} numberOfLines={1}>{describeGame(g, uid, partnerUid, name).status}</Text>
@@ -261,7 +257,11 @@ function Lobby({ deck, onClose }: { deck: DeckInfo | null; onClose: () => void }
   const [error, setError] = useState("");
   const [makeRoom, setMakeRoom] = useState(false);
   const [shown, setShown] = useState<DeckInfo | null>(deck);
-  useEffect(() => { if (deck) { setShown(deck); setError(""); setMakeRoom(false); } }, [deck]);
+  const [prevDeck, setPrevDeck] = useState(deck);
+  if (deck !== prevDeck) {
+    setPrevDeck(deck);
+    if (deck) { setShown(deck); setError(""); setMakeRoom(false); }
+  }
   const d = deck ?? shown;
   if (!d) return <Sheet open={false} onClose={onClose}><View /></Sheet>;
 
@@ -270,7 +270,6 @@ function Lobby({ deck, onClose }: { deck: DeckInfo | null; onClose: () => void }
   const sameRunning = kindGames.find((g) => g.deck === d.id && (written || g.board || g.round < g.cards.length));
   const full = kindGames.length >= MAX_OPEN_GAMES;
   const noun = written ? "deck" : "game";
-  const Icon = deckIcon(d.id);
 
   const guard = async (action: () => Promise<void>, failure: string) => {
     if (busy || !coupleId) return;
@@ -304,7 +303,7 @@ function Lobby({ deck, onClose }: { deck: DeckInfo | null; onClose: () => void }
   return (
     <Sheet open={!!deck} onClose={onClose} locked={busy}>
       <LinearGradient colors={gradientOf(d.gradient)} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }} style={styles.lobbyHead}>
-        <View style={styles.lobbyIcon}><Icon size={24} color={C.white} /></View>
+        <View style={styles.lobbyIcon}><DeckIcon id={d.id} size={24} color={C.white} /></View>
         <Text variant="title" onCard style={styles.lobbyTitle}>{d.title}</Text>
         {!showMakeRoom && <Text variant="small" color={W(0.75)}>{d.howTo}</Text>}
       </LinearGradient>

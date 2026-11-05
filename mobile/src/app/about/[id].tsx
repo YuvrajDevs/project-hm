@@ -19,7 +19,7 @@ import { useSession } from "~/store/session";
 import { useFirstName } from "~/store/derived";
 import { replaceWithGame } from "~/lib/nav";
 import { useGameRoom } from "~/features/games/useGameRoom";
-import { deckIcon } from "~/features/games/deckIcons";
+import { DeckIcon } from "~/features/games/deckIcons";
 import { Avatar } from "~/ui/Avatar";
 import { Dialog } from "~/ui/Dialog";
 import { Loading } from "~/ui/Loading";
@@ -45,7 +45,6 @@ function About({ game, uid, partnerUid, coupleId, partnerName, leave }: ReturnTy
   const [pickCursor, setPickCursor] = useState<number | null>(null);
   const [guessCursor, setGuessCursor] = useState<number | null>(null);
   const deck = DECK_BY_ID[game.deck];
-  const Icon = deckIcon(game.deck);
   const total = game.cards.length;
   const phase = aboutPhase(game, uid, partnerUid);
   const myPicks = pickedCount(game, uid);
@@ -83,7 +82,7 @@ function About({ game, uid, partnerUid, coupleId, partnerName, leave }: ReturnTy
     <KeyboardAvoidingView behavior="padding" style={[styles.screen, { paddingTop: insets.top + 8, paddingBottom: insets.bottom + 12 }]}>
       <View style={styles.header}>
         <Press onPress={leave} style={styles.round} accessibilityLabel="Close for now"><X size={20} color={W(0.7)} /></Press>
-        <View style={styles.title}><Icon size={16} color={W(0.8)} /><Text variant="label" onCard numberOfLines={1}>{deck.title}</Text></View>
+        <View style={styles.title}><DeckIcon id={game.deck} size={16} color={W(0.8)} /><Text variant="label" onCard numberOfLines={1}>{deck.title}</Text></View>
         <Press onPress={() => setConfirm(true)} style={styles.endBtn} accessibilityLabel="End this deck for both of you"><Text variant="eyebrow" color={W(0.6)}>End</Text></Press>
       </View>
       {showProgress && (

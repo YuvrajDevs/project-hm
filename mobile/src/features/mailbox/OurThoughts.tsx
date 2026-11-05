@@ -36,8 +36,9 @@ export const OurThoughts = memo(function OurThoughts({ active }: { active: boole
   // Saved thoughts can be older than anything loaded, so they're fetched only while that view is open
   useEffect(() => {
     if (filter !== "saved" || !coupleId || !uid) return;
-    setSaved(null);
-    return subscribeToSavedThoughts(coupleId, uid, setSaved);
+    const unsubscribe = subscribeToSavedThoughts(coupleId, uid, setSaved);
+    // Leaving the view drops the list, so coming back never flashes a stale one
+    return () => { unsubscribe(); setSaved(null); };
   }, [filter, coupleId, uid]);
 
   const week = useMemo(() => messages.filter((m) => isThisWeek(m, now)), [messages, now]);
@@ -112,7 +113,9 @@ function Pager({ list, now, active }: { list: MailboxMessage[]; now: number; act
 
   // A new list starts again from the first page
   const firstId = list[0]?.id;
-  useEffect(() => { setIndex(0); ref.current?.scrollToOffset({ offset: 0, animated: false }); }, [firstId]);
+  const [pagedFor, setPagedFor] = useState(firstId);
+  if (pagedFor !== firstId) { setPagedFor(firstId); setIndex(0); }
+  useEffect(() => { ref.current?.scrollToOffset({ offset: 0, animated: false }); }, [firstId]);
 
   const onEnd = useCallback((e: NativeSyntheticEvent<NativeScrollEvent>) => {
     setIndex(Math.round(e.nativeEvent.contentOffset.x / (pageWidth + 16)));

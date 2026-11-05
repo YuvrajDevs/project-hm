@@ -1,5 +1,5 @@
 // First run: a name, then four quick questions that become profile tags (lib/onboarding.ts, shared with the web).
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import { StyleSheet, View } from "react-native";
 import Animated, { FadeInRight, FadeOutLeft, LinearTransition, useAnimatedStyle, withTiming } from "react-native-reanimated";
 import { KeyboardAwareScrollView } from "react-native-keyboard-controller";
@@ -35,7 +35,8 @@ export default function Onboarding() {
   const [error, setError] = useState("");
 
   // Pre-fill the name from Google once it is known, without overwriting anything typed
-  useEffect(() => { if (googleName) setName((n) => n || googleName); }, [googleName]);
+  const [prefilled, setPrefilled] = useState(false);
+  if (googleName && !prefilled) { setPrefilled(true); if (!name) setName(googleName); }
 
   const save = async (withAnswers: Record<string, string> | null) => {
     const uid = auth.currentUser?.uid;

@@ -58,7 +58,11 @@ const ICONS: Record<string, LucideIcon> = {
   closer: Heart,
 };
 
-export const deckIcon = (id: DeckId): LucideIcon => ICONS[id] ?? Sparkles;
+/** A deck's icon as an element. Picking the component inside render (const Icon = …) trips the React Compiler. */
+export function DeckIcon({ id, size, color }: { id: DeckId; size: number; color: string }) {
+  const Icon = ICONS[id] ?? Sparkles;
+  return <Icon size={size} color={color} />;
+}
 
 /** The deck's main colour scale (its first card hue), for accents on its screens. */
 export const deckHue = (id: DeckId) => {

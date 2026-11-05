@@ -178,7 +178,7 @@ function Canvas({ strokes, canDraw, tool, onStroke }: { strokes: string[]; canDr
   const sideSV = useSharedValue(0);
   const pts = useSharedValue<number[]>([]); // flat [x0, y0, x1, y1, ...] on the 0–1000 grid
   const path = useSharedValue("");
-  useEffect(() => { sideSV.value = side; }, [side, sideSV]);
+  useEffect(() => { sideSV.set(side); }, [side, sideSV]);
 
   const flush = (flat: number[]) => {
     const pairs: string[] = [];
@@ -188,7 +188,7 @@ function Canvas({ strokes, canDraw, tool, onStroke }: { strokes: string[]; canDr
 
   const toGrid = (v: number) => {
     "worklet";
-    const s = sideSV.value || 1;
+    const s = sideSV.get() || 1;
     return Math.round(Math.min(GRID, Math.max(0, (v / s) * GRID)));
   };
   const build = (flat: number[]) => {
@@ -205,31 +205,31 @@ function Canvas({ strokes, canDraw, tool, onStroke }: { strokes: string[]; canDr
     .minDistance(0)
     .maxPointers(1)
     .onBegin((e) => {
-      pts.value = [toGrid(e.x), toGrid(e.y)];
-      path.value = build(pts.value);
+      pts.set([toGrid(e.x), toGrid(e.y)]);
+      path.set(build(pts.get()));
     })
     .onUpdate((e) => {
       const x = toGrid(e.x), y = toGrid(e.y);
-      const cur = pts.value;
+      const cur = pts.get();
       const lx = cur[cur.length - 2], ly = cur[cur.length - 1];
       if (Math.hypot(x - lx, y - ly) < MIN_STEP) return;
       const next = [...cur, x, y];
       // Very long lines go out in pieces, continuing from the last point
       if (next.length / 2 >= MAX_POINTS) {
         runOnJS(flush)(next);
-        pts.value = [x, y];
+        pts.set([x, y]);
       } else {
-        pts.value = next;
+        pts.set(next);
       }
-      path.value = build(pts.value);
+      path.set(build(pts.get()));
     })
     .onFinalize(() => {
-      if (pts.value.length) runOnJS(flush)(pts.value);
-      pts.value = [];
-      path.value = "";
+      if (pts.get().length) runOnJS(flush)(pts.get());
+      pts.set([]);
+      path.set("");
     });
 
-  const liveProps = useAnimatedProps(() => ({ d: path.value }));
+  const liveProps = useAnimatedProps(() => ({ d: path.get() }));
 
   const onLayout = (e: LayoutChangeEvent) => setBox({ w: e.nativeEvent.layout.width, h: e.nativeEvent.layout.height });
 

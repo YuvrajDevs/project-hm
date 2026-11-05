@@ -6,6 +6,6 @@ import { useAnimatedStyle, useSharedValue, withTiming } from "react-native-reani
 export function useProgressWidth(ratio: number, duration = 450) {
   const target = Math.max(0, Math.min(100, Math.round((Number.isFinite(ratio) ? ratio : 0) * 100)));
   const pct = useSharedValue(0);
-  useEffect(() => { pct.value = withTiming(target, { duration }); }, [target, duration, pct]);
-  return useAnimatedStyle(() => ({ width: `${pct.value}%` }));
+  useEffect(() => { pct.set(withTiming(target, { duration })); }, [target, duration, pct]);
+  return useAnimatedStyle(() => ({ width: `${pct.get()}%` }));
 }

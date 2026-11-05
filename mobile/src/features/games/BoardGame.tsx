@@ -137,10 +137,10 @@ const Coin = memo(function Coin({ mine, win, dropFrom }: { mine: boolean; win: b
   const y = useSharedValue(-dropFrom * 52);
   const o = useSharedValue(0);
   useEffect(() => {
-    y.value = withSpring(0, { damping: 15, stiffness: 240, mass: 0.8 });
-    o.value = withTiming(1, { duration: 120 });
+    y.set(withSpring(0, { damping: 15, stiffness: 240, mass: 0.8 }));
+    o.set(withTiming(1, { duration: 120 }));
   }, [y, o]);
-  const style = useAnimatedStyle(() => ({ transform: [{ translateY: y.value }], opacity: o.value }));
+  const style = useAnimatedStyle(() => ({ transform: [{ translateY: y.get() }], opacity: o.get() }));
   return <Animated.View style={[styles.coin, { backgroundColor: mine ? C.pink400 : C.blue400 }, win && styles.coinWin, style]} />;
 });
 

@@ -22,37 +22,37 @@ export function StepSlider({ value, onChange, min = 1, max = 10, low, high, labe
   const toX = (v: number, w: number) => ((v - min) / steps) * Math.max(0, w - THUMB);
 
   useEffect(() => {
-    if (width > 0) { x.value = withSpring(toX(value, width), SPRING); last.value = value; }
+    if (width > 0) { x.set(withSpring(toX(value, width), SPRING)); last.set(value); }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [value, width]);
 
   const onLayout = (e: LayoutChangeEvent) => {
     const w = e.nativeEvent.layout.width;
     setWidth(w);
-    track.value = w;
+    track.set(w);
   };
 
   const emit = (v: number) => { tick(); onChange(v); };
 
   const move = (px: number) => {
     "worklet";
-    const room = Math.max(1, track.value - THUMB);
+    const room = Math.max(1, track.get() - THUMB);
     const clamped = Math.min(room, Math.max(0, px - THUMB / 2));
-    x.value = clamped;
+    x.set(clamped);
     const v = Math.round(min + (clamped / room) * steps);
-    if (v !== last.value) { last.value = v; runOnJS(emit)(v); }
+    if (v !== last.get()) { last.set(v); runOnJS(emit)(v); }
   };
 
   const snap = () => {
     "worklet";
-    const room = Math.max(1, track.value - THUMB);
-    x.value = withSpring(((last.value - min) / steps) * room, SPRING);
+    const room = Math.max(1, track.get() - THUMB);
+    x.set(withSpring(((last.get() - min) / steps) * room, SPRING));
   };
 
   const pan = Gesture.Pan().minDistance(0).onBegin((e) => move(e.x)).onUpdate((e) => move(e.x)).onFinalize(() => snap());
 
-  const thumb = useAnimatedStyle(() => ({ transform: [{ translateX: x.value }] }));
-  const fill = useAnimatedStyle(() => ({ width: x.value + THUMB / 2 }));
+  const thumb = useAnimatedStyle(() => ({ transform: [{ translateX: x.get() }] }));
+  const fill = useAnimatedStyle(() => ({ width: x.get() + THUMB / 2 }));
 
   return (
     <View

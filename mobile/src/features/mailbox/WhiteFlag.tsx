@@ -24,10 +24,10 @@ export const WhiteFlagCard = memo(function WhiteFlagCard() {
   const mine = by === uid;
   const glow = useSharedValue(0.9);
   useEffect(() => {
-    if (!mine) { glow.value = 1; return; }
-    glow.value = withRepeat(withSequence(withTiming(1, { duration: 2000 }), withTiming(0.85, { duration: 2000 })), -1);
+    if (!mine) { glow.set(1); return; }
+    glow.set(withRepeat(withSequence(withTiming(1, { duration: 2000 }), withTiming(0.85, { duration: 2000 })), -1));
   }, [mine, glow]);
-  const pulse = useAnimatedStyle(() => ({ opacity: glow.value }));
+  const pulse = useAnimatedStyle(() => ({ opacity: glow.get() }));
 
   const toggle = async () => {
     setBusy(true);
@@ -76,8 +76,8 @@ export function WhiteFlagOverlay() {
   const busyRef = useRef(false);
   const [error, setError] = useState("");
   const pulse = useSharedValue(0.3);
-  useEffect(() => { pulse.value = withRepeat(withSequence(withTiming(0.6, { duration: 2000 }), withTiming(0.3, { duration: 2000 })), -1); }, [pulse]);
-  const halo = useAnimatedStyle(() => ({ opacity: pulse.value, transform: [{ scale: 1 + (pulse.value - 0.3) / 3 }] }));
+  useEffect(() => { pulse.set(withRepeat(withSequence(withTiming(0.6, { duration: 2000 }), withTiming(0.3, { duration: 2000 })), -1)); }, [pulse]);
+  const halo = useAnimatedStyle(() => ({ opacity: pulse.get(), transform: [{ scale: 1 + (pulse.get() - 0.3) / 3 }] }));
 
   if (!by || by === uid) return null;
 

@@ -52,13 +52,13 @@ export const Bubble = memo(function Bubble(p: Props) {
   const pan = Gesture.Pan()
     .activeOffsetX(14)
     .failOffsetY([-12, 12])
-    .onUpdate((e) => { x.value = Math.max(0, Math.min(90, e.translationX * 0.65)); })
+    .onUpdate((e) => { x.set(Math.max(0, Math.min(90, e.translationX * 0.65))); })
     .onEnd(() => {
-      if (x.value > SWIPE_TO_REPLY * 0.65) runOnJS(reply)();
-      x.value = withSpring(0, SPRING);
+      if (x.get() > SWIPE_TO_REPLY * 0.65) runOnJS(reply)();
+      x.set(withSpring(0, SPRING));
     });
-  const slide = useAnimatedStyle(() => ({ transform: [{ translateX: x.value }] }));
-  const hint = useAnimatedStyle(() => ({ opacity: Math.min(1, x.value / (SWIPE_TO_REPLY * 0.65)) }));
+  const slide = useAnimatedStyle(() => ({ transform: [{ translateX: x.get() }] }));
+  const hint = useAnimatedStyle(() => ({ opacity: Math.min(1, x.get() / (SWIPE_TO_REPLY * 0.65)) }));
 
   const radius = { borderTopLeftRadius: 22, borderTopRightRadius: 22, borderBottomLeftRadius: 22, borderBottomRightRadius: 22 };
   if (mine) { radius.borderBottomRightRadius = 6; if (joinsPrev) radius.borderTopRightRadius = 6; }

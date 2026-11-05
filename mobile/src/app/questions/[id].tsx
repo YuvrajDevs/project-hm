@@ -17,7 +17,7 @@ import { useGuard } from "~/lib/routing";
 import { useFirstName } from "~/store/derived";
 import { replaceWithGame } from "~/lib/nav";
 import { useGameRoom } from "~/features/games/useGameRoom";
-import { deckIcon } from "~/features/games/deckIcons";
+import { DeckIcon } from "~/features/games/deckIcons";
 import { Dialog } from "~/ui/Dialog";
 import { Loading } from "~/ui/Loading";
 import { Press } from "~/ui/Pressable";
@@ -40,7 +40,6 @@ function QuestionDeck({ game, uid, partnerUid, coupleId, partnerName, leave }: R
   const [error, setError] = useState("");
   const [confirm, setConfirm] = useState(false);
   const deck = DECK_BY_ID[game.deck];
-  const Icon = deckIcon(game.deck);
   const total = game.cards.length;
   const mine = answeredCount(game, uid);
   const theirs = answeredCount(game, partnerUid);
@@ -62,7 +61,7 @@ function QuestionDeck({ game, uid, partnerUid, coupleId, partnerName, leave }: R
     <KeyboardAvoidingView behavior="padding" style={[styles.screen, { paddingTop: insets.top + 8, paddingBottom: insets.bottom + 12 }]}>
       <View style={styles.header}>
         <Press onPress={leave} style={styles.round} accessibilityLabel="Close for now"><X size={20} color={W(0.7)} /></Press>
-        <View style={styles.title}><Icon size={16} color={W(0.8)} /><Text variant="label" onCard numberOfLines={1}>{deck.title}</Text></View>
+        <View style={styles.title}><DeckIcon id={game.deck} size={16} color={W(0.8)} /><Text variant="label" onCard numberOfLines={1}>{deck.title}</Text></View>
         <Press onPress={() => setConfirm(true)} style={styles.endBtn} accessibilityLabel="End this deck for both of you"><Text variant="eyebrow" color={W(0.6)}>End</Text></Press>
       </View>
       <View style={styles.progressRow}>

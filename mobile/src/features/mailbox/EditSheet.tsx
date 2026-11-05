@@ -1,5 +1,5 @@
 // Edit a thought (or a sealed capsule's words) before it's answered (components/features/mailbox/EditMessage.tsx).
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import { ScrollView, StyleSheet, View } from "react-native";
 import { Save } from "lucide-react-native";
 import type { MailboxIntent, MailboxMessage, MailboxStatus } from "@/lib/types";
@@ -20,14 +20,16 @@ export function EditSheet({ open, onClose, message }: { open: boolean; onClose: 
   const [error, setError] = useState("");
 
   // Start from the thought as it is now whenever the sheet opens
-  useEffect(() => {
-    if (!open) return;
-    setStatus(message.status);
-    setIntent(message.intent);
-    setNote(message.note || "");
-    setError("");
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [open]);
+  const [wasOpen, setWasOpen] = useState(open);
+  if (open !== wasOpen) {
+    setWasOpen(open);
+    if (open) {
+      setStatus(message.status);
+      setIntent(message.intent);
+      setNote(message.note || "");
+      setError("");
+    }
+  }
 
   const save = async () => {
     setSaving(true);

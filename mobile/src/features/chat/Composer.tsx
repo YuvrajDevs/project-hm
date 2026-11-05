@@ -182,8 +182,8 @@ export const Composer = memo(function Composer({ onText, onSticker, onMedia, onV
 
 function RecDot() {
   const o = useSharedValue(1);
-  useEffect(() => { o.value = withRepeat(withSequence(withTiming(0.3, { duration: 600 }), withTiming(1, { duration: 600 })), -1); }, [o]);
-  const style = useAnimatedStyle(() => ({ opacity: o.value }));
+  useEffect(() => { o.set(withRepeat(withSequence(withTiming(0.3, { duration: 600 }), withTiming(1, { duration: 600 })), -1)); }, [o]);
+  const style = useAnimatedStyle(() => ({ opacity: o.get() }));
   return <Animated.View style={[styles.recDot, style]} />;
 }
 

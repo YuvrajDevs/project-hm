@@ -33,11 +33,11 @@ export function Sheet({ open, onClose, title, subtitle, children, tall, locked }
   useEffect(() => {
     if (open) {
       setMounted(true);
-      fade.value = withTiming(1, { duration: 200 });
-      y.value = withSpring(0, SPRING);
+      fade.set(withTiming(1, { duration: 200 }));
+      y.set(withSpring(0, SPRING));
     } else if (mounted) {
-      fade.value = withTiming(0, { duration: 180 });
-      y.value = withTiming(height, { duration: 220, easing: Easing.in(Easing.cubic) }, (done) => { if (done) runOnJS(finishClose)(); });
+      fade.set(withTiming(0, { duration: 180 }));
+      y.set(withTiming(height, { duration: 220, easing: Easing.in(Easing.cubic) }, (done) => { if (done) runOnJS(finishClose)(); }));
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [open]);
@@ -54,14 +54,14 @@ export function Sheet({ open, onClose, title, subtitle, children, tall, locked }
     .enabled(!locked)
     .activeOffsetY(8)
     .failOffsetX([-20, 20])
-    .onUpdate((e) => { y.value = Math.max(0, e.translationY); })
+    .onUpdate((e) => { y.set(Math.max(0, e.translationY)); })
     .onEnd((e) => {
       if (e.translationY > 120 || e.velocityY > 900) runOnJS(requestClose)();
-      else y.value = withSpring(0, SPRING);
+      else y.set(withSpring(0, SPRING));
     });
 
-  const sheetStyle = useAnimatedStyle(() => ({ transform: [{ translateY: y.value }] }));
-  const backdropStyle = useAnimatedStyle(() => ({ opacity: fade.value }));
+  const sheetStyle = useAnimatedStyle(() => ({ transform: [{ translateY: y.get() }] }));
+  const backdropStyle = useAnimatedStyle(() => ({ opacity: fade.get() }));
 
   if (!mounted) return null;
   return (
