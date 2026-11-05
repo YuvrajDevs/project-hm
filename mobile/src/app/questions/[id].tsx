@@ -4,7 +4,8 @@ import { useEffect, useRef, useState } from "react";
 import { FlatList, ScrollView, StyleSheet, TextInput, View, useWindowDimensions, type NativeScrollEvent, type NativeSyntheticEvent } from "react-native";
 import { useLocalSearchParams } from "expo-router";
 import { LinearGradient } from "expo-linear-gradient";
-import Animated, { FadeIn, SlideInRight, useAnimatedStyle, withTiming } from "react-native-reanimated";
+import Animated, { FadeIn, SlideInRight } from "react-native-reanimated";
+import { useProgressWidth } from "~/ui/useProgressWidth";
 import { KeyboardAvoidingView } from "react-native-keyboard-controller";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { ArrowLeft, ArrowRight, X } from "lucide-react-native";
@@ -100,7 +101,7 @@ function QuestionDeck({ game, uid, partnerUid, coupleId, partnerName, leave }: R
 }
 
 function ProgressBox({ label, done, total, tint }: { label: string; done: number; total: number; tint: string }) {
-  const bar = useAnimatedStyle(() => ({ width: `${withTiming(Math.round((done / Math.max(1, total)) * 100), { duration: 400 })}%` }));
+  const bar = useProgressWidth(done / Math.max(1, total), 400);
   return (
     <View style={styles.progressBox}>
       <View style={styles.between}>

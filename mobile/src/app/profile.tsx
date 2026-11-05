@@ -5,7 +5,8 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import { ScrollView, StyleSheet, View } from "react-native";
 import { router } from "expo-router";
 import { Image } from "expo-image";
-import Animated, { FadeIn, useAnimatedStyle, withSpring, withTiming } from "react-native-reanimated";
+import Animated, { FadeIn, useAnimatedStyle, withSpring } from "react-native-reanimated";
+import { useProgressWidth } from "~/ui/useProgressWidth";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { useShallow } from "zustand/react/shallow";
 import { ArrowLeft, BellRing, Cake, Check, Coffee, Eye, Flame, Gift, MapPin, Moon, Music, Pencil, Plus, Settings, Sparkles, Sun, Target, Umbrella, Utensils, type LucideIcon } from "lucide-react-native";
@@ -357,7 +358,7 @@ function Switcher({ view, partnerFirst, onChange }: { view: "me" | "partner"; pa
 }
 
 function ProgressBar({ ratio }: { ratio: number }) {
-  const style = useAnimatedStyle(() => ({ width: `${withTiming(Math.round(ratio * 100), { duration: 500 })}%` }));
+  const style = useProgressWidth(ratio, 500);
   return <View style={styles.track}><Animated.View style={[styles.fill, style]} /></View>;
 }
 

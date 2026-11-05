@@ -2,7 +2,8 @@
 // Removing asks for a second tap (the web removes on the first), since it removes it for both of you.
 import { memo, useEffect, useMemo, useState } from "react";
 import { ScrollView, StyleSheet, View } from "react-native";
-import Animated, { FadeIn, FadeOut, LinearTransition, useAnimatedStyle, withTiming } from "react-native-reanimated";
+import Animated, { FadeIn, FadeOut, LinearTransition } from "react-native-reanimated";
+import { useProgressWidth } from "~/ui/useProgressWidth";
 import { ArrowRight, Check, Plus, Trash2 } from "lucide-react-native";
 import { addBucketItem, deleteBucketItem, setBucketItemDone, subscribeToBucketList } from "@/lib/firestore-helpers";
 import type { BucketItem } from "@/lib/types";
@@ -80,7 +81,7 @@ function Empty() {
 
 function Progress({ ratio }: { ratio: number }) {
   const page = usePageColors();
-  const style = useAnimatedStyle(() => ({ width: `${withTiming(Math.round(ratio * 100), { duration: 500 })}%` }));
+  const style = useProgressWidth(ratio, 500);
   return (
     <View style={[styles.track, { backgroundColor: page.hairline }]}>
       <Animated.View style={[styles.fill, style]} />
