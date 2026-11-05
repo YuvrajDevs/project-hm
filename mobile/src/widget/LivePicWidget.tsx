@@ -5,7 +5,7 @@
 // "Live pic": the last photo your partner sent, edge to edge. Tapping it opens the camera to send one back.
 import { FlexWidget, ImageWidget, OverlapWidget, SvgWidget, TextWidget } from "react-native-android-widget";
 import type { SharedWidgets } from "./shared";
-import { BEBAS, BODY, ICON, RADIUS, RoundButton, SERIF, firstName, stamp } from "./parts";
+import { BEBAS, BODY, ICON, RADIUS, RoundButton, firstName, stamp } from "./parts";
 
 const URI = "honestmailbox://snap";
 /** The picture is decoded at this size; widgets have a memory budget, and the square is never shown larger */
@@ -25,10 +25,8 @@ export function LivePicWidget({ data }: { data: SharedWidgets | null }) {
         <FlexWidget style={{ width: 52, height: 52, borderRadius: 26, backgroundColor: "#ffffff33", justifyContent: "center", alignItems: "center" }}>
           <SvgWidget svg={ICON.camera("#ffffff")} style={{ width: 24, height: 24 }} />
         </FlexWidget>
-        <FlexWidget style={{ flexDirection: "row", alignItems: "center", marginTop: 10 }}>
-          <TextWidget text="LIVE " style={{ fontFamily: BEBAS, fontSize: 24, color: "#ffffff" }} />
-          <TextWidget text="pic" style={{ fontFamily: SERIF, fontSize: 23, color: "#ffffff" }} />
-        </FlexWidget>
+        {/* Two fonts can't share a baseline in a widget, so the title is drawn as one image (assets/widget) */}
+        <ImageWidget image={require("../../assets/widget/title-livepic.png")} imageWidth={72} imageHeight={25} style={{ marginTop: 10 }} />
         <TextWidget text={data ? `${name}'s photos land here` : "Open the app to sign in"} style={{ fontFamily: BODY, fontSize: 12, color: "#ffe4ee", marginTop: 2 }} />
       </FlexWidget>
     );
