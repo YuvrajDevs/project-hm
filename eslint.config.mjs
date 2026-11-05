@@ -19,6 +19,8 @@ const eslintConfig = defineConfig([
     "out/**",
     "build/**",
     "next-env.d.ts",
+    // The Android/iOS app has its own toolchain (mobile/tsconfig.json)
+    "mobile/**",
   ]),
 ]);
 
