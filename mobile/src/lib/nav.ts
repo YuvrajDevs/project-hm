@@ -1,5 +1,7 @@
 // One place for "open X", the app's version of the web's window events (openGame, openChat, openSafeSpace…).
-import { router } from "expo-router";
+import { useCallback, useEffect, useRef } from "react";
+import { BackHandler } from "react-native";
+import { router, useFocusEffect } from "expo-router";
 import { DECK_BY_ID, slotFor } from "@/lib/games/decks";
 import type { ActiveGame } from "@/lib/types";
 
@@ -24,3 +26,17 @@ export const replaceWithGame = (game: Pick<ActiveGame, "id" | "deck">) => {
 };
 
 export const goHome = () => (router.canGoBack() ? router.back() : router.replace("/home"));
+
+/**
+ * Android's Back (button or gesture) steps back inside a screen before leaving it: the Archive tab back to the
+ * mailbox, saved messages back to the chat. `handler` returns true when it handled Back; false lets the screen
+ * close as usual. Only active while the screen is in front, so a screen underneath never takes another's Back.
+ */
+export function useAndroidBack(handler: () => boolean) {
+  const latest = useRef(handler);
+  useEffect(() => { latest.current = handler; });
+  useFocusEffect(useCallback(() => {
+    const sub = BackHandler.addEventListener("hardwareBackPress", () => latest.current());
+    return () => sub.remove();
+  }, []));
+}

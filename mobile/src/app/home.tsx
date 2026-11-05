@@ -13,7 +13,7 @@ import { useSession } from "~/store/session";
 import { useLive } from "~/store/live";
 import { useBell, usePartnerName, useTodayId, useTodaysCheckins } from "~/store/derived";
 import { ui, useUI } from "~/store/ui";
-import { openNotifications } from "~/lib/nav";
+import { openNotifications, useAndroidBack } from "~/lib/nav";
 import { Brand, RoundButton, Screen } from "~/ui/Screen";
 import { Text } from "~/ui/Text";
 import { Dialog } from "~/ui/Dialog";
@@ -38,6 +38,7 @@ import { AccentWords } from "~/ui/Wordmark";
 export default function Home() {
   const allowed = useGuard(["/home"]);
   const view = useUI((s) => s.view);
+  useAndroidBack(() => { if (useUI.getState().view !== "archive") return false; ui.set({ view: "mailbox" }); return true; });
   // A different person signing in on this phone starts from a clean slate
   const uid = useSession((s) => s.authUser?.uid);
   useEffect(() => () => ui.reset(), [uid]);

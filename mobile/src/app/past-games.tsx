@@ -20,6 +20,7 @@ import { Button } from "~/ui/Button";
 import { C, gradientOf, W } from "~/theme/tokens";
 import { usePageColors } from "~/theme/appearance";
 import { warn } from "~/lib/feedback";
+import { useAndroidBack } from "~/lib/nav";
 
 type Entry = CoupleGame & { archivedAt: string; id: string };
 
@@ -59,6 +60,7 @@ export default function PastGames() {
   };
 
   const back = () => { if (open) { setOpen(null); setConfirm(null); } else if (router.canGoBack()) router.back(); else router.replace("/home"); };
+  useAndroidBack(() => { if (!open) return false; setOpen(null); setConfirm(null); return true; });
   const items = open ? replayItems(open, uid, partnerUid, name) : [];
 
   return (

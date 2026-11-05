@@ -34,7 +34,7 @@ export default function Notifications() {
       <Animated.View entering={FadeIn.duration(200)} style={StyleSheet.absoluteFill}>
         <Pressable style={[StyleSheet.absoluteFill, styles.backdrop]} onPress={close} accessibilityLabel="Close notifications" />
       </Animated.View>
-      <Animated.View entering={SlideInDown.duration(260)} style={[styles.panel, { marginTop: insets.top + 24, marginBottom: insets.bottom + 24 }]}>
+      <Animated.View entering={SlideInDown.duration(260)} style={[styles.panel, { marginTop: insets.top + 16, marginBottom: insets.bottom + 12 }]}>
         <View style={styles.header}>
           <View style={styles.row}>
             <View>
@@ -90,7 +90,8 @@ export default function Notifications() {
 const styles = StyleSheet.create({
   root: { flex: 1, paddingHorizontal: 16 },
   backdrop: { backgroundColor: "rgba(0,0,0,0.7)" },
-  panel: { flex: 1, maxHeight: 640, alignSelf: "center", width: "100%", maxWidth: 480, backgroundColor: "#151515", borderRadius: 24, borderWidth: 1, borderColor: W(0.1), overflow: "hidden" },
+  // Runs from under the status bar to just above the gesture bar, however tall the phone
+  panel: { flex: 1, alignSelf: "center", width: "100%", maxWidth: 480, backgroundColor: "#151515", borderRadius: 24, borderWidth: 1, borderColor: W(0.1), overflow: "hidden" },
   header: { flexDirection: "row", alignItems: "center", justifyContent: "space-between", padding: 20, borderBottomWidth: 1, borderBottomColor: W(0.05) },
   row: { flexDirection: "row", alignItems: "center", gap: 12 },
   dot: { position: "absolute", top: -2, right: -2, width: 8, height: 8, borderRadius: 4, backgroundColor: C.pink },

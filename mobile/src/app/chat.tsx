@@ -37,6 +37,7 @@ import { KeyGate } from "~/features/chat/KeyGate";
 import { ChatSettings } from "~/features/chat/ChatSettings";
 import { Saved } from "~/features/chat/Saved";
 import { ImageViewer, OnceViewer, VideoViewer } from "~/features/chat/Viewers";
+import { useAndroidBack } from "~/lib/nav";
 
 const PAGE_SIZE = 40;
 const RUN_GAP_MS = 5 * 60 * 1000;
@@ -247,6 +248,7 @@ export default function Chat() {
   };
 
   const close = () => (view === "saved" ? setView("chat") : router.canGoBack() ? router.back() : router.replace("/home"));
+  useAndroidBack(() => { if (view !== "saved") return false; setView("chat"); return true; });
   const saved = view === "saved";
 
   return (
