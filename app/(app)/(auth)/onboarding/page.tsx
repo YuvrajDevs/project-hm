@@ -9,73 +9,19 @@ import { motion, AnimatePresence } from "framer-motion";
 import { useRouter } from "next/navigation";
 import { MessageCircle, Cloud, Battery, Heart, ChevronRight, User } from "lucide-react";
 import { Wordmark } from "@/components/ui/Wordmark";
+import { ONBOARDING_STEPS, ONBOARDING_TOTAL_STEPS, buildProfileUpdate, type OnboardingStepId } from "@/lib/onboarding";
 
-// Step 0 is always name, steps 1–4 are profile questions
-const profileSteps = [
-  {
-    id: "support",
-    question: "How do you prefer to receive support?",
-    options: ["Just listen silently", "Give me advice", "Physical touch", "Distract me"],
-    icon: <MessageCircle className="w-5 h-5 text-pink-400" />,
-    color: "from-pink-500/10 to-transparent",
-  },
-  {
-    id: "overwhelmed",
-    question: "Your first instinct when overwhelmed?",
-    options: ["Withdraw and hide", "Talk it out", "Clean & organize", "Sleep it off"],
-    icon: <Battery className="w-5 h-5 text-blue-400" />,
-    color: "from-blue-500/10 to-transparent",
-  },
-  {
-    id: "space",
-    question: "How do you signal you need space?",
-    options: ["I say it directly", "I go quiet", "I leave the room", "I zone out on my phone"],
-    icon: <Cloud className="w-5 h-5 text-yellow-400" />,
-    color: "from-yellow-500/10 to-transparent",
-  },
-  {
-    id: "love",
-    question: "What makes you feel most loved?",
-    options: ["Words of affirmation", "Acts of service", "Little surprises", "Quality time"],
-    icon: <Heart className="w-5 h-5 text-red-400" />,
-    color: "from-red-500/10 to-transparent",
-  },
-];
-
-const TOTAL_STEPS = profileSteps.length + 1; // +1 for name step
-
-// Onboarding answers land in the same profile tags the profile page edits
-const ANSWER_TO_TAG: Record<string, { category: "howToShowUp" | "offSignals" | "loveLanguages"; tag: string }> = {
-  "Just listen silently": { category: "howToShowUp", tag: "Just listen" },
-  "Give me advice": { category: "howToShowUp", tag: "Be direct" },
-  "Physical touch": { category: "loveLanguages", tag: "Touch" },
-  "Distract me": { category: "howToShowUp", tag: "Distract me" },
-  "Withdraw and hide": { category: "offSignals", tag: "Withdraw" },
-  "Talk it out": { category: "offSignals", tag: "Talk it out" },
-  "Clean & organize": { category: "offSignals", tag: "Clean & organize" },
-  "Sleep it off": { category: "offSignals", tag: "Sleep it off" },
-  "I say it directly": { category: "offSignals", tag: "Say it directly" },
-  "I go quiet": { category: "offSignals", tag: "Get quiet" },
-  "I leave the room": { category: "offSignals", tag: "Leave the room" },
-  "I zone out on my phone": { category: "offSignals", tag: "Zone out" },
-  "Words of affirmation": { category: "loveLanguages", tag: "Words" },
-  "Acts of service": { category: "loveLanguages", tag: "Acts" },
-  "Little surprises": { category: "loveLanguages", tag: "Gifts" },
-  "Quality time": { category: "loveLanguages", tag: "Time" },
+// Step 0 is always name, steps 1–4 are profile questions (shared with the app: lib/onboarding.ts)
+const STEP_LOOK: Record<OnboardingStepId, { icon: React.ReactNode; color: string }> = {
+  support: { icon: <MessageCircle className="w-5 h-5 text-pink-400" />, color: "from-pink-500/10 to-transparent" },
+  overwhelmed: { icon: <Battery className="w-5 h-5 text-blue-400" />, color: "from-blue-500/10 to-transparent" },
+  space: { icon: <Cloud className="w-5 h-5 text-yellow-400" />, color: "from-yellow-500/10 to-transparent" },
+  love: { icon: <Heart className="w-5 h-5 text-red-400" />, color: "from-red-500/10 to-transparent" },
 };
 
-const buildProfileUpdate = (answers: Record<string, string>) => {
-  const update: Record<string, string[] | string> = {};
-  for (const answer of Object.values(answers)) {
-    const mapped = ANSWER_TO_TAG[answer];
-    if (!mapped) continue;
-    const key = `profile.${mapped.category}`;
-    const existing = (update[key] as string[] | undefined) || [];
-    if (!existing.includes(mapped.tag)) update[key] = [...existing, mapped.tag];
-  }
-  if (Object.keys(update).length > 0) update["profile.updatedAt"] = new Date().toISOString();
-  return update;
-};
+const profileSteps = ONBOARDING_STEPS.map((step) => ({ ...step, ...STEP_LOOK[step.id] }));
+
+const TOTAL_STEPS = ONBOARDING_TOTAL_STEPS;
 
 export default function Onboarding() {
   const [step, setStep] = useState(0); // 0 = name, 1-4 = profile

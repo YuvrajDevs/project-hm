@@ -105,11 +105,14 @@ export const SafeSpaceSession: React.FC<SafeSpaceSessionProps> = ({ onLeave, onC
   const lastMessage = messages[messages.length - 1];
   const lastMessageId = lastMessage?.id;
   const lastFromPartner = !!lastMessage && lastMessage.senderUid !== uid;
+  // Your own thought already marks the space read when it is sent, so only write when there is something new to you
+  const alreadySeen = !!uid && !!activeSafeSpace?.seen?.[uid];
   useEffect(() => {
     if (!coupleId || !sessionId || !uid) return;
-    markSafeSpaceSeen(coupleId, sessionId, uid).catch(console.error);
+    if (lastFromPartner || !alreadySeen) markSafeSpaceSeen(coupleId, sessionId, uid).catch(console.error);
     listEndRef.current?.scrollIntoView({ behavior: "smooth", block: "end" });
     if (lastFromPartner) playTransition();
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- alreadySeen only gates the first write; it must not re-run the effect
   }, [coupleId, sessionId, uid, lastMessageId, lastFromPartner, playTransition]);
 
   // Together or apart? Decides whether turns apply.

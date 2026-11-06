@@ -33,7 +33,7 @@ const useEmulators = process.env.NEXT_PUBLIC_USE_EMULATORS === "1"
 // Initialize Firebase for Client-side
 const app = getApps().length > 0
   ? getApp()
-  : initializeApp(useEmulators ? { ...firebaseConfig, projectId: "demo-honest-mailbox" } : firebaseConfig);
+  : initializeApp(useEmulators ? { ...firebaseConfig, projectId: process.env.NEXT_PUBLIC_EMULATOR_PROJECT_ID || "demo-honest-mailbox" } : firebaseConfig);
 // Auto-detect lets the live connection fall back to long polling where a network buffers streaming
 // responses, which is what made one person see a move seconds after the other
 const db = (() => {

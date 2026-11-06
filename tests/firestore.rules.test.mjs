@@ -25,7 +25,9 @@ import {
   serverTimestamp,
   arrayUnion,
   arrayRemove,
+  increment,
 } from "firebase/firestore";
+import assert from "node:assert/strict";
 
 let env;
 const ALICE = "alice";
@@ -585,6 +587,26 @@ test("chat wallpaper: each person writes only their own, both can read", async (
   await assertSucceeds(deleteDoc(wp(ALICE)));
 });
 
+test("widgets: each person writes only their own encrypted doodle and picture, both can read", async () => {
+  await seedCouple();
+  const w = (who, owner = who) => doc(db(who), "couples", COUPLE, "widgets", owner);
+  const doodle = (extra = {}) => ({ doodleIv: "A".repeat(16), doodleCt: "A".repeat(500), doodleAt: serverTimestamp(), ...extra });
+  const pic = (extra = {}) => ({ picIv: "B".repeat(16), picCt: "B".repeat(5000), picAt: serverTimestamp(), ...extra });
+  await assertSucceeds(setDoc(w(ALICE), doodle(), { merge: true }));
+  await assertSucceeds(setDoc(w(ALICE), pic(), { merge: true }));                                   // the other kind, kept beside it
+  await assertSucceeds(getDoc(w(BOB, ALICE)));                                                       // the partner reads it
+  await assertFails(getDoc(w(MALLORY, ALICE)));                                                      // outsiders don't
+  await assertFails(setDoc(w(BOB, ALICE), doodle(), { merge: true }));                               // not Bob's to write
+  await assertFails(setDoc(w(MALLORY), doodle(), { merge: true }));                                  // not in the couple
+  await assertFails(setDoc(w(ALICE), doodle({ doodleIv: "short" }), { merge: true }));
+  await assertFails(setDoc(w(ALICE), doodle({ doodleCt: "A".repeat(200001) }), { merge: true }));
+  await assertFails(setDoc(w(ALICE), pic({ picCt: "B".repeat(700001) }), { merge: true }));
+  await assertFails(setDoc(w(ALICE), doodle({ text: "plain words" }), { merge: true }));          // nothing unencrypted
+  await assertFails(setDoc(w(ALICE), doodle({ doodleAt: "yesterday" }), { merge: true }));
+  await assertFails(deleteDoc(w(BOB, ALICE)));                                                       // only during a reset or unpairing
+  await assertSucceeds(deleteDoc(w(ALICE)));
+});
+
 test("a message and the chat summary on the couple are written together", async () => {
   await seedCouple();
   const alice = db(ALICE);
@@ -629,4 +651,40 @@ test("either partner can save a thought for themselves, and only themselves", as
   await assertFails(updateDoc(m1(MALLORY), { savedBy: arrayUnion(MALLORY) }));
   await assertSucceeds(updateDoc(m1(BOB), { savedBy: arrayRemove(BOB) }));
   await assertSucceeds(getDocs(query(collection(db(BOB), "couples", COUPLE, "mailbox"), where("savedBy", "array-contains", ALICE))));
+});
+
+test("ending a finished game archives it, adds its points and removes it in one write, exactly once", async () => {
+  await seedCouple();
+  await seed((d) => setDoc(doc(d, "couples", COUPLE, "games", "g1"), { deck: "xo", players: [ALICE, BOB], wins: { [ALICE]: 1 } }));
+  const end = (uid) => {
+    const d = db(uid);
+    const batch = writeBatch(d);
+    batch.set(doc(d, "couples", COUPLE, "game_history", "2026_xo"), { deck: "xo", players: [ALICE, BOB], wins: { [ALICE]: 1 }, archivedAt: "x" });
+    batch.update(doc(d, "couples", COUPLE), { [`gameScores.${ALICE}`]: increment(1), [`gameScores.${BOB}`]: increment(0) });
+    batch.delete(doc(d, "couples", COUPLE, "games", "g1"));
+    return batch.commit();
+  };
+  await assertSucceeds(end(ALICE));
+  // The partner tapping End at the same moment cannot archive it, or count the points, a second time
+  await assertFails(end(BOB));
+  await assertSucceeds(deleteDoc(doc(db(BOB), "couples", COUPLE, "games", "g1")));
+  await env.withSecurityRulesDisabled(async (ctx) => {
+    const snap = await getDoc(doc(ctx.firestore(), "couples", COUPLE));
+    assert.equal(snap.data().gameScores[ALICE], 1);
+  });
+  await assertFails(end(MALLORY));
+});
+
+test("a safe space thought and the turn change land together", async () => {
+  await seedCouple();
+  await seed((d) => setDoc(doc(d, "couples", COUPLE, "safe_space_sessions", "s1"), { active: true, startedBy: ALICE }));
+  const d = db(ALICE);
+  const batch = writeBatch(d);
+  batch.set(doc(collection(d, "couples", COUPLE, "safe_space_sessions", "s1", "messages")), { senderUid: ALICE, text: "hi", createdAt: Timestamp.now() });
+  batch.update(doc(d, "couples", COUPLE, "safe_space_sessions", "s1"), { lastMessageBy: ALICE, currentTurnUid: ALICE });
+  await assertSucceeds(batch.commit());
+  const forged = writeBatch(d);
+  forged.set(doc(collection(d, "couples", COUPLE, "safe_space_sessions", "s1", "messages")), { senderUid: BOB, text: "hi", createdAt: Timestamp.now() });
+  forged.update(doc(d, "couples", COUPLE, "safe_space_sessions", "s1"), { lastMessageBy: BOB });
+  await assertFails(forged.commit());
 });

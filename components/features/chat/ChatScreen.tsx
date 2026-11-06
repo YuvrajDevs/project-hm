@@ -23,7 +23,7 @@ import { Composer } from "./Composer";
 import { ImageViewer } from "./ImageViewer";
 import { OnceViewer, VideoViewer } from "./MediaViewers";
 import { ChatSettings } from "./ChatSettings";
-import { effectiveWallpaper, pendingOffer } from "./wallpaper";
+import { effectiveWallpaper, pendingOffer } from "@/lib/chatWallpaper";
 import { SavedMessages } from "./SavedMessages";
 
 const PAGE = 40;
@@ -250,11 +250,13 @@ export const ChatScreen = ({ onClose }: { onClose: () => void }) => {
   };
 
   const fail = (what: string) => (err: unknown) => {
-    console.error(err);
+    // An expected refusal (partner not set up, file too big) is shown to the user; only surprises are logged
+    if (!(err instanceof ChatMediaError)) console.error(err);
     setError(err instanceof ChatMediaError ? err.message : `That ${what} didn't send. Check your connection and try again.`);
   };
 
-  const sendText = (text: string, once: boolean) => { send({ kind: "text", text, once }).catch(fail("message")); };
+  // Resolves false when it didn't send, so the composer can put the words back
+  const sendText = (text: string, once: boolean) => send({ kind: "text", text, once }).then(() => true, (err) => { fail("message")(err); return false; });
 
   const sendMedia = async (file: File, once: boolean) => {
     setPreparing(true);
@@ -324,7 +326,7 @@ export const ChatScreen = ({ onClose }: { onClose: () => void }) => {
 
   const unsend = (m: ChatMessage) => {
     setSelectedId(null);
-    deleteChatMessage(coupleId, m.id).catch(() => setError("Couldn't unsend that. Try again."));
+    deleteChatMessage(coupleId, m.id, m.path).catch(() => setError("Couldn't unsend that. Try again."));
   };
 
   const partnerTitle = user?.partnerNickname?.trim() || partner?.displayName || "Your person";

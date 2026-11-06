@@ -331,12 +331,16 @@ export const StreakGrid: React.FC<StreakGridProps> = ({ history }) => {
                                                     <div className="text-[8px] font-bebas tracking-widest text-neutral-600 uppercase">
                                                         Repeat: {event.repeat}
                                                     </div>
+                                                    {/* Only whoever added it can remove it (firestore.rules); for anyone else the delete would just fail */}
+                                                    {event.createdBy === user?.uid && (
                                                     <button 
-                                                        onClick={() => removeEvent(event.id)}
+                                                        onClick={() => removeEvent(event.id).catch(console.error)}
+                                                        aria-label="Remove special day"
                                                         className="p-2 text-neutral-800 hover:text-red-400 transition-colors"
                                                     >
                                                         <Trash2 className="w-4 h-4" />
                                                     </button>
+                                                    )}
                                                 </div>
                                             </div>
                                         ))}

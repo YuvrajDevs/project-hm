@@ -11,12 +11,15 @@ export const ERASER_WIDTH = 22;
 
 const BLACK = "#111111";
 
-export const encodeStroke = (tool: string, points: string) => `${tool}|${points}`;
+// Strokes are added with arrayUnion, which drops a value equal to one already there; redrawing the exact same dot after
+// erasing it would vanish. A short random tag after the tool ("ef4444.k3x9|…") keeps every stroke distinct.
+export const encodeStroke = (tool: string, points: string, tag?: string) => `${tag ? `${tool}.${tag}` : tool}|${points}`;
+export const strokeTag = () => Math.random().toString(36).slice(2, 8);
 
 export const parseStroke = (stroke: string) => {
   const bar = stroke.indexOf("|");
   if (bar < 0) return { color: BLACK, width: PEN_WIDTH, points: stroke };
-  const head = stroke.slice(0, bar);
+  const head = stroke.slice(0, bar).split(".")[0];
   const points = stroke.slice(bar + 1);
   // The pad is white, so erasing is drawing wide and white
   if (head === ERASER) return { color: "#ffffff", width: ERASER_WIDTH, points };

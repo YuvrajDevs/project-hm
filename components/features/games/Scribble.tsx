@@ -6,7 +6,7 @@ import {
   addScribbleStroke, advanceGame, clearScribble, endGame, replayGame, skipScribble, submitScribbleGuess,
 } from "@/lib/firestore-helpers";
 import { drawer, getCard, guessMatches, roundKey, totalScores } from "@/lib/games/engine";
-import { ERASER, PALETTE, encodeStroke, parseStroke } from "@/lib/games/strokes";
+import { ERASER, PALETTE, encodeStroke, parseStroke, strokeTag } from "@/lib/games/strokes";
 import type { ActiveGame } from "@/lib/types";
 import { useSensoryFeedback } from "@/hooks/useSensoryFeedback";
 import { cn } from "@/lib/utils";
@@ -226,7 +226,7 @@ const Canvas = ({ strokes, canDraw, tool, onStroke }: { strokes: string[]; canDr
   };
 
   const flush = () => {
-    if (points.current.length > 0) onStroke(encodeStroke(tool, points.current.map(([x, y]) => `${x},${y}`).join(" ")));
+    if (points.current.length > 0) onStroke(encodeStroke(tool, points.current.map(([x, y]) => `${x},${y}`).join(" "), strokeTag()));
   };
 
   const down = (e: React.PointerEvent) => {

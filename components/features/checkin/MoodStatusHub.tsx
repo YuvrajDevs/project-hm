@@ -29,7 +29,16 @@ export const MoodStatusHub = () => {
   return (
     <div className="grid grid-rows-2 gap-3 h-full">
       {/* You: label, then the icon beside when it was set, then the full mood name on its own line */}
-      <button onClick={openSignalSelector} className={cn(tile.replace("%s", "red"), needsUpdate && "ring-2 ring-yellow-300")}>
+      <button onClick={openSignalSelector} className={tile.replace("%s", "red")} aria-label={needsUpdate ? "Your mood: update it for today" : undefined}>
+        {/* Not updated today: just a small dot in the corner */}
+        {needsUpdate && (
+          <motion.span
+            aria-hidden="true"
+            animate={{ scale: [1, 1.3, 1], opacity: [0.6, 1, 0.6] }}
+            transition={{ repeat: Infinity, duration: 2 }}
+            className="absolute top-3.5 right-4 w-2 h-2 rounded-full bg-yellow-300"
+          />
+        )}
         <span className={eyebrow}>You are feeling</span>
         <div className="flex items-center justify-between gap-2">
           {/* eslint-disable-next-line @next/next/no-img-element */}
@@ -38,16 +47,7 @@ export const MoodStatusHub = () => {
             alt=""
             className={cn("w-12 h-12 md:w-14 md:h-14 shrink-0 object-contain drop-shadow-lg", !user?.currentMood && "opacity-25 grayscale")}
           />
-          {needsUpdate ? (
-            <span className={cn(since, "flex items-center gap-1.5")}>
-              <motion.span
-                animate={{ scale: [1, 1.3, 1], opacity: [0.6, 1, 0.6] }}
-                transition={{ repeat: Infinity, duration: 2 }}
-                className="w-1.5 h-1.5 rounded-full bg-yellow-300 shrink-0"
-              />
-              Update today
-            </span>
-          ) : user?.moodUpdatedAt ? (
+          {!needsUpdate && user?.moodUpdatedAt ? (
             <span className={since}>{formatRelativeTime(user.moodUpdatedAt)}</span>
           ) : null}
         </div>

@@ -8,6 +8,7 @@ import { X, Send, Hash, Clock, Lock, Unlock } from "lucide-react";
 import { useSensoryFeedback } from "@/hooks/useSensoryFeedback";
 import { PREMIUM_ICONS, INTENT_ICONS } from "@/lib/constants";
 import { useScrollLock } from "@/hooks/useScrollLock";
+import { capsuleUnlockInstant, clockIn } from "@/lib/capsule";
 
 const composeStatuses = (Object.keys(PREMIUM_ICONS) as MailboxStatus[]).map(id => ({
     id,
@@ -50,34 +51,14 @@ export const ComposeMessage = ({ onClose }: { onClose: () => void }) => {
 
   const previewInfo = useMemo(() => {
     if (!unlockAt || !isDifferentTZ) return null;
-    const localDate = new Date(unlockAt);
-    if (isNaN(localDate.getTime())) return null;
-
-    const partnerTZ = partner?.timezone || Intl.DateTimeFormat().resolvedOptions().timeZone;
     const myTZ = Intl.DateTimeFormat().resolvedOptions().timeZone;
-
-    if (timezoneMode === "MINE") {
-        const partnerTime = localDate.toLocaleTimeString([], { timeZone: partnerTZ, hour: '2-digit', minute: '2-digit' });
-        return { 
-            main: `Unlocks at ${localDate.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })} for you`,
-            sub: `That's ${partnerTime} for ${partner?.displayName || 'partner'}`
-        };
-    } else {
-        try {
-            const partnerDateStr = localDate.toLocaleString('en-US', { timeZone: partnerTZ });
-            const myDateStr = localDate.toLocaleString('en-US', { timeZone: myTZ });
-            const diff = new Date(myDateStr).getTime() - new Date(partnerDateStr).getTime();
-            
-            const adjustedForMe = new Date(localDate.getTime() + diff);
-            return {
-                main: `Unlocks at ${unlockAt.split('T')[1]} for them`,
-                sub: `That's ${adjustedForMe.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })} for you`
-            };
-        } catch (e) {
-            return null;
-        }
-    }
-  }, [unlockAt, timezoneMode, partner?.timezone, partner?.displayName]);
+    const partnerTZ = partner?.timezone || myTZ;
+    const at = capsuleUnlockInstant(unlockAt, timezoneMode, myTZ, partnerTZ);
+    if (Number.isNaN(at)) return null;
+    return timezoneMode === "MINE"
+      ? { main: `Unlocks at ${clockIn(at, myTZ)} for you`, sub: `That's ${clockIn(at, partnerTZ)} for ${partner?.displayName || "partner"}` }
+      : { main: `Unlocks at ${clockIn(at, partnerTZ)} for them`, sub: `That's ${clockIn(at, myTZ)} for you` };
+  }, [unlockAt, timezoneMode, isDifferentTZ, partner?.timezone, partner?.displayName]);
 
   const handleSend = async () => {
     if (!status || !intent) return;
@@ -85,7 +66,8 @@ export const ComposeMessage = ({ onClose }: { onClose: () => void }) => {
       setError("Pick when the time capsule should open, or turn it off.");
       return;
     }
-    if (showCapsuleParams && new Date(unlockAt).getTime() <= Date.now()) {
+    const myZone = Intl.DateTimeFormat().resolvedOptions().timeZone;
+    if (showCapsuleParams && !(capsuleUnlockInstant(unlockAt, timezoneMode, myZone, partner?.timezone || myZone) > Date.now())) {
       setError("Pick an unlock time in the future.");
       return;
     }
@@ -96,18 +78,8 @@ export const ComposeMessage = ({ onClose }: { onClose: () => void }) => {
       const payload: Omit<MailboxMessage, "id" | "senderUid" | "createdAt"> = { status, intent, note: note.slice(0, 140) };
       
       if (showCapsuleParams && unlockAt) {
-          if (timezoneMode === "MINE") {
-              payload.unlockAt = new Date(unlockAt).toISOString();
-          } else {
-              // Calculate UTC from Partner's perspective
-              const partnerTZ = partner?.timezone || Intl.DateTimeFormat().resolvedOptions().timeZone;
-              const myTZ = Intl.DateTimeFormat().resolvedOptions().timeZone;
-              const localDate = new Date(unlockAt);
-              const partnerDateStr = localDate.toLocaleString('en-US', { timeZone: partnerTZ });
-              const myDateStr = localDate.toLocaleString('en-US', { timeZone: myTZ });
-              const diff = new Date(myDateStr).getTime() - new Date(partnerDateStr).getTime();
-              payload.unlockAt = new Date(localDate.getTime() + diff).toISOString();
-          }
+          const myTZ = Intl.DateTimeFormat().resolvedOptions().timeZone;
+          payload.unlockAt = new Date(capsuleUnlockInstant(unlockAt, timezoneMode, myTZ, partner?.timezone || myTZ)).toISOString();
           payload.isSecretBeforeUnlock = isSecretBeforeUnlock;
       }
       

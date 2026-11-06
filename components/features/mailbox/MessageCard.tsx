@@ -318,7 +318,7 @@ export const MessageCard = ({ message }: { message: MailboxMessage }) => {
                   {message.response.mode === "LISTEN" ? "Listening" : message.response.mode === "HERE" ? "Here with you" : "Coming in 30"}
                 </h4>
                 <p className="text-xs font-outfit opacity-75 mt-1 truncate">
-                  {message.response.text ? `"${message.response.text}"` : "Your partner replied"}
+                  {message.response.text ? `"${message.response.text}"` : isSender ? `${partnerFirst} replied` : "You replied"}
                 </p>
               </div>
             </div>

@@ -8,7 +8,7 @@
 // backup is set up well after the key was generated. Both live inside the same on-device trust boundary
 // (this origin's IndexedDB) - the non-extractable copy guards against code accidentally exporting the
 // key, not against an attacker who already has script access to this origin.
-import { doc, getDoc, setDoc, updateDoc, deleteDoc } from "firebase/firestore";
+import { doc, getDoc, getDocFromCache, setDoc, updateDoc, deleteDoc } from "firebase/firestore";
 import { db } from "./firebase.ts";
 import { getKey, putKey, deleteKey, setKeyScope, getLegacyKey } from "./e2eeStore.ts";
 import {
@@ -131,7 +131,11 @@ export const getAesKeyForCouple = async (uid: string, coupleId: string, partnerU
   // Scope to this user before touching the local key: without this, a stale scope left by
   // another account in the same browser tab would silently read the wrong private key.
   setKeyScope(uid);
-  const partnerSnap = await getDoc(doc(db, "users", partnerUid));
+  // Both apps keep a live listener on the partner's profile, so the local cache already holds the current public
+  // key (a rotation arrives through that listener). Reading it from the cache avoids a server round trip on every
+  // chat snapshot; the network is only used when the cache doesn't have the document yet.
+  const ref = doc(db, "users", partnerUid);
+  const partnerSnap = await getDocFromCache(ref).catch(() => getDoc(ref));
   const partnerJwk = partnerSnap.data()?.chatPublicKey as JsonWebKey | undefined;
   if (!partnerJwk) return null;
 

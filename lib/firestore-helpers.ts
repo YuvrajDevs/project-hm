@@ -37,7 +37,6 @@ import {
   MailboxMessage,
   DailyCheckIn,
   QuickReact,
-  SafeSpaceSession,
   PartnerNote,
   AppNotification,
   CoupleGame,
@@ -54,7 +53,7 @@ import { REACTION_ICONS } from "./constants";
 import { getAesKeyForCouple, encryptDraft, decryptMessage, encryptBytes, decryptBytes, rotateKeys, prepareKeyReset } from "./e2ee.ts";
 import { finalizeChatKeyReset } from "./chatReset.ts";
 import { ChatMediaError } from "./chatMedia.ts";
-import { aboutDone, likeKey } from "./games/about.ts";
+import { likeKey } from "./games/about.ts";
 
 /**
  * Generic converter for Firestore to maintain type safety
@@ -85,6 +84,13 @@ export const getCoupleCollection = (coupleId: string, subPath: string) => {
 };
 
 /**
+ * Error handler for live listeners. Losing access is expected (a partner unpairs, a reset, an account deleted on
+ * another device); the sync gate then moves the person on. Without a handler the phone app's Firebase SDK calls the
+ * listener with no snapshot, which crashed the app reading `.docs` of nothing.
+ */
+const listenerError = (what: string) => (err: unknown) => console.warn(`${what} listener stopped:`, err);
+
+/**
  * Mailbox Helpers
  */
 export const subscribeToMailbox = (coupleId: string, pageSize: number, callback: (messages: MailboxMessage[]) => void) => {
@@ -92,7 +98,7 @@ export const subscribeToMailbox = (coupleId: string, pageSize: number, callback:
   const q = query(getCoupleCollection(coupleId, "mailbox"), orderBy("createdAt", "desc"), limit(pageSize));
   return onSnapshot(q, (snapshot) => {
     callback(snapshot.docs.map(doc => doc.data() as MailboxMessage));
-  });
+  }, listenerError("Mailbox"));
 };
 
 export const sendMailboxMessage = async (coupleId: string, message: Omit<MailboxMessage, "id" | "createdAt">, partnerUid: string) => {
@@ -216,7 +222,7 @@ export const subscribeToSavedThoughts = (coupleId: string, uid: string, callback
         .filter((m) => !m.hiddenFor?.includes(uid))
         .sort((a, b) => (b.createdAt || "").localeCompare(a.createdAt || ""))
     );
-  });
+  }, listenerError("Saved thoughts"));
 };
 
 export const hideMessageForUser = async (coupleId: string, messageId: string, uid: string) => {
@@ -320,7 +326,7 @@ export const subscribeToSafeSpaceMessages = (coupleId: string, sessionId: string
   
   return onSnapshot(q, (snapshot) => {
     callback(snapshot.docs.map(doc => doc.data()));
-  });
+  }, listenerError("Safe space messages"));
 };
 
 /**
@@ -329,18 +335,21 @@ export const subscribeToSafeSpaceMessages = (coupleId: string, sessionId: string
  */
 export const sendSafeSpaceMessage = async (coupleId: string, sessionId: string, senderUid: string, text: string, notifyUid?: string) => {
   const sessionRef = doc(db, "couples", coupleId, "safe_space_sessions", sessionId);
-  await addDoc(collection(db, "couples", coupleId, "safe_space_sessions", sessionId, "messages"), {
+  // One write for both: the partner sees the thought and whose turn it is in the same update, never one without the other
+  const batch = writeBatch(db);
+  batch.set(doc(collection(db, "couples", coupleId, "safe_space_sessions", sessionId, "messages")), {
     senderUid,
     text,
     createdAt: Timestamp.now()
   });
-  await updateDoc(sessionRef, {
+  batch.update(sessionRef, {
     lastMessageAt: Timestamp.now(),
     lastMessageBy: senderUid,
     // Whoever is speaking has the floor until they hand it over
     currentTurnUid: senderUid,
     [`seen.${senderUid}`]: new Date().toISOString(),
   });
+  await batch.commit();
 
   if (notifyUid) {
     await notifyPartner(notifyUid, {
@@ -432,45 +441,40 @@ export const subscribeToGames = (coupleId: string, callback: (games: ActiveGame[
   );
 
 /**
- * A game counts as finished when the last card is done, for a question deck when both have answered everything,
- * and for a board game once anyone has won a round
+ * Close a game for both. A finished game is archived to the history, its points are added to the couple's
+ * running score, and the live game is removed, all in ONE atomic write: the shelf's score (runningScore in
+ * lib/games/engine.ts) counts finished open games plus `gameScores`, so a half-applied end would show the points
+ * twice or not at all for a moment. The history id comes from the game itself, and history entries can be created
+ * but never overwritten, so if both partners end it at once only the first write lands; the second falls back to
+ * just removing the (already removed) game and the points are never counted twice.
  */
-const isFinished = (g: CoupleGame) => {
-  if (!DECK_BY_ID[g.deck]) return false;
-  const mechanic = DECK_BY_ID[g.deck].mechanic;
-  if (mechanic === "xo" || mechanic === "connect4") return Object.values(g.wins ?? {}).some(n => n > 0);
-  if (mechanic === "about") return aboutDone(g);
-  if (mechanic === "open") return g.players.every(u => g.cards.every((_, r) => !!g.answers?.[`r${r}`]?.[u]?.text));
-  return g.round >= g.cards.length;
-};
-
-/**
- * Keep a finished game before it's removed, so it can be read again later.
- * The id comes from the game itself, so both partners tapping at once still store it once.
- */
-const archiveIfFinished = async (coupleId: string, gameId: string) => {
+const endGameAtomically = async (coupleId: string, gameId: string) => {
   const snap = await getDoc(gameRef(coupleId, gameId));
   if (!snap.exists()) return;
   const game = snap.data() as CoupleGame;
-  if (!isFinished(game)) return;
+  const { isGameFinished, totalScores, withoutPhotos } = await import("./games/engine");
+  if (!isGameFinished(game)) {
+    await deleteDoc(gameRef(coupleId, gameId));
+    return;
+  }
   const id = `${game.startedAt}_${game.deck}`.replace(/[^\w-]/g, "_");
-  // Truth or dare photos stay inside the live game and are never kept; the archived copy says one was deleted
-  const { withoutPhotos } = await import("./games/engine");
-  const kept = withoutPhotos(game);
-  // If the partner already stored it, the copy is there and history entries can't be overwritten,
-  // so the write fails and the points aren't counted a second time
-  const stored = await setDoc(doc(db, "couples", coupleId, "game_history", id), { ...kept, archivedAt: new Date().toISOString() })
-    .then(() => true, () => false);
-  if (!stored) return;
-  // Add this game's points to the couple's running score
-  const { totalScores } = await import("./games/engine");
   const [a, b] = game.players;
   const pts = totalScores(game, [a, b]);
+  const batch = writeBatch(db);
+  // Truth or dare photos stay inside the live game and are never kept; the archived copy says one was deleted
+  batch.set(doc(db, "couples", coupleId, "game_history", id), { ...withoutPhotos(game), archivedAt: new Date().toISOString() });
   if (pts[a] || pts[b]) {
-    await updateDoc(doc(db, "couples", coupleId), {
+    batch.update(doc(db, "couples", coupleId), {
       [`gameScores.${a}`]: increment(pts[a] || 0),
       [`gameScores.${b}`]: increment(pts[b] || 0),
-    }).catch(console.error);
+    });
+  }
+  batch.delete(gameRef(coupleId, gameId));
+  try {
+    await batch.commit();
+  } catch (err) {
+    // Already archived by the partner (history can't be overwritten): just make sure the live game is gone
+    await deleteDoc(gameRef(coupleId, gameId)).catch(() => { throw err; });
   }
 };
 
@@ -722,10 +726,7 @@ export const replayGame = async (coupleId: string, oldId: string, uid: string, p
 };
 
 /** Close a game for both. A finished one is kept in the history first. */
-export const endGame = async (coupleId: string, gameId: string) => {
-  await archiveIfFinished(coupleId, gameId);
-  await deleteDoc(gameRef(coupleId, gameId));
-};
+export const endGame = (coupleId: string, gameId: string) => endGameAtomically(coupleId, gameId);
 
 export const updateUserMood = async (uid: string, mood: string, partnerUid?: string) => {
   const userRef = doc(db, "users", uid);
@@ -792,7 +793,7 @@ export const respondToMessage = async (coupleId: string, messageId: string, resp
   });
 };
 
-const COUPLE_SUBCOLLECTIONS = ["mailbox", "checkins", "reactions", "safe_space_sessions", "events", "games", "game_history", "bucket_list", "chat", "preferences"];
+const COUPLE_SUBCOLLECTIONS = ["mailbox", "checkins", "reactions", "safe_space_sessions", "events", "games", "game_history", "bucket_list", "chat", "preferences", "widgets"];
 
 /**
  * Delete documents in chunks that fit inside a single batch
@@ -825,6 +826,16 @@ export const resetCoupleHistory = async (coupleId: string) => {
   }
 
   await deleteRefs(refs);
+
+  // Chat videos live in Storage, not Firestore, so deleting the messages above would leave their (encrypted) files
+  // behind forever. Both partners may list and delete in the couple's folder while they are still its members, which
+  // is why this runs before the couple document itself goes. Best effort: a missing file is already what we want.
+  try {
+    const { items } = await listAll(storageRef(storage, `chat/${coupleId}`));
+    await Promise.all(items.map((item) => deleteObject(item).catch(() => {})));
+  } catch {
+    // No video folder for this couple
+  }
 };
 
 export const destroyCoupleData = async (coupleId: string) => {
@@ -1061,7 +1072,7 @@ export const subscribeToEvents = (coupleId: string, callback: (events: CoupleEve
   const q = query(getCoupleCollection(coupleId, "events"), orderBy("dateId", "asc"));
   return onSnapshot(q, (snapshot) => {
     callback(snapshot.docs.map(doc => doc.data() as CoupleEvent));
-  });
+  }, listenerError("Events"));
 };
 
 export const saveCoupleEvent = async (coupleId: string, event: Omit<CoupleEvent, "id" | "createdAt">) => {
@@ -1091,7 +1102,7 @@ export const subscribeToPartnerNotes = (uid: string, callback: (notes: PartnerNo
   
   return onSnapshot(q, (snapshot) => {
     callback(snapshot.docs.map(doc => doc.data()));
-  });
+  }, listenerError("Partner notes"));
 };
 
 export const addPartnerNote = async (uid: string, text: string, shared = false) => {
@@ -1199,9 +1210,13 @@ export const markAllNotificationsAsRead = async (uid: string) => {
   const notisRef = collection(db, "users", uid, "notifications");
   const q = query(notisRef, where("read", "==", false));
   const snap = await getDocs(q);
-  const batch = writeBatch(db);
-  snap.docs.forEach((d) => batch.update(d.ref, { read: true }));
-  await batch.commit();
+  // A batch takes at most 500 writes, and game notifications (which the bell doesn't list) can pile up unread
+  // over months, so this goes out in chunks rather than failing outright on a long-lived account
+  for (let i = 0; i < snap.docs.length; i += 400) {
+    const batch = writeBatch(db);
+    snap.docs.slice(i, i + 400).forEach((d) => batch.update(d.ref, { read: true }));
+    await batch.commit();
+  }
 };
 
 export const updateUserNotificationSettings = async (uid: string, enabled: boolean) => {
@@ -1220,7 +1235,7 @@ export const subscribeToNotifications = (uid: string, callback: (notis: AppNotif
   
   return onSnapshot(q, (snapshot) => {
     callback(snapshot.docs.map(doc => doc.data()));
-  });
+  }, listenerError("Notifications"));
 };
 
 /**
@@ -1256,21 +1271,49 @@ const toChat = (d: QueryDocumentSnapshot): ChatMessage => {
   } as ChatMessage;
 };
 
-// Decrypts one raw doc into the plaintext shape the UI expects. Never throws: a missing/invalid
-// schema, a missing shared key, or a failed decrypt (tamper, or a key that's been rotated away) all
-// land on `decryptFailed`, which MessageContent shows as a placeholder instead of crashing.
-const decryptChat = async (raw: ChatMessage, uid: string, coupleId: string, partnerUid: string): Promise<ChatMessage> => {
-  // A view-once message that has been opened has no content left, by design: that isn't a failure
-  if (raw.once && raw.openedAt) return { ...raw, decryptFailed: false };
-  if (raw.v !== 1 || !raw.iv || !raw.ct) return { ...raw, decryptFailed: true };
-  try {
-    const aesKey = await getAesKeyForCouple(uid, coupleId, partnerUid);
+// Decrypting a message is pure work on bytes that never change once written (a doc's iv and ct are fixed; only
+// savedBy / openedAt move afterwards). So each listener keeps what it already decrypted, keyed by doc id + iv, and a
+// snapshot only decrypts what is actually new. It also resolves the shared key ONCE per snapshot: before this, every
+// snapshot re-decrypted every loaded message (photos included) and fetched the partner's profile from the server once
+// per message, which is where the chat's lag came from.
+type DecryptedFields = Partial<ChatMessage>;
+
+const makeChatDecrypter = (uid: string, coupleId: string, partnerUid: string) => {
+  const cache = new Map<string, { key: CryptoKey; fields: DecryptedFields }>();
+  let seq = 0;
+
+  const one = async (raw: ChatMessage, aesKey: CryptoKey | null): Promise<ChatMessage> => {
+    // A view-once message that has been opened has no content left, by design: that isn't a failure
+    if (raw.once && raw.openedAt) return { ...raw, decryptFailed: false };
+    if (raw.v !== 1 || !raw.iv || !raw.ct) return { ...raw, decryptFailed: true };
     if (!aesKey) return { ...raw, decryptFailed: true };
-    const fields = await decryptMessage(coupleId, raw.senderUid, raw.kind, raw.iv, raw.ct, aesKey);
-    return { ...raw, ...fields, decryptFailed: false };
-  } catch {
-    return { ...raw, decryptFailed: true };
-  }
+    const id = `${raw.id}/${raw.iv}`;
+    const hit = cache.get(id);
+    if (hit && hit.key === aesKey) return { ...raw, ...hit.fields, decryptFailed: false };
+    try {
+      const fields = await decryptMessage(coupleId, raw.senderUid, raw.kind, raw.iv, raw.ct, aesKey);
+      cache.set(id, { key: aesKey, fields });
+      return { ...raw, ...fields, decryptFailed: false };
+    } catch {
+      // Tampered, or encrypted with a key that has since been rotated away: shown as a placeholder, never a crash
+      return { ...raw, decryptFailed: true };
+    }
+  };
+
+  /**
+   * Decrypts a whole snapshot. Resolves to null if a newer snapshot started in the meantime, so a slow decrypt can
+   * never overwrite newer messages on screen with an older list.
+   */
+  return async (raws: ChatMessage[]): Promise<ChatMessage[] | null> => {
+    const mine = ++seq;
+    const needsKey = raws.some((r) => !(r.once && r.openedAt) && r.v === 1 && r.iv && r.ct);
+    const aesKey = needsKey ? await getAesKeyForCouple(uid, coupleId, partnerUid).catch(() => null) : null;
+    const out = await Promise.all(raws.map((r) => one(r, aesKey)));
+    // Forget what is no longer on screen, so memory stays bounded by what the listener holds
+    const live = new Set(raws.map((r) => `${r.id}/${r.iv}`));
+    for (const k of cache.keys()) if (!live.has(k)) cache.delete(k);
+    return mine === seq ? out : null;
+  };
 };
 
 // The newest `count` messages, oldest first
@@ -1283,12 +1326,13 @@ export const subscribeToChat = (
   onError?: (err: unknown) => void
 ) => {
   const q = query(collection(db, "couples", coupleId, "chat"), orderBy("createdAt", "asc"), limitToLast(count));
+  const decryptAll = makeChatDecrypter(uid, coupleId, partnerUid);
   return onSnapshot(
     q,
     { includeMetadataChanges: true },
     async (snap) => {
-      const messages = await Promise.all(snap.docs.map(toChat).map((m) => decryptChat(m, uid, coupleId, partnerUid)));
-      callback(messages, snap.size >= count);
+      const messages = await decryptAll(snap.docs.map(toChat));
+      if (messages) callback(messages, snap.size >= count);
     },
     onError
   );
@@ -1303,11 +1347,12 @@ export const subscribeToSavedChat = (
   onError?: (err: unknown) => void
 ) => {
   const q = query(collection(db, "couples", coupleId, "chat"), where("savedBy", "array-contains", uid));
+  const decryptAll = makeChatDecrypter(uid, coupleId, partnerUid);
   return onSnapshot(
     q,
     async (snap) => {
-      const messages = await Promise.all(snap.docs.map(toChat).map((m) => decryptChat(m, uid, coupleId, partnerUid)));
-      callback(messages.sort((a, b) => b.createdAt.localeCompare(a.createdAt)));
+      const messages = await decryptAll(snap.docs.map(toChat));
+      if (messages) callback(messages.sort((a, b) => b.createdAt.localeCompare(a.createdAt)));
     },
     onError
   );
@@ -1368,8 +1413,11 @@ export const markChatSeen = (coupleId: string, uid: string, lastAt?: string) => 
 export const setChatMessageSaved = (coupleId: string, messageId: string, uid: string, saved: boolean) =>
   updateDoc(doc(db, "couples", coupleId, "chat", messageId), { savedBy: saved ? arrayUnion(uid) : arrayRemove(uid) });
 
-export const deleteChatMessage = (coupleId: string, messageId: string) =>
-  deleteDoc(doc(db, "couples", coupleId, "chat", messageId));
+/** Unsend. A video's encrypted file goes too, once the message pointing at it is gone (otherwise it would be orphaned). */
+export const deleteChatMessage = async (coupleId: string, messageId: string, videoPath?: string) => {
+  await deleteDoc(doc(db, "couples", coupleId, "chat", messageId));
+  if (videoPath) await deleteObject(storageRef(storage, videoPath)).catch(() => {});
+};
 
 /**
  * Open a view-once message: the content is wiped from the server in the same step, so it can be seen

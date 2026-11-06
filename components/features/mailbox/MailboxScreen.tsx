@@ -58,7 +58,8 @@ export const MailboxScreen: React.FC<MailboxScreenProps> = ({ onOpenCheckIn, onC
                         </span>
                     </div>
                     <p className="font-bebas leading-none tabular-nums flex items-baseline gap-2">
-                        <span className="text-[8.5rem] md:text-[10rem]">{metrics?.streak ?? 0}</span>
+                        {/* Two- and three-digit streaks step down on phones so "days" still fits beside them */}
+                        <span className={cn((metrics?.streak ?? 0) >= 100 ? "text-[5rem] md:text-[8rem]" : (metrics?.streak ?? 0) >= 10 ? "text-[6.5rem] md:text-[10rem]" : "text-[8.5rem] md:text-[10rem]")}>{metrics?.streak ?? 0}</span>
                         <span className="text-2xl md:text-3xl tracking-wide opacity-70">{(metrics?.streak ?? 0) === 1 ? "day" : "days"}</span>
                     </p>
                     <p className="font-outfit text-xs leading-snug opacity-75 text-pretty">
